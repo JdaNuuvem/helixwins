@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#fff0f0">
+  <meta property="og:title" content="Helix Jump">
+  <title>Helix Jump</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='14' fill='%23FFE66D' stroke='%23FF6B6B' stroke-width='2'/%3E%3C/svg%3E">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      font-family: 'Arial', sans-serif;
+      background: #FFE4EE;
+    }
+
+    #game-container {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      touch-action: none;
+      -webkit-tap-highlight-color: transparent;
+      background: linear-gradient(to bottom, #FFE4EE, #FFB3CB) !important;
+      opacity: 1 !important;
+    }
+
+    #game-container canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      background: transparent !important;
+      opacity: 1 !important;
+    }
+
+    #ui-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+    }
+
+    #start-screen {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: rgba(10, 4, 22, 0.45);
+      pointer-events: auto;
+      z-index: 10;
+      overflow: hidden;
+      cursor: pointer;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    #start-screen.hidden { display: none; }
+
+    #start-screen::before {
+      content: '';
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      height: 50%;
+      background: linear-gradient(to top, rgba(10,4,22,.3) 0%, transparent 100%);
+      pointer-events: none;
+    }
+
+    #start-screen p {
+      font-size: 30px;
+      font-weight: 900;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      color: #fff;
+      text-shadow:
+        0 0 12px rgba(232,60,160,.9),
+        0 0 30px rgba(232,60,160,.5),
+        0 2px 8px rgba(0,0,0,.6);
+      margin-bottom: 12px;
+      text-align: center;
+      animation: glow-title 2.2s ease-in-out infinite;
+    }
+
+    @keyframes glow-title {
+      0%, 100% { text-shadow: 0 0 10px rgba(232,60,160,.7), 0 0 24px rgba(232,60,160,.35), 0 2px 8px rgba(0,0,0,.6); }
+      50%       { text-shadow: 0 0 22px rgba(232,60,160,1),  0 0 55px rgba(168,85,247,.6),  0 2px 8px rgba(0,0,0,.6); }
+    }
+
+    #start-screen .arrow {
+      font-size: 28px;
+      color: rgba(255,255,255,.75);
+      text-shadow: 0 0 12px rgba(232,60,160,.8);
+      animation: bounce-arrow 1.4s ease-in-out infinite;
+    }
+
+    @keyframes bounce-arrow {
+      0%, 100% { transform: translateY(0);    opacity: .6; }
+      50%       { transform: translateY(10px); opacity: 1;  }
+    }
+
+    #score {
+      position: absolute;
+      top: 20px;
+      top: calc(20px + env(safe-area-inset-top, 0px));
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 64px;
+      font-weight: bold;
+      color: #1a1a2e;
+      white-space: nowrap;
+      pointer-events: none;
+    }
+
+    #idle-hint {
+      position: absolute;
+      bottom: 80px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 18px;
+      color: rgba(26, 26, 46, 0.45);
+      display: none;
+      pointer-events: none;
+    }
+
+    #idle-hint.visible {
+      display: block;
+      animation: blink-hint 1.5s ease-in-out infinite;
+    }
+
+    @keyframes blink-hint {
+      0%, 100% { opacity: 0.4; }
+      50% { opacity: 1; }
+    }
+
+    #combo {
+      position: absolute;
+      top: 96px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 20px;
+      font-weight: bold;
+      color: #e91e63;
+      display: none;
+      pointer-events: none;
+    }
+
+    #combo.visible {
+      display: block;
+    }
+
+    #points-popup {
+      position: absolute;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 38px;
+      font-weight: bold;
+      color: #1a1a2e;
+      pointer-events: none;
+      opacity: 0;
+      display: none;
+    }
+
+    #points-popup.visible {
+      display: block;
+    }
+
+    #game-over {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      text-align: center;
+      display: none;
+      pointer-events: none;
+      background: rgba(255, 255, 255, 0.93);
+      padding: 36px 52px;
+      border-radius: 20px;
+      box-shadow: 0 4px 32px rgba(0, 0, 0, 0.12);
+    }
+
+    #game-over.visible {
+      display: block;
+      pointer-events: auto;
+    }
+
+    #game-over h2 {
+      margin-bottom: 16px;
+      color: #1a1a2e;
+      font-size: 30px;
+    }
+
+    #game-over p {
+      margin-bottom: 8px;
+      color: #555;
+      font-size: 18px;
+    }
+
+    #game-over .restart-btn {
+      margin-top: 24px;
+      padding: 14px 36px;
+      font-size: 18px;
+      font-weight: bold;
+      color: white;
+      background: #e91e63;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      font-family: Arial, sans-serif;
+      transition: background 0.2s;
+    }
+
+    #game-over .restart-btn:hover {
+      background: #c2185b;
+    }
+
+  </style>
+  <script type="module" crossorigin src="/assets/index-DycWJ8E2.js"></script>
+</head>
+<body>
+  <div id="game-container">
+    <canvas id="canvas"></canvas>
+    <div id="ui-overlay">
+      <div id="start-screen">
+        <p>Toque para jogar</p>
+        <span class="arrow">↓</span>
+      </div>
+      <div id="score">0</div>
+      <div id="idle-hint">← Arraste →</div>
+      <div id="combo">2x combo!</div>
+      <div id="points-popup">+100!</div>
+      <div id="game-over">
+        <h2>Game Over</h2>
+        <p>Score: <span id="final-score">0</span></p>
+        <p>Recorde: <span id="record">0</span></p>
+        <button class="restart-btn">Jogar Novamente</button>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
