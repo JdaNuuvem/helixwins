@@ -19,7 +19,8 @@ const JWT_SECRET = process.env.JWT_SECRET || 'clone_demo_secret_key_2026';
 const JWT_EXPIRY = '7d';
 const SALT_ROUNDS = 10;
 const STATIC_DIR = __dirname;
-const DB_FILE = path.join(__dirname, 'database.json');
+const DATA_DIR = process.env.DATA_DIR || __dirname;
+const DB_FILE = path.join(DATA_DIR, 'database.json');
 
 // ─── AmploPay Gateway Config ────────────────────────────────────────────────
 const AMPLOPAY_BASE_URL = 'https://app.amplopay.com/api/v1';
