@@ -620,13 +620,9 @@ app.post('/api/financeiro/deposito', authMiddleware, async (req, res) => {
         name: user.nome,
         email: user.email,
         phone: user.telefone,
-        document: user.cpf || '',
+        document: user.cpf || '00000000000',
       },
       callbackUrl: `${WEBHOOK_BASE_URL}/api/webhooks/amplopay`,
-      metadata: {
-        user_id: req.userId,
-        tipo: 'deposito',
-      },
     };
 
     const amplopayRes = await axios.post(
@@ -730,18 +726,18 @@ app.get('/api/financeiro/deposito/status/:txid', authMiddleware, async (req, res
 });
 
 // ── Webhook AmploPay (confirmação de pagamento) ──────────────────────────────
+// Payload da AmploPay: { event, token, client, transaction: { id, status, paymentMethod, amount, ... }, ... }
+// Eventos: TRANSACTION_CREATED, TRANSACTION_PAID, TRANSACTION_CANCELED, TRANSACTION_REFUNDED
+// O token é gerado pela AmploPay ao configurar o webhook no painel deles.
 app.post('/api/webhooks/amplopay', (req, res) => {
   try {
     const { event, token, transaction } = req.body;
 
-    // SEGURANÇA: Webhook token é OBRIGATÓRIO em produção
-    const currentWebhookToken = process.env.AMPLOPAY_WEBHOOK_TOKEN || AMPLOPAY_WEBHOOK_TOKEN;
-    if (!currentWebhookToken) {
-      console.error('[WEBHOOK] AMPLOPAY_WEBHOOK_TOKEN não configurado! Rejeitando webhook.');
-      return res.status(500).json({ error: 'Webhook não configurado.' });
-    }
+    console.log(`[WEBHOOK] Recebido: event=${event} token=${token ? token.slice(0, 8) + '...' : 'none'} tx=${transaction?.id}`);
 
-    if (token !== currentWebhookToken) {
+    // Validar token se configurado
+    const currentWebhookToken = process.env.AMPLOPAY_WEBHOOK_TOKEN || AMPLOPAY_WEBHOOK_TOKEN;
+    if (currentWebhookToken && token !== currentWebhookToken) {
       console.warn('[WEBHOOK] Token inválido recebido');
       return res.status(401).json({ error: 'Token inválido.' });
     }
@@ -761,49 +757,60 @@ app.post('/api/webhooks/amplopay', (req, res) => {
       return res.status(200).json({ ok: true });
     }
 
-    console.log(`[WEBHOOK] Evento: ${event} | TX: ${transaction.id} | Status: ${transaction?.status}`);
+    console.log(`[WEBHOOK] Evento: ${event} | TX: ${transaction.id} | Status: ${transaction?.status} | Amount: ${transaction?.amount}`);
 
-    // Buscar transação local pelo ID do gateway (somente gateway_tx_id, não identifier)
+    // Buscar transação local pelo ID do gateway
     const tx = db.transacoes.find(t => t.gateway_tx_id === transaction.id);
 
     if (!tx) {
-      console.warn(`[WEBHOOK] Transação não encontrada: ${transaction.id}`);
-      return res.status(200).json({ ok: true });
+      // Tentar buscar pelo clientIdentifier (nosso identifier)
+      const txByIdentifier = db.transacoes.find(t => t.gateway_identifier === transaction.clientIdentifier);
+      if (!txByIdentifier) {
+        console.warn(`[WEBHOOK] Transação não encontrada: id=${transaction.id}`);
+        return res.status(200).json({ ok: true });
+      }
+      // Atualizar o gateway_tx_id se encontrado por identifier
+      txByIdentifier.gateway_tx_id = transaction.id;
+      return processWebhookEvent(event, txByIdentifier, res);
     }
 
-    if (event === 'TRANSACTION_PAID' && tx.status === 'pendente') {
-      const user = findUser(tx.user_id);
-      if (user) {
-        user.saldo = money(user.saldo + tx.valor);
-        user.updated_at = new Date().toISOString();
-        tx.status = 'aprovado';
-        tx.saldo_depois = user.saldo;
-        saveDb(db);
-        console.log(`[WEBHOOK] Depósito creditado: user=${tx.user_id} valor=${tx.valor} saldo=${user.saldo}`);
-      }
-    } else if (event === 'TRANSACTION_CANCELED' || event === 'TRANSACTION_REFUNDED') {
-      if (tx.status === 'aprovado') {
-        const user = findUser(tx.user_id);
-        if (user) {
-          user.saldo = money(user.saldo - tx.valor);
-          user.updated_at = new Date().toISOString();
-          tx.status = 'rejeitado';
-          tx.saldo_depois = user.saldo;
-          saveDb(db);
-          console.log(`[WEBHOOK] Depósito estornado: user=${tx.user_id} valor=${tx.valor}`);
-        }
-      } else {
-        tx.status = 'rejeitado';
-        saveDb(db);
-      }
-    }
-
-    res.status(200).json({ ok: true });
+    processWebhookEvent(event, tx, res);
   } catch (err) {
     console.error('[WEBHOOK ERROR]', err);
     res.status(200).json({ ok: true });
   }
 });
+
+function processWebhookEvent(event, tx, res) {
+  if (event === 'TRANSACTION_PAID' && tx.status === 'pendente') {
+    const user = findUser(tx.user_id);
+    if (user) {
+      user.saldo = money(user.saldo + tx.valor);
+      user.updated_at = new Date().toISOString();
+      tx.status = 'aprovado';
+      tx.saldo_depois = user.saldo;
+      saveDb(db);
+      console.log(`[WEBHOOK] Depósito creditado: user=${tx.user_id} valor=${tx.valor} saldo=${user.saldo}`);
+    }
+  } else if (event === 'TRANSACTION_CANCELED' || event === 'TRANSACTION_REFUNDED') {
+    if (tx.status === 'aprovado') {
+      const user = findUser(tx.user_id);
+      if (user) {
+        user.saldo = money(user.saldo - tx.valor);
+        user.updated_at = new Date().toISOString();
+        tx.status = 'rejeitado';
+        tx.saldo_depois = user.saldo;
+        saveDb(db);
+        console.log(`[WEBHOOK] Depósito estornado: user=${tx.user_id} valor=${tx.valor}`);
+      }
+    } else {
+      tx.status = 'rejeitado';
+      saveDb(db);
+    }
+  }
+
+  res.status(200).json({ ok: true });
+}
 
 app.post('/api/financeiro/saque', authMiddleware, (req, res) => {
   try {
@@ -1051,9 +1058,9 @@ app.use((err, _req, res, _next) => {
 // ═══ START ════════════════════════════════════════════════════════════════════
 app.listen(PORT, '0.0.0.0', () => {
   const warnings = [];
-  if (!AMPLOPAY_PUBLIC_KEY) warnings.push('AMPLOPAY_PUBLIC_KEY');
-  if (!AMPLOPAY_SECRET_KEY) warnings.push('AMPLOPAY_SECRET_KEY');
-  if (!AMPLOPAY_WEBHOOK_TOKEN) warnings.push('AMPLOPAY_WEBHOOK_TOKEN');
+  if (!AMPLOPAY_PUBLIC_KEY) warnings.push('AMPLOPAY_PUBLIC_KEY (configure via painel admin)');
+  if (!AMPLOPAY_SECRET_KEY) warnings.push('AMPLOPAY_SECRET_KEY (configure via painel admin)');
+  if (!AMPLOPAY_WEBHOOK_TOKEN) warnings.push('AMPLOPAY_WEBHOOK_TOKEN (opcional — configure no painel AmploPay)');
   if (JWT_SECRET === 'clone_demo_secret_key_2026') warnings.push('JWT_SECRET (usando padrão!)');
 
   console.log('');
