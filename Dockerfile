@@ -17,12 +17,12 @@ RUN echo '{}' > /dev/null
 
 # Variáveis de ambiente padrão
 ENV NODE_ENV=production
-ENV PORT=3000
+ENV PORT=8888
 
-EXPOSE 3000
+EXPOSE 8888
 
 # Health check para Coolify
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-  CMD wget -qO- http://localhost:3000/api/health || exit 1
+  CMD wget -qO- http://localhost:8888/api/health || exit 1
 
 CMD ["node", "server.js"]
