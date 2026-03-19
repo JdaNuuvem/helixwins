@@ -24,3 +24,4 @@ EXPOSE 8888
 HEALTHCHECK NONE
 
 CMD ["node", "server.js"]
+# force rebuild
