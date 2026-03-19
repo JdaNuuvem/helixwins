@@ -21,8 +21,6 @@ ENV PORT=8888
 
 EXPOSE 8888
 
-# Health check para Coolify
-HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-  CMD wget -qO- http://localhost:8888/api/health || exit 1
+HEALTHCHECK NONE
 
 CMD ["node", "server.js"]
