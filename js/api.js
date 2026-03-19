@@ -21,8 +21,8 @@ const API = (() => {
   function saveUser(u) {
     // Armazenar apenas dados não-sensíveis para UI
     if (u) {
-      const { id, nome, email, telefone, saldo, saldo_afiliado, chave_pix, codigo_indicacao, created_at } = u;
-      localStorage.setItem('hw_user', JSON.stringify({ id, nome, email, telefone, saldo, saldo_afiliado, chave_pix, codigo_indicacao, created_at }));
+      const { id, nome, email, telefone, saldo, saldo_afiliado, chave_pix, codigo_indicacao, created_at, admin } = u;
+      localStorage.setItem('hw_user', JSON.stringify({ id, nome, email, telefone, saldo, saldo_afiliado, chave_pix, codigo_indicacao, created_at, admin: !!admin }));
     }
   }
   function getUser() {
@@ -136,6 +136,14 @@ const API = (() => {
     return request('GET', '/user/suporte');
   }
 
+  // ── Admin ──────────────────────────────────────────────────────────────
+  async function getGatewayConfig() {
+    return request('GET', '/admin/gateway-config');
+  }
+  async function updateGatewayConfig(config) {
+    return request('PUT', '/admin/gateway-config', config);
+  }
+
   // ── Cupons ───────────────────────────────────────────────────────────────
   async function validarCupom(codigo) {
     return request('POST', '/cupons/validar', { codigo });
@@ -151,6 +159,7 @@ const API = (() => {
     gameConfigs, iniciarPartida, finalizarPartida, abandonarPartida,
     deposito, depositoStatus, saque, saqueAfiliado, historico, meusSaques,
     indicacaoInfo, suporteLinks,
+    getGatewayConfig, updateGatewayConfig,
     validarCupom, resgatarCupom,
   };
 })();

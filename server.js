@@ -107,7 +107,7 @@ function generateReferralCode() {
 }
 
 function safeUser(user) {
-  const { senha_hash, admin, cpf, ...safe } = user;
+  const { senha_hash, cpf, ...safe } = user;
   return safe;
 }
 
@@ -334,8 +334,8 @@ app.post('/api/auth/register', (req, res) => {
 app.get('/api/auth/me', authMiddleware, (req, res) => {
   const user = findUser(req.userId);
   if (!user) return res.status(404).json({ error: 'Usuário não encontrado.' });
-  const { id, nome, email, telefone, saldo, chave_pix, codigo_indicacao, created_at } = user;
-  res.json({ user: { id, nome, email, telefone, saldo, chave_pix, codigo_indicacao, created_at } });
+  const { id, nome, email, telefone, saldo, chave_pix, codigo_indicacao, created_at, admin } = user;
+  res.json({ user: { id, nome, email, telefone, saldo, chave_pix, codigo_indicacao, created_at, admin: !!admin } });
 });
 
 app.post('/api/auth/logout', (_req, res) => {
@@ -734,12 +734,13 @@ app.post('/api/webhooks/amplopay', (req, res) => {
     const { event, token, transaction } = req.body;
 
     // SEGURANÇA: Webhook token é OBRIGATÓRIO em produção
-    if (!AMPLOPAY_WEBHOOK_TOKEN) {
+    const currentWebhookToken = process.env.AMPLOPAY_WEBHOOK_TOKEN || AMPLOPAY_WEBHOOK_TOKEN;
+    if (!currentWebhookToken) {
       console.error('[WEBHOOK] AMPLOPAY_WEBHOOK_TOKEN não configurado! Rejeitando webhook.');
       return res.status(500).json({ error: 'Webhook não configurado.' });
     }
 
-    if (token !== AMPLOPAY_WEBHOOK_TOKEN) {
+    if (token !== currentWebhookToken) {
       console.warn('[WEBHOOK] Token inválido recebido');
       return res.status(401).json({ error: 'Token inválido.' });
     }
@@ -936,6 +937,77 @@ app.get('/api/admin/saques-pendentes', authMiddleware, adminMiddleware, (_req, r
       return { ...t, user_nome: user?.nome, user_email: user?.email };
     });
   res.json({ saques: pendentes });
+});
+
+// ── Configurações do Gateway (admin) ─────────────────────────────────────
+app.get('/api/admin/gateway-config', authMiddleware, adminMiddleware, (_req, res) => {
+  // Retorna credenciais mascaradas (só mostra últimos 4 chars)
+  function mask(val) {
+    if (!val) return '';
+    if (val.length <= 4) return '****';
+    return '•'.repeat(val.length - 4) + val.slice(-4);
+  }
+  const pk = process.env.AMPLOPAY_PUBLIC_KEY || AMPLOPAY_PUBLIC_KEY;
+  const sk = process.env.AMPLOPAY_SECRET_KEY || AMPLOPAY_SECRET_KEY;
+  const wt = process.env.AMPLOPAY_WEBHOOK_TOKEN || AMPLOPAY_WEBHOOK_TOKEN;
+  res.json({
+    public_key: mask(pk),
+    secret_key: mask(sk),
+    webhook_token: mask(wt),
+    webhook_url: `${WEBHOOK_BASE_URL}/api/webhooks/amplopay`,
+    has_public_key: !!pk,
+    has_secret_key: !!sk,
+    has_webhook_token: !!wt,
+  });
+});
+
+app.put('/api/admin/gateway-config', authMiddleware, adminMiddleware, (req, res) => {
+  const { public_key, secret_key, webhook_token } = req.body;
+
+  // Atualiza variáveis em memória
+  let updated = [];
+  if (public_key && typeof public_key === 'string' && public_key.trim()) {
+    const val = public_key.trim();
+    process.env.AMPLOPAY_PUBLIC_KEY = val;
+    amplopayHeaders['x-public-key'] = val;
+    updated.push('public_key');
+  }
+  if (secret_key && typeof secret_key === 'string' && secret_key.trim()) {
+    const val = secret_key.trim();
+    process.env.AMPLOPAY_SECRET_KEY = val;
+    amplopayHeaders['x-secret-key'] = val;
+    updated.push('secret_key');
+  }
+  if (webhook_token && typeof webhook_token === 'string' && webhook_token.trim()) {
+    process.env.AMPLOPAY_WEBHOOK_TOKEN = webhook_token.trim();
+    updated.push('webhook_token');
+  }
+
+  // Persiste no arquivo .env se existir
+  const envPath = path.join(__dirname, '.env');
+  try {
+    let envContent = fs.existsSync(envPath) ? fs.readFileSync(envPath, 'utf-8') : '';
+    const envVars = {
+      AMPLOPAY_PUBLIC_KEY: process.env.AMPLOPAY_PUBLIC_KEY,
+      AMPLOPAY_SECRET_KEY: process.env.AMPLOPAY_SECRET_KEY,
+      AMPLOPAY_WEBHOOK_TOKEN: process.env.AMPLOPAY_WEBHOOK_TOKEN,
+    };
+    for (const [key, value] of Object.entries(envVars)) {
+      if (!value) continue;
+      const regex = new RegExp(`^${key}=.*$`, 'm');
+      if (regex.test(envContent)) {
+        envContent = envContent.replace(regex, `${key}=${value}`);
+      } else {
+        envContent += `${envContent.endsWith('\n') || !envContent ? '' : '\n'}${key}=${value}\n`;
+      }
+    }
+    fs.writeFileSync(envPath, envContent, 'utf-8');
+  } catch (err) {
+    console.warn('[ADMIN] Não foi possível salvar .env:', err.message);
+  }
+
+  console.log(`[ADMIN] Gateway config atualizada por user=${req.userId}: ${updated.join(', ')}`);
+  res.json({ ok: true, updated });
 });
 
 // ═══ INDICAÇÃO ════════════════════════════════════════════════════════════════

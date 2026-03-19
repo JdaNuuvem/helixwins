@@ -73,6 +73,13 @@ function renderPainel(el) {
                   <span class="ppd-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></span>
                   <span>Suporte</span>
                 </button>
+                ${user.admin ? `
+                <div class="ppd-divider"></div>
+                <button class="ppd-item" id="ppd-btn-gateway">
+                  <span class="ppd-icon" style="color:#f59e0b"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span>
+                  <span>Gateway de Pagamento</span>
+                </button>
+                ` : ''}
                 <div class="ppd-divider"></div>
                 <button class="ppd-item ppd-item-danger" id="ppd-btn-sair">
                   <span class="ppd-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></span>
@@ -484,6 +491,103 @@ function renderPainel(el) {
       </div>
     </div>
 
+    <!-- ══ MODAL GATEWAY CONFIG (Admin) ════════════════════════════════ -->
+    ${user.admin ? `
+    <div class="pnl-modal-bg hidden" id="modal-gateway">
+      <div class="pnl-modal">
+        <div class="pnl-modal-header">
+          <span class="pnl-modal-title">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2" width="20" height="20"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+            Gateway AmploPay
+          </span>
+          <button class="pnl-modal-close" id="close-gateway">✕</button>
+        </div>
+
+        <!-- Status indicators -->
+        <div class="gw-status-row" id="gw-status-row">
+          <div class="gw-status-item" id="gw-st-pk">
+            <span class="gw-dot gw-dot-off"></span>
+            <span>Public Key</span>
+          </div>
+          <div class="gw-status-item" id="gw-st-sk">
+            <span class="gw-dot gw-dot-off"></span>
+            <span>Secret Key</span>
+          </div>
+          <div class="gw-status-item" id="gw-st-wt">
+            <span class="gw-dot gw-dot-off"></span>
+            <span>Webhook Token</span>
+          </div>
+        </div>
+
+        <!-- Webhook URL (readonly) -->
+        <div class="gw-field">
+          <label class="gw-label">Webhook URL (configure na AmploPay)</label>
+          <div class="gw-readonly-wrap">
+            <input id="gw-webhook-url" class="pnl-input-modal gw-readonly" readonly value="..." />
+            <button class="gw-copy-btn" id="gw-copy-url" title="Copiar">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+            </button>
+          </div>
+        </div>
+
+        <!-- Current values (masked) -->
+        <div class="gw-current" id="gw-current">
+          <div class="gw-current-title">Valores atuais (mascarados)</div>
+          <div class="gw-current-item"><span class="gw-current-lbl">Public Key:</span> <code id="gw-cur-pk">...</code></div>
+          <div class="gw-current-item"><span class="gw-current-lbl">Secret Key:</span> <code id="gw-cur-sk">...</code></div>
+          <div class="gw-current-item"><span class="gw-current-lbl">Webhook Token:</span> <code id="gw-cur-wt">...</code></div>
+        </div>
+
+        <div class="gw-divider"></div>
+
+        <div class="gw-section-title">Atualizar Credenciais</div>
+        <div class="gw-hint">Deixe em branco para manter o valor atual.</div>
+
+        <div class="gw-field">
+          <label class="gw-label">Public Key</label>
+          <div class="gw-input-wrap">
+            <input id="gw-public-key" class="pnl-input-modal" type="password" placeholder="pk_live_..." autocomplete="off" />
+            <button class="gw-toggle-eye" data-target="gw-public-key" title="Mostrar/ocultar">
+              <svg class="eye-show" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+              <svg class="eye-hide hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+            </button>
+          </div>
+        </div>
+
+        <div class="gw-field">
+          <label class="gw-label">Secret Key</label>
+          <div class="gw-input-wrap">
+            <input id="gw-secret-key" class="pnl-input-modal" type="password" placeholder="sk_live_..." autocomplete="off" />
+            <button class="gw-toggle-eye" data-target="gw-secret-key" title="Mostrar/ocultar">
+              <svg class="eye-show" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+              <svg class="eye-hide hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+            </button>
+          </div>
+        </div>
+
+        <div class="gw-field">
+          <label class="gw-label">Webhook Token</label>
+          <div class="gw-input-wrap">
+            <input id="gw-webhook-token" class="pnl-input-modal" type="password" placeholder="Token de validação do webhook" autocomplete="off" />
+            <button class="gw-toggle-eye" data-target="gw-webhook-token" title="Mostrar/ocultar">
+              <svg class="eye-show" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+              <svg class="eye-hide hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+            </button>
+          </div>
+        </div>
+
+        <button class="pnl-play-btn" id="gw-save-btn" style="margin-top:16px;background:linear-gradient(135deg,#f59e0b,#d97706)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="18" height="18"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+          Salvar Credenciais
+        </button>
+
+        <div class="pnl-info-box pnl-info-orange" style="margin-top:14px">
+          As credenciais ficam salvas no arquivo .env do servidor. Em produção, configure via variáveis de ambiente do Coolify.
+        </div>
+      </div>
+    </div>
+    ` : ''}
+
     <style>
       /* ── Root & layout ─────────────────────────────────────────── */
       .pnl-root {
@@ -714,6 +818,80 @@ function renderPainel(el) {
       .sup-link-url  { font-size: 11px; color: #9980aa; margin-top: 2px; }
       .sup-link-arrow { margin-left: auto; color: #c4a8d4; flex-shrink: 0; }
       .sup-empty { text-align:center; padding: 30px 0; color: #9980aa; font-size: 13px; }
+
+      /* ── Gateway Config Modal ──────────────────────────────────── */
+      .gw-status-row {
+        display: flex; gap: 10px; margin-bottom: 18px; flex-wrap: wrap;
+      }
+      .gw-status-item {
+        display: flex; align-items: center; gap: 6px;
+        padding: 6px 12px; border-radius: 50px;
+        background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.1);
+        font-size: 12px; font-weight: 600; color: rgba(255,255,255,.7);
+      }
+      .gw-dot {
+        width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+      }
+      .gw-dot-on  { background: #22c55e; box-shadow: 0 0 6px rgba(34,197,94,.5); }
+      .gw-dot-off { background: #ef4444; box-shadow: 0 0 6px rgba(239,68,68,.4); }
+      .gw-field { margin-bottom: 14px; }
+      .gw-label {
+        font-size: 12px; font-weight: 700; color: rgba(255,255,255,.6);
+        text-transform: uppercase; letter-spacing: .05em; margin-bottom: 6px; display: block;
+      }
+      .gw-readonly-wrap {
+        display: flex; gap: 6px; align-items: center;
+      }
+      .gw-readonly {
+        flex: 1; background: rgba(255,255,255,.04) !important;
+        color: rgba(255,255,255,.5) !important; cursor: default;
+        font-family: 'Courier New', monospace; font-size: 12px;
+      }
+      .gw-copy-btn {
+        flex-shrink: 0; background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.15);
+        border-radius: 8px; padding: 8px 10px; cursor: pointer; color: rgba(255,255,255,.7);
+        transition: background .15s, color .15s;
+      }
+      .gw-copy-btn:hover { background: rgba(255,255,255,.2); color: #fff; }
+      .gw-current {
+        background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.08);
+        border-radius: 12px; padding: 14px 16px; margin-bottom: 16px;
+      }
+      .gw-current-title {
+        font-size: 11px; font-weight: 700; color: rgba(255,255,255,.4);
+        text-transform: uppercase; letter-spacing: .08em; margin-bottom: 10px;
+      }
+      .gw-current-item {
+        font-size: 12px; color: rgba(255,255,255,.55); margin-bottom: 6px;
+        display: flex; align-items: center; gap: 8px;
+      }
+      .gw-current-item:last-child { margin-bottom: 0; }
+      .gw-current-lbl { font-weight: 600; color: rgba(255,255,255,.7); min-width: 100px; }
+      .gw-current-item code {
+        font-family: 'Courier New', monospace; font-size: 12px;
+        background: rgba(255,255,255,.06); padding: 2px 8px; border-radius: 4px;
+        letter-spacing: 1px;
+      }
+      .gw-divider { height: 1px; background: rgba(255,255,255,.08); margin: 16px 0; }
+      .gw-section-title {
+        font-size: 15px; font-weight: 700; color: #fff; margin-bottom: 4px;
+      }
+      .gw-hint {
+        font-size: 12px; color: rgba(255,255,255,.4); margin-bottom: 16px;
+      }
+      .gw-input-wrap {
+        position: relative; display: flex; align-items: center;
+      }
+      .gw-input-wrap .pnl-input-modal {
+        flex: 1; padding-right: 40px;
+      }
+      .gw-toggle-eye {
+        position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+        background: none; border: none; cursor: pointer; padding: 4px;
+        color: rgba(255,255,255,.5); transition: color .15s;
+      }
+      .gw-toggle-eye:hover { color: rgba(255,255,255,.8); }
+      .gw-toggle-eye .hidden { display: none; }
 
       /* ── Scroll area ───────────────────────────────────────────── */
       .pnl-scroll { flex: 1; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; padding-bottom: 56px; background: transparent; }
@@ -1450,6 +1628,101 @@ function renderPainel(el) {
     } catch {
       loading.style.display = 'none';
       wrap.innerHTML = '<div class="sup-empty">Erro ao carregar links de suporte.</div>';
+    }
+  }
+
+  // ── Gateway Config (Admin) ─────────────────────────────────────────────
+  if (user.admin && document.getElementById('ppd-btn-gateway')) {
+    document.getElementById('ppd-btn-gateway').addEventListener('click', () => {
+      closeProfileDrop();
+      openModal('modal-gateway');
+      _carregarGatewayConfig();
+    });
+
+    document.getElementById('close-gateway').addEventListener('click', () => closeModal('modal-gateway'));
+    document.getElementById('modal-gateway').addEventListener('click', e => {
+      if (e.target.id === 'modal-gateway') closeModal('modal-gateway');
+    });
+
+    // Toggle eye buttons
+    document.querySelectorAll('.gw-toggle-eye').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const target = document.getElementById(btn.dataset.target);
+        const isPass = target.type === 'password';
+        target.type = isPass ? 'text' : 'password';
+        btn.querySelector('.eye-show').classList.toggle('hidden', !isPass);
+        btn.querySelector('.eye-hide').classList.toggle('hidden', isPass);
+      });
+    });
+
+    // Copy webhook URL
+    document.getElementById('gw-copy-url').addEventListener('click', () => {
+      const url = document.getElementById('gw-webhook-url').value;
+      copyToClipboard(url);
+    });
+
+    // Save
+    document.getElementById('gw-save-btn').addEventListener('click', async () => {
+      const pk = document.getElementById('gw-public-key').value.trim();
+      const sk = document.getElementById('gw-secret-key').value.trim();
+      const wt = document.getElementById('gw-webhook-token').value.trim();
+
+      if (!pk && !sk && !wt) {
+        showToast('Preencha pelo menos um campo para atualizar.', 'warning');
+        return;
+      }
+
+      const btn = document.getElementById('gw-save-btn');
+      btn.disabled = true;
+      try {
+        const payload = {};
+        if (pk) payload.public_key = pk;
+        if (sk) payload.secret_key = sk;
+        if (wt) payload.webhook_token = wt;
+        await API.updateGatewayConfig(payload);
+        showToast('Credenciais atualizadas com sucesso!', 'success');
+        // Limpa inputs
+        document.getElementById('gw-public-key').value = '';
+        document.getElementById('gw-secret-key').value = '';
+        document.getElementById('gw-webhook-token').value = '';
+        // Recarrega status
+        _carregarGatewayConfig();
+      } catch (err) {
+        showToast(err.message || 'Erro ao salvar.', 'error');
+      } finally {
+        btn.disabled = false;
+      }
+    });
+
+    async function _carregarGatewayConfig() {
+      try {
+        const data = await API.getGatewayConfig();
+
+        // Status dots
+        _setGwDot('gw-st-pk', data.has_public_key);
+        _setGwDot('gw-st-sk', data.has_secret_key);
+        _setGwDot('gw-st-wt', data.has_webhook_token);
+
+        // Webhook URL
+        document.getElementById('gw-webhook-url').value = data.webhook_url || '';
+
+        // Masked values
+        document.getElementById('gw-cur-pk').textContent = data.public_key || '(vazio)';
+        document.getElementById('gw-cur-sk').textContent = data.secret_key || '(vazio)';
+        document.getElementById('gw-cur-wt').textContent = data.webhook_token || '(vazio)';
+      } catch (err) {
+        showToast('Erro ao carregar configuração do gateway.', 'error');
+      }
+    }
+
+    function _setGwDot(itemId, active) {
+      const item = document.getElementById(itemId);
+      if (!item) return;
+      const dot = item.querySelector('.gw-dot');
+      if (dot) {
+        dot.classList.toggle('gw-dot-on', active);
+        dot.classList.toggle('gw-dot-off', !active);
+      }
     }
   }
 
