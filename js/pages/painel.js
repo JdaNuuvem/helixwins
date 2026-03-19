@@ -248,9 +248,13 @@ function renderPainel(el) {
             <button class="pnl-quick" data-dep="50">R$50</button>
             <button class="pnl-quick" data-dep="100">R$100</button>
           </div>
-          <div class="pnl-input-wrap" style="margin-bottom:16px">
+          <div class="pnl-input-wrap" style="margin-bottom:14px">
             <span class="pnl-input-prefix">R$</span>
             <input id="dep-valor" class="pnl-input" type="number" placeholder="Mínimo R$10,00" min="10" step="1" inputmode="decimal" data-min="10" data-max="0" />
+          </div>
+          <div class="pnl-input-wrap" style="margin-bottom:16px;background:#f8f8f8" id="dep-cpf-wrap">
+            <span class="pnl-input-prefix" style="font-size:11px;white-space:nowrap">CPF</span>
+            <input id="dep-cpf" class="pnl-input" type="text" placeholder="000.000.000-00" maxlength="14" inputmode="numeric" style="background:transparent" />
           </div>
           <!-- Card de bônus — só aparece quando bônus está ativo -->
           <div id="dep-bonus-card" class="hidden" style="background:linear-gradient(135deg,#1a7a3a,#22a850);border-radius:12px;padding:14px 16px;margin-bottom:16px;color:#fff">
@@ -1820,6 +1824,17 @@ function renderPainel(el) {
     const _btn = document.getElementById('dep-cupom-btn');
     _btn.disabled = false; _btn.textContent = 'Aplicar'; _btn.style.background = '#2d6a4f';
     window._cupomAplicado = null;
+    // CPF: preenche se já tem e esconde o campo
+    const _u = API.getUser();
+    const depCpfEl = document.getElementById('dep-cpf');
+    const depCpfWrap = document.getElementById('dep-cpf-wrap');
+    if (_u?.cpf && _u.cpf.length >= 11) {
+      depCpfEl.value = _u.cpf;
+      depCpfWrap.style.display = 'none';
+    } else {
+      depCpfEl.value = '';
+      depCpfWrap.style.display = '';
+    }
     openModal('modal-deposito');
 
     // Busca config de bônus + limites em segundo plano
@@ -1882,6 +1897,15 @@ function renderPainel(el) {
 
   // CPF é obtido do cadastro do usuário (enviado pelo backend para a AmploPay)
 
+  // Máscara de CPF no depósito
+  document.getElementById('dep-cpf').addEventListener('input', function() {
+    let v = this.value.replace(/\D/g, '').slice(0, 11);
+    if (v.length > 9) v = v.replace(/(\d{3})(\d{3})(\d{3})(\d{1,2})/, '$1.$2.$3-$4');
+    else if (v.length > 6) v = v.replace(/(\d{3})(\d{3})(\d{1,3})/, '$1.$2.$3');
+    else if (v.length > 3) v = v.replace(/(\d{3})(\d{1,3})/, '$1.$2');
+    this.value = v;
+  });
+
   document.getElementById('dep-confirmar').addEventListener('click', async () => {
     const depEl  = document.getElementById('dep-valor');
     const v      = parseFloat(depEl.value);
@@ -1889,6 +1913,14 @@ function renderPainel(el) {
     const depMax = parseFloat(depEl.dataset.max) || 0;
     if (!v || v < depMin) { showToast(`Valor mínimo: ${formatMoney(depMin)}`, 'warning'); return; }
     if (depMax > 0 && v > depMax) { showToast(`Valor máximo: ${formatMoney(depMax)}`, 'warning'); return; }
+
+    // Validar CPF
+    const cpfRaw = document.getElementById('dep-cpf').value.replace(/\D/g, '');
+    const u = API.getUser();
+    if (!u?.cpf && cpfRaw.length !== 11) {
+      showToast('Informe um CPF válido (11 dígitos).', 'warning');
+      return;
+    }
 
     const btn = document.getElementById('dep-confirmar');
     btn.disabled = true;
@@ -1900,7 +1932,7 @@ function renderPainel(el) {
     document.getElementById('dep-content').classList.add('hidden');
 
     try {
-      const data = await API.deposito(v);
+      const data = await API.deposito(v, cpfRaw || undefined);
 
       // Esconde spinner, mostra conteúdo
       document.getElementById('dep-loading').classList.add('hidden');

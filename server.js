@@ -610,6 +610,18 @@ app.post('/api/financeiro/deposito', authMiddleware, async (req, res) => {
 
     const user = findUser(req.userId);
     if (!user) return res.status(404).json({ error: 'Usuário não encontrado.' });
+
+    // CPF pode vir na request do depósito (frontend pede na hora)
+    const cpfEnviado = req.body.cpf ? String(req.body.cpf).replace(/\D/g, '') : null;
+    if (cpfEnviado && cpfEnviado.length === 11) {
+      user.cpf = cpfEnviado;
+      user.updated_at = new Date().toISOString();
+      saveDb(db);
+    }
+    if (!user.cpf || user.cpf.length !== 11) {
+      return res.status(400).json({ error: 'Informe um CPF válido para realizar o depósito.' });
+    }
+
     const identifier = `DEP_${req.userId}_${Date.now()}`;
 
     // Criar cobrança PIX na AmploPay
@@ -620,7 +632,7 @@ app.post('/api/financeiro/deposito', authMiddleware, async (req, res) => {
         name: user.nome,
         email: user.email,
         phone: user.telefone,
-        document: user.cpf || '00000000000',
+        document: user.cpf || '',
       },
       callbackUrl: `${WEBHOOK_BASE_URL}/api/webhooks/amplopay`,
     };

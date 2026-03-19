@@ -107,8 +107,10 @@ const API = (() => {
   async function depositoInfo() {
     return request('GET', '/user/deposito-info');
   }
-  async function deposito(valor) {
-    return request('POST', '/financeiro/deposito', { valor });
+  async function deposito(valor, cpf) {
+    const body = { valor };
+    if (cpf) body.cpf = cpf;
+    return request('POST', '/financeiro/deposito', body);
   }
   async function depositoStatus(txid) {
     return request('GET', `/financeiro/deposito/status/${encodeURIComponent(txid)}`);
