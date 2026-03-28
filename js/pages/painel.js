@@ -364,6 +364,32 @@ function renderPainel(el) {
       </div>
     </div>
 
+    <!-- ══ MODAL DESBLOQUEIO DE SAQUE (Upsell) ═══════════════════════════ -->
+    <div class="pnl-modal-bg hidden" id="modal-desbloqueio">
+      <div class="pnl-modal" style="text-align:center">
+        <div class="pnl-modal-header">
+          <span class="pnl-modal-title" style="color:#f59e0b">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2" width="20" height="20"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            Desbloqueio de Saque
+          </span>
+          <button class="pnl-modal-close" id="close-desbloqueio">✕</button>
+        </div>
+        <div style="padding:8px 0 16px">
+          <div style="font-size:48px;margin-bottom:12px">🔒</div>
+          <div style="font-size:15px;color:#e2e8f0;line-height:1.6;margin-bottom:16px">
+            Para desbloquear seu saque, deposite <strong style="color:#10b981">R$ 20,00</strong> a partir da conta que vai receber o saque final.
+          </div>
+          <div class="pnl-info-box pnl-info-orange" style="text-align:left;margin-bottom:16px">
+            Esse deposito sera adicionado ao seu saldo normalmente. Apos a confirmacao, seu saque sera liberado automaticamente.
+          </div>
+          <button class="pnl-play-btn" id="desbl-depositar-btn" style="background:linear-gradient(135deg,#10b981,#059669);font-size:16px;padding:14px 24px">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="18" height="18"><path d="M12 5v14M5 12l7 7 7-7"/></svg>
+            Depositar R$ 20,00 para Desbloquear
+          </button>
+        </div>
+      </div>
+    </div>
+
     <!-- ══ MODAL SAQUE AFILIADO ════════════════════════════════════════════ -->
     <div class="pnl-modal-bg hidden" id="modal-saque-afiliado">
       <div class="pnl-modal">
@@ -495,98 +521,91 @@ function renderPainel(el) {
       </div>
     </div>
 
-    <!-- ══ MODAL GATEWAY CONFIG (Admin) ════════════════════════════════ -->
+    <!-- ══ MODAL GATEWAY CONFIG (Admin) — Multi-Gateway ═════════════════ -->
     ${user.admin ? `
     <div class="pnl-modal-bg hidden" id="modal-gateway">
-      <div class="pnl-modal">
+      <div class="pnl-modal" style="max-width:480px">
         <div class="pnl-modal-header">
           <span class="pnl-modal-title">
             <svg viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2" width="20" height="20"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-            Gateway AmploPay
+            Multi-Gateway
           </span>
           <button class="pnl-modal-close" id="close-gateway">✕</button>
         </div>
 
-        <!-- Status indicators -->
-        <div class="gw-status-row" id="gw-status-row">
-          <div class="gw-status-item" id="gw-st-pk">
-            <span class="gw-dot gw-dot-off"></span>
-            <span>Public Key</span>
-          </div>
-          <div class="gw-status-item" id="gw-st-sk">
-            <span class="gw-dot gw-dot-off"></span>
-            <span>Secret Key</span>
-          </div>
-          <div class="gw-status-item" id="gw-st-wt">
-            <span class="gw-dot gw-dot-off"></span>
-            <span>Webhook Token</span>
-          </div>
+        <!-- Gateway Selector -->
+        <div class="gw-section-title" style="margin-bottom:8px">Gateway Ativo</div>
+        <div class="gw-selector" style="display:flex;gap:8px;margin-bottom:16px">
+          <button class="gw-sel-btn" data-gw="amplopay" id="gw-sel-amplopay" style="flex:1;padding:10px 12px;border-radius:10px;border:2px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.05);color:#fff;cursor:pointer;font-size:13px;font-weight:600;transition:all .2s">
+            AmploPay
+          </button>
+          <button class="gw-sel-btn" data-gw="paradisepags" id="gw-sel-paradisepags" style="flex:1;padding:10px 12px;border-radius:10px;border:2px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.05);color:#fff;cursor:pointer;font-size:13px;font-weight:600;transition:all .2s">
+            ParadisePags
+          </button>
         </div>
 
-        <!-- Webhook URL (readonly) -->
-        <div class="gw-field">
-          <label class="gw-label">Webhook URL (configure na AmploPay)</label>
-          <div class="gw-readonly-wrap">
-            <input id="gw-webhook-url" class="pnl-input-modal gw-readonly" readonly value="..." />
-            <button class="gw-copy-btn" id="gw-copy-url" title="Copiar">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-            </button>
+        <!-- ── AmploPay Config Panel ── -->
+        <div id="gw-panel-amplopay" class="gw-panel">
+          <div class="gw-status-row" id="gw-status-row-amp">
+            <div class="gw-status-item" id="gw-st-amp-pk"><span class="gw-dot gw-dot-off"></span><span>Public Key</span></div>
+            <div class="gw-status-item" id="gw-st-amp-sk"><span class="gw-dot gw-dot-off"></span><span>Secret Key</span></div>
+            <div class="gw-status-item" id="gw-st-amp-wt"><span class="gw-dot gw-dot-off"></span><span>Webhook</span></div>
           </div>
-        </div>
-
-        <!-- Current values (masked) -->
-        <div class="gw-current" id="gw-current">
-          <div class="gw-current-title">Valores atuais (mascarados)</div>
-          <div class="gw-current-item"><span class="gw-current-lbl">Public Key:</span> <code id="gw-cur-pk">...</code></div>
-          <div class="gw-current-item"><span class="gw-current-lbl">Secret Key:</span> <code id="gw-cur-sk">...</code></div>
-          <div class="gw-current-item"><span class="gw-current-lbl">Webhook Token:</span> <code id="gw-cur-wt">...</code></div>
-        </div>
-
-        <div class="gw-divider"></div>
-
-        <div class="gw-section-title">Atualizar Credenciais</div>
-        <div class="gw-hint">Deixe em branco para manter o valor atual.</div>
-
-        <div class="gw-field">
-          <label class="gw-label">Public Key</label>
-          <div class="gw-input-wrap">
-            <input id="gw-public-key" class="pnl-input-modal" type="password" placeholder="Sua public key da AmploPay" autocomplete="off" />
-            <button class="gw-toggle-eye" data-target="gw-public-key" title="Mostrar/ocultar">
-              <svg class="eye-show" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-              <svg class="eye-hide hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
-            </button>
+          <div class="gw-field">
+            <label class="gw-label">Webhook URL (configure na AmploPay)</label>
+            <div class="gw-readonly-wrap">
+              <input id="gw-amp-webhook-url" class="pnl-input-modal gw-readonly" readonly value="..." />
+              <button class="gw-copy-btn" data-copy="gw-amp-webhook-url" title="Copiar">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+              </button>
+            </div>
           </div>
-        </div>
-
-        <div class="gw-field">
-          <label class="gw-label">Secret Key</label>
-          <div class="gw-input-wrap">
-            <input id="gw-secret-key" class="pnl-input-modal" type="password" placeholder="Sua secret key da AmploPay" autocomplete="off" />
-            <button class="gw-toggle-eye" data-target="gw-secret-key" title="Mostrar/ocultar">
-              <svg class="eye-show" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-              <svg class="eye-hide hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
-            </button>
+          <div class="gw-current">
+            <div class="gw-current-item"><span class="gw-current-lbl">Public Key:</span> <code id="gw-amp-cur-pk">...</code></div>
+            <div class="gw-current-item"><span class="gw-current-lbl">Secret Key:</span> <code id="gw-amp-cur-sk">...</code></div>
+            <div class="gw-current-item"><span class="gw-current-lbl">Webhook Token:</span> <code id="gw-amp-cur-wt">...</code></div>
           </div>
+          <div class="gw-divider"></div>
+          <div class="gw-hint">Deixe em branco para manter o valor atual.</div>
+          <div class="gw-field"><label class="gw-label">Public Key</label><input id="gw-amp-pk" class="pnl-input-modal" type="password" placeholder="Public key da AmploPay" autocomplete="off" /></div>
+          <div class="gw-field"><label class="gw-label">Secret Key</label><input id="gw-amp-sk" class="pnl-input-modal" type="password" placeholder="Secret key da AmploPay" autocomplete="off" /></div>
+          <div class="gw-field"><label class="gw-label">Webhook Token</label><input id="gw-amp-wt" class="pnl-input-modal" type="password" placeholder="Token de validacao do webhook" autocomplete="off" /></div>
+          <button class="pnl-play-btn gw-save-cred" data-gw="amplopay" style="margin-top:12px;background:linear-gradient(135deg,#f59e0b,#d97706)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="18" height="18"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+            Salvar AmploPay
+          </button>
         </div>
 
-        <div class="gw-field">
-          <label class="gw-label">Webhook Token</label>
-          <div class="gw-input-wrap">
-            <input id="gw-webhook-token" class="pnl-input-modal" type="password" placeholder="Token de validação do webhook" autocomplete="off" />
-            <button class="gw-toggle-eye" data-target="gw-webhook-token" title="Mostrar/ocultar">
-              <svg class="eye-show" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-              <svg class="eye-hide hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
-            </button>
+        <!-- ── ParadisePags Config Panel ── -->
+        <div id="gw-panel-paradisepags" class="gw-panel" style="display:none">
+          <div class="gw-status-row" id="gw-status-row-par">
+            <div class="gw-status-item" id="gw-st-par-sk"><span class="gw-dot gw-dot-off"></span><span>Secret Key (X-API-Key)</span></div>
           </div>
+          <div class="gw-field">
+            <label class="gw-label">Webhook URL (configure no painel ParadisePags)</label>
+            <div class="gw-readonly-wrap">
+              <input id="gw-par-webhook-url" class="pnl-input-modal gw-readonly" readonly value="..." />
+              <button class="gw-copy-btn" data-copy="gw-par-webhook-url" title="Copiar">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+              </button>
+            </div>
+          </div>
+          <div class="gw-current">
+            <div class="gw-current-item"><span class="gw-current-lbl">Secret Key:</span> <code id="gw-par-cur-sk">...</code></div>
+            <div class="gw-current-item"><span class="gw-current-lbl">Base URL:</span> <code id="gw-par-cur-url">...</code></div>
+          </div>
+          <div class="gw-divider"></div>
+          <div class="gw-hint">Deixe em branco para manter o valor atual.</div>
+          <div class="gw-field"><label class="gw-label">Secret Key (X-API-Key)</label><input id="gw-par-sk" class="pnl-input-modal" type="password" placeholder="sk_sua_chave_secreta" autocomplete="off" /></div>
+          <div class="gw-field"><label class="gw-label">Base URL</label><input id="gw-par-url" class="pnl-input-modal" type="text" placeholder="https://multi.paradisepags.com" autocomplete="off" /></div>
+          <button class="pnl-play-btn gw-save-cred" data-gw="paradisepags" style="margin-top:12px;background:linear-gradient(135deg,#8b5cf6,#7c3aed)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="18" height="18"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+            Salvar ParadisePags
+          </button>
         </div>
-
-        <button class="pnl-play-btn" id="gw-save-btn" style="margin-top:16px;background:linear-gradient(135deg,#f59e0b,#d97706)">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="18" height="18"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
-          Salvar Credenciais
-        </button>
 
         <div class="pnl-info-box pnl-info-orange" style="margin-top:14px">
-          As credenciais ficam salvas no arquivo .env do servidor. Em produção, configure via variáveis de ambiente do Coolify.
+          Selecione o gateway ativo acima. Configure as credenciais de cada gateway individualmente.
         </div>
       </div>
     </div>
@@ -1503,7 +1522,7 @@ function renderPainel(el) {
     document.getElementById(id).classList.add('hidden');
   }
 
-  ['modal-deposito','modal-dep-confirmado','modal-saque','modal-saque-afiliado','modal-indicacao','modal-perfil','modal-suporte'].forEach(id => {
+  ['modal-deposito','modal-dep-confirmado','modal-saque','modal-desbloqueio','modal-saque-afiliado','modal-indicacao','modal-perfil','modal-suporte'].forEach(id => {
     document.getElementById(id).addEventListener('click', e => {
       if (e.target.id === id) closeModal(id);
     });
@@ -1635,8 +1654,10 @@ function renderPainel(el) {
     }
   }
 
-  // ── Gateway Config (Admin) ─────────────────────────────────────────────
+  // ── Gateway Config (Admin) — Multi-Gateway ──────────────────────────────
   if (user.admin && document.getElementById('ppd-btn-gateway')) {
+    let _gwData = null;
+
     document.getElementById('ppd-btn-gateway').addEventListener('click', () => {
       closeProfileDrop();
       openModal('modal-gateway');
@@ -1648,74 +1669,109 @@ function renderPainel(el) {
       if (e.target.id === 'modal-gateway') closeModal('modal-gateway');
     });
 
-    // Toggle eye buttons
-    document.querySelectorAll('.gw-toggle-eye').forEach(btn => {
+    // Copy buttons
+    document.querySelectorAll('.gw-copy-btn').forEach(btn => {
       btn.addEventListener('click', () => {
-        const target = document.getElementById(btn.dataset.target);
-        const isPass = target.type === 'password';
-        target.type = isPass ? 'text' : 'password';
-        btn.querySelector('.eye-show').classList.toggle('hidden', !isPass);
-        btn.querySelector('.eye-hide').classList.toggle('hidden', isPass);
+        const input = document.getElementById(btn.dataset.copy);
+        if (input) copyToClipboard(input.value);
       });
     });
 
-    // Copy webhook URL
-    document.getElementById('gw-copy-url').addEventListener('click', () => {
-      const url = document.getElementById('gw-webhook-url').value;
-      copyToClipboard(url);
+    // Gateway selector buttons
+    document.querySelectorAll('.gw-sel-btn').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const gw = btn.dataset.gw;
+        try {
+          await API.setActiveGateway(gw);
+          showToast(`Gateway ativo: ${gw === 'amplopay' ? 'AmploPay' : 'ParadisePags'}`, 'success');
+          _carregarGatewayConfig();
+        } catch (err) {
+          showToast(err.message || 'Erro ao trocar gateway.', 'error');
+        }
+      });
     });
 
-    // Save
-    document.getElementById('gw-save-btn').addEventListener('click', async () => {
-      const pk = document.getElementById('gw-public-key').value.trim();
-      const sk = document.getElementById('gw-secret-key').value.trim();
-      const wt = document.getElementById('gw-webhook-token').value.trim();
-
-      if (!pk && !sk && !wt) {
-        showToast('Preencha pelo menos um campo para atualizar.', 'warning');
-        return;
-      }
-
-      const btn = document.getElementById('gw-save-btn');
-      btn.disabled = true;
-      try {
-        const payload = {};
-        if (pk) payload.public_key = pk;
-        if (sk) payload.secret_key = sk;
-        if (wt) payload.webhook_token = wt;
-        await API.updateGatewayConfig(payload);
-        showToast('Credenciais atualizadas com sucesso!', 'success');
-        // Limpa inputs
-        document.getElementById('gw-public-key').value = '';
-        document.getElementById('gw-secret-key').value = '';
-        document.getElementById('gw-webhook-token').value = '';
-        // Recarrega status
-        _carregarGatewayConfig();
-      } catch (err) {
-        showToast(err.message || 'Erro ao salvar.', 'error');
-      } finally {
-        btn.disabled = false;
-      }
+    // Save credential buttons
+    document.querySelectorAll('.gw-save-cred').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const gw = btn.dataset.gw;
+        btn.disabled = true;
+        try {
+          let config = {};
+          if (gw === 'amplopay') {
+            const pk = document.getElementById('gw-amp-pk').value.trim();
+            const sk = document.getElementById('gw-amp-sk').value.trim();
+            const wt = document.getElementById('gw-amp-wt').value.trim();
+            if (pk) config.public_key = pk;
+            if (sk) config.secret_key = sk;
+            if (wt) config.webhook_token = wt;
+          } else {
+            const sk = document.getElementById('gw-par-sk').value.trim();
+            const url = document.getElementById('gw-par-url').value.trim();
+            if (sk) config.secret_key = sk;
+            if (url) config.base_url = url;
+          }
+          if (!Object.keys(config).length) {
+            showToast('Preencha pelo menos um campo.', 'warning');
+            return;
+          }
+          await API.updateGatewayCredentials(gw, config);
+          showToast('Credenciais salvas!', 'success');
+          // Clear inputs
+          if (gw === 'amplopay') {
+            document.getElementById('gw-amp-pk').value = '';
+            document.getElementById('gw-amp-sk').value = '';
+            document.getElementById('gw-amp-wt').value = '';
+          } else {
+            document.getElementById('gw-par-sk').value = '';
+            document.getElementById('gw-par-url').value = '';
+          }
+          _carregarGatewayConfig();
+        } catch (err) {
+          showToast(err.message || 'Erro ao salvar.', 'error');
+        } finally {
+          btn.disabled = false;
+        }
+      });
     });
 
     async function _carregarGatewayConfig() {
       try {
         const data = await API.getGatewayConfig();
+        _gwData = data;
 
-        // Status dots
-        _setGwDot('gw-st-pk', data.has_public_key);
-        _setGwDot('gw-st-sk', data.has_secret_key);
-        _setGwDot('gw-st-wt', data.has_webhook_token);
+        const active = data.active || 'amplopay';
 
-        // Webhook URL
-        document.getElementById('gw-webhook-url').value = data.webhook_url || '';
+        // Highlight active selector
+        document.querySelectorAll('.gw-sel-btn').forEach(b => {
+          const isActive = b.dataset.gw === active;
+          b.style.borderColor = isActive ? '#f59e0b' : 'rgba(255,255,255,0.1)';
+          b.style.background = isActive ? 'rgba(245,158,11,0.15)' : 'rgba(255,255,255,0.05)';
+          b.style.color = isActive ? '#f59e0b' : '#fff';
+        });
 
-        // Masked values
-        document.getElementById('gw-cur-pk').textContent = data.public_key || '(vazio)';
-        document.getElementById('gw-cur-sk').textContent = data.secret_key || '(vazio)';
-        document.getElementById('gw-cur-wt').textContent = data.webhook_token || '(vazio)';
+        // Show/hide panels
+        document.getElementById('gw-panel-amplopay').style.display = active === 'amplopay' ? '' : 'none';
+        document.getElementById('gw-panel-paradisepags').style.display = active === 'paradisepags' ? '' : 'none';
+
+        // AmploPay data
+        const amp = data.amplopay || {};
+        _setGwDot('gw-st-amp-pk', amp.has_public_key);
+        _setGwDot('gw-st-amp-sk', amp.has_secret_key);
+        _setGwDot('gw-st-amp-wt', amp.has_webhook_token);
+        document.getElementById('gw-amp-webhook-url').value = amp.webhook_url || '';
+        document.getElementById('gw-amp-cur-pk').textContent = amp.public_key || '(vazio)';
+        document.getElementById('gw-amp-cur-sk').textContent = amp.secret_key || '(vazio)';
+        document.getElementById('gw-amp-cur-wt').textContent = amp.webhook_token || '(vazio)';
+
+        // ParadisePags data
+        const par = data.paradisepags || {};
+        _setGwDot('gw-st-par-sk', par.has_secret_key);
+        document.getElementById('gw-par-webhook-url').value = par.webhook_url || '';
+        document.getElementById('gw-par-cur-sk').textContent = par.secret_key || '(vazio)';
+        document.getElementById('gw-par-cur-url').textContent = par.base_url || '(padrao)';
       } catch (err) {
-        showToast('Erro ao carregar configuração do gateway.', 'error');
+        showToast('Erro ao carregar configuracao do gateway.', 'error');
       }
     }
 
@@ -1939,8 +1995,9 @@ function renderPainel(el) {
       document.getElementById('dep-content').classList.remove('hidden');
 
       const qrImg = document.getElementById('dep-qr-img');
-      if (data.qrcode_imagem) {
-        qrImg.src = data.qrcode_imagem;
+      const qrSrc = data.qrcode_imagem || data.qrcode_base64 || '';
+      if (qrSrc) {
+        qrImg.src = qrSrc;
         document.getElementById('dep-qr-wrap').style.display = 'block';
       } else {
         document.getElementById('dep-qr-wrap').style.display = 'none';
@@ -2100,9 +2157,37 @@ function renderPainel(el) {
       currentSaldo = parseFloat(data.saldo_novo) || currentSaldo - v;
       document.getElementById('saldo-badge').textContent = formatMoney(currentSaldo);
       document.getElementById('st-saldo').textContent    = formatMoney(currentSaldo);
-    } catch (err) { showToast(err.message, 'error'); }
+    } catch (err) {
+      // Upsell: desbloqueio de saque
+      let errData = null;
+      try { errData = JSON.parse(err.message); } catch {}
+      if (err.message && err.message.includes('desbloquear')) {
+        closeModal('modal-saque');
+        _mostrarUpsellDesbloqueio();
+      } else {
+        showToast(err.message, 'error');
+      }
+    }
     finally { btn.disabled = false; btn.textContent = 'Solicitar Saque'; }
   });
+
+  // ── Desbloqueio de Saque (Upsell) ────────────────────────────────────────
+  document.getElementById('close-desbloqueio').addEventListener('click', () => closeModal('modal-desbloqueio'));
+  document.getElementById('modal-desbloqueio').addEventListener('click', e => {
+    if (e.target.id === 'modal-desbloqueio') closeModal('modal-desbloqueio');
+  });
+
+  document.getElementById('desbl-depositar-btn').addEventListener('click', () => {
+    closeModal('modal-desbloqueio');
+    // Abre modal de depósito com valor pre-preenchido de R$20
+    openModal('modal-deposito');
+    const depInput = document.getElementById('dep-valor');
+    if (depInput) depInput.value = '20';
+  });
+
+  function _mostrarUpsellDesbloqueio() {
+    openModal('modal-desbloqueio');
+  }
 
   // ── Saque de Comissão (Afiliado) ─────────────────────────────────────────
   let currentSaldoAfil = 0;

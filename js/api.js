@@ -142,8 +142,14 @@ const API = (() => {
   async function getGatewayConfig() {
     return request('GET', '/admin/gateway-config');
   }
-  async function updateGatewayConfig(config) {
-    return request('PUT', '/admin/gateway-config', config);
+  async function updateGatewayConfig(payload) {
+    return request('PUT', '/admin/gateway-config', payload);
+  }
+  async function setActiveGateway(gatewayName) {
+    return request('PUT', '/admin/gateway-config', { active: gatewayName });
+  }
+  async function updateGatewayCredentials(gateway, config) {
+    return request('PUT', '/admin/gateway-config', { gateway, config });
   }
 
   // ── Cupons ───────────────────────────────────────────────────────────────
@@ -161,7 +167,7 @@ const API = (() => {
     gameConfigs, iniciarPartida, finalizarPartida, abandonarPartida,
     deposito, depositoStatus, saque, saqueAfiliado, historico, meusSaques,
     indicacaoInfo, suporteLinks,
-    getGatewayConfig, updateGatewayConfig,
+    getGatewayConfig, updateGatewayConfig, setActiveGateway, updateGatewayCredentials,
     validarCupom, resgatarCupom,
   };
 })();

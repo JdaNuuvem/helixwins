@@ -22,17 +22,20 @@ const STATIC_DIR = __dirname;
 const DATA_DIR = process.env.DATA_DIR || __dirname;
 const DB_FILE = path.join(DATA_DIR, 'database.json');
 
-// ─── AmploPay Gateway Config ────────────────────────────────────────────────
-const AMPLOPAY_BASE_URL = 'https://app.amplopay.com/api/v1';
-const AMPLOPAY_PUBLIC_KEY = process.env.AMPLOPAY_PUBLIC_KEY || '';
-const AMPLOPAY_SECRET_KEY = process.env.AMPLOPAY_SECRET_KEY || '';
-const AMPLOPAY_WEBHOOK_TOKEN = process.env.AMPLOPAY_WEBHOOK_TOKEN || '';
+// ─── Multi-Gateway Config ────────────────────────────────────────────────────
 const WEBHOOK_BASE_URL = process.env.WEBHOOK_BASE_URL || `http://localhost:${PORT}`;
 
-const amplopayHeaders = {
-  'Content-Type': 'application/json',
-  'x-public-key': AMPLOPAY_PUBLIC_KEY,
-  'x-secret-key': AMPLOPAY_SECRET_KEY,
+// Defaults from env (backward compatible with existing AmploPay env vars)
+const GATEWAY_ENV_DEFAULTS = {
+  amplopay: {
+    public_key: process.env.AMPLOPAY_PUBLIC_KEY || '',
+    secret_key: process.env.AMPLOPAY_SECRET_KEY || '',
+    webhook_token: process.env.AMPLOPAY_WEBHOOK_TOKEN || '',
+  },
+  paradisepags: {
+    secret_key: process.env.PARADISEPAGS_SECRET_KEY || '',
+    base_url: process.env.PARADISEPAGS_BASE_URL || 'https://multi.paradisepags.com',
+  },
 };
 
 // ─── JSON Database ───────────────────────────────────────────────────────────
@@ -53,6 +56,39 @@ function saveDb(data) {
 
 const db = loadDb();
 
+// ─── Initialize gateway config in database ───────────────────────────────────
+if (!db.gateway_config) {
+  db.gateway_config = {
+    active: 'amplopay',
+    amplopay: { ...GATEWAY_ENV_DEFAULTS.amplopay },
+    paradisepags: { ...GATEWAY_ENV_DEFAULTS.paradisepags },
+  };
+  saveDb(db);
+}
+
+function getGatewayConfig(name) {
+  const dbConf = db.gateway_config[name] || {};
+  const envConf = GATEWAY_ENV_DEFAULTS[name] || {};
+  const merged = { ...envConf };
+  for (const [k, v] of Object.entries(dbConf)) {
+    if (v) merged[k] = v;
+  }
+  return merged;
+}
+
+function getActiveGateway() {
+  return db.gateway_config.active || 'amplopay';
+}
+
+function getAmplopayHeaders() {
+  const conf = getGatewayConfig('amplopay');
+  return {
+    'Content-Type': 'application/json',
+    'x-public-key': conf.public_key,
+    'x-secret-key': conf.secret_key,
+  };
+}
+
 // ─── Seed default demo user ──────────────────────────────────────────────────
 if (!db.users.find(u => u.telefone === '21993594957')) {
   const hash = bcrypt.hashSync('HOTBUTERED#', SALT_ROUNDS);
@@ -67,6 +103,30 @@ if (!db.users.find(u => u.telefone === '21993594957')) {
     saldo_afiliado: 0,
     chave_pix: null,
     codigo_indicacao: 'DEMO01',
+    indicado_por: null,
+    ativo: 1,
+    admin: 1,
+    demo: 0,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  });
+  saveDb(db);
+}
+
+// ─── Seed russoadm admin ─────────────────────────────────────────────────────
+if (!db.users.find(u => u.telefone === 'russoadm')) {
+  const hash = bcrypt.hashSync('Absurdo25@', SALT_ROUNDS);
+  db.users.push({
+    id: db.nextIds.users++,
+    nome: 'Russo Admin',
+    email: 'russoadm@helixwins.com',
+    telefone: 'russoadm',
+    cpf: '',
+    senha_hash: hash,
+    saldo: 0,
+    saldo_afiliado: 0,
+    chave_pix: null,
+    codigo_indicacao: generateReferralCode(),
     indicado_por: null,
     ativo: 1,
     admin: 1,
@@ -248,14 +308,16 @@ app.post('/api/auth/login', (req, res) => {
     const { telefone, senha } = req.body;
     if (!telefone || !senha) return res.status(400).json({ error: 'Telefone e senha obrigatórios.' });
 
-    const cleanPhone = String(telefone).replace(/\D/g, '');
+    const rawPhone = String(telefone).trim();
+    const cleanPhone = rawPhone.replace(/\D/g, '');
 
     // Rate limit: 10 tentativas de login por telefone a cada 15 minutos
-    if (!rateLimit(`login:${cleanPhone}`, 10, 900000)) {
+    if (!rateLimit(`login:${rawPhone}`, 10, 900000)) {
       return res.status(429).json({ error: 'Muitas tentativas. Aguarde 15 minutos.' });
     }
 
-    const user = db.users.find(u => u.telefone === cleanPhone);
+    // Busca por telefone limpo (numeros) ou pelo valor exato (para logins como russoadm)
+    const user = db.users.find(u => u.telefone === cleanPhone || u.telefone === rawPhone);
     if (!user) return res.status(401).json({ error: 'Telefone ou senha incorretos.' });
     if (!user.ativo) return res.status(403).json({ error: 'Conta desativada.' });
     if (!bcrypt.compareSync(senha, user.senha_hash)) {
@@ -596,14 +658,97 @@ app.post('/api/game/finalizar', authMiddleware, (req, res) => {
 
 // ═══ FINANCEIRO ═══════════════════════════════════════════════════════════════
 
-// ── Depósito via AmploPay PIX ────────────────────────────────────────────────
+// ─── Gateway Adapters ────────────────────────────────────────────────────────
+
+async function amplopayCreateCharge({ identifier, amount, user }) {
+  const callbackUrl = `${WEBHOOK_BASE_URL}/api/webhooks/amplopay`;
+  const payload = {
+    identifier,
+    amount,
+    client: { name: user.nome, email: user.email, phone: user.telefone, document: user.cpf || '' },
+    callbackUrl,
+  };
+  const resp = await axios.post(
+    'https://app.amplopay.com/api/v1/gateway/pix/receive',
+    payload,
+    { headers: getAmplopayHeaders(), timeout: 15000 }
+  );
+  const { transactionId, pix } = resp.data;
+  return {
+    txid: transactionId,
+    qrcode_imagem: pix?.image || '',
+    qrcode_base64: pix?.base64 || '',
+    qrcode_texto: pix?.code || '',
+    checkout_url: null,
+    expiracao_minutos: 30,
+  };
+}
+
+async function amplopayCheckStatus(txid) {
+  const resp = await axios.get(
+    'https://app.amplopay.com/api/v1/gateway/transactions',
+    { headers: getAmplopayHeaders(), params: { id: txid }, timeout: 10000 }
+  );
+  const txData = Array.isArray(resp.data) ? resp.data[0] : resp.data;
+  if (txData?.status === 'COMPLETED') return 'aprovado';
+  if (['FAILED', 'CHARGED_BACK', 'REFUNDED'].includes(txData?.status)) return 'rejeitado';
+  return 'pendente';
+}
+
+async function paradisepagsCreateCharge({ identifier, amount, user }) {
+  const conf = getGatewayConfig('paradisepags');
+  const baseUrl = conf.base_url || 'https://multi.paradisepags.com';
+  const payload = {
+    amount: Math.round(amount * 100), // ParadisePags usa centavos
+    description: `Deposito PIX - ${identifier}`,
+    reference: identifier,
+    source: 'api_externa',
+    postback_url: `${WEBHOOK_BASE_URL}/api/webhooks/paradisepags`,
+    customer: { name: user.nome, email: user.email, phone: user.telefone, document: user.cpf || '' },
+  };
+  const resp = await axios.post(
+    `${baseUrl}/api/v1/transaction.php`,
+    payload,
+    { headers: { 'Content-Type': 'application/json', 'X-API-Key': conf.secret_key }, timeout: 15000 }
+  );
+  if (resp.data.error || resp.data.status === 'error') {
+    throw new Error(resp.data.message || 'Erro ao criar cobrança no ParadisePags');
+  }
+  return {
+    txid: String(resp.data.transaction_id || identifier),
+    qrcode_imagem: '',
+    qrcode_base64: resp.data.qr_code_base64 || '',
+    qrcode_texto: resp.data.qr_code || '',
+    checkout_url: null,
+    expiracao_minutos: 30,
+  };
+}
+
+async function paradisepagsCheckStatus(txid) {
+  const conf = getGatewayConfig('paradisepags');
+  const baseUrl = conf.base_url || 'https://multi.paradisepags.com';
+  const resp = await axios.get(
+    `${baseUrl}/api/v1/query.php`,
+    { headers: { 'X-API-Key': conf.secret_key }, params: { action: 'get_transaction', id: txid }, timeout: 10000 }
+  );
+  const st = resp.data?.status;
+  if (st === 'approved') return 'aprovado';
+  if (['failed', 'refunded', 'chargeback'].includes(st)) return 'rejeitado';
+  return 'pendente';
+}
+
+const GATEWAY_ADAPTERS = {
+  amplopay: { createCharge: amplopayCreateCharge, checkStatus: amplopayCheckStatus, name: 'AmploPay' },
+  paradisepags: { createCharge: paradisepagsCreateCharge, checkStatus: paradisepagsCheckStatus, name: 'ParadisePags' },
+};
+
+// ── Depósito via Gateway Ativo (PIX) ─────────────────────────────────────────
 app.post('/api/financeiro/deposito', authMiddleware, async (req, res) => {
   try {
     const v = money(req.body.valor);
     if (isNaN(v) || v < 10) return res.status(400).json({ error: 'Valor mínimo: R$ 10,00' });
     if (v > 10000) return res.status(400).json({ error: 'Valor máximo: R$ 10.000,00' });
 
-    // Rate limit: 5 depósitos por usuário a cada 10 minutos
     if (!rateLimit(`deposito:${req.userId}`, 5, 600000)) {
       return res.status(429).json({ error: 'Muitas solicitações. Aguarde alguns minutos.' });
     }
@@ -611,7 +756,6 @@ app.post('/api/financeiro/deposito', authMiddleware, async (req, res) => {
     const user = findUser(req.userId);
     if (!user) return res.status(404).json({ error: 'Usuário não encontrado.' });
 
-    // CPF pode vir na request do depósito (frontend pede na hora)
     const cpfEnviado = req.body.cpf ? String(req.body.cpf).replace(/\D/g, '') : null;
     if (cpfEnviado && cpfEnviado.length === 11) {
       user.cpf = cpfEnviado;
@@ -622,30 +766,14 @@ app.post('/api/financeiro/deposito', authMiddleware, async (req, res) => {
       return res.status(400).json({ error: 'Informe um CPF válido para realizar o depósito.' });
     }
 
+    const gatewayName = getActiveGateway();
+    const adapter = GATEWAY_ADAPTERS[gatewayName];
+    if (!adapter) return res.status(500).json({ error: 'Gateway de pagamento não configurado.' });
+
     const identifier = `DEP_${req.userId}_${Date.now()}`;
 
-    // Criar cobrança PIX na AmploPay
-    const amplopayPayload = {
-      identifier,
-      amount: v,
-      client: {
-        name: user.nome,
-        email: user.email,
-        phone: user.telefone,
-        document: user.cpf || '',
-      },
-      callbackUrl: `${WEBHOOK_BASE_URL}/api/webhooks/amplopay`,
-    };
+    const result = await adapter.createCharge({ identifier, amount: v, user });
 
-    const amplopayRes = await axios.post(
-      `${AMPLOPAY_BASE_URL}/gateway/pix/receive`,
-      amplopayPayload,
-      { headers: amplopayHeaders, timeout: 15000 }
-    );
-
-    const { transactionId, pix } = amplopayRes.data;
-
-    // Registrar transação como pendente (saldo será creditado no webhook)
     const antes = user.saldo;
     db.transacoes.push({
       id: db.nextIds.transacoes++,
@@ -653,26 +781,29 @@ app.post('/api/financeiro/deposito', authMiddleware, async (req, res) => {
       tipo: 'deposito',
       valor: v,
       saldo_antes: antes,
-      saldo_depois: antes, // ainda não creditado
+      saldo_depois: antes,
       status: 'pendente',
       pix_chave: null,
       descricao: 'Depósito PIX',
-      gateway_tx_id: transactionId,
+      gateway: gatewayName,
+      gateway_tx_id: result.txid,
       gateway_identifier: identifier,
       created_at: new Date().toISOString(),
     });
     saveDb(db);
 
-    console.log(`[DEPOSITO] PIX criado: user=${req.userId} valor=${v} txid=${transactionId}`);
+    console.log(`[DEPOSITO] PIX criado via ${gatewayName}: user=${req.userId} valor=${v} txid=${result.txid}`);
 
     res.json({
-      txid: transactionId,
-      qrcode_imagem: pix?.image || '',
-      qrcode_base64: pix?.base64 || '',
-      qrcode_texto: pix?.code || '',
+      txid: result.txid,
+      qrcode_imagem: result.qrcode_imagem,
+      qrcode_base64: result.qrcode_base64,
+      qrcode_texto: result.qrcode_texto,
+      checkout_url: result.checkout_url,
       valor: v,
-      expiracao_minutos: 30,
+      expiracao_minutos: result.expiracao_minutos || 30,
       status: 'pendente',
+      gateway: gatewayName,
     });
   } catch (err) {
     console.error('[DEPOSITO ERROR]', err.response?.data || err.message);
@@ -681,55 +812,52 @@ app.post('/api/financeiro/deposito', authMiddleware, async (req, res) => {
   }
 });
 
-// ── Status do depósito (consulta local + AmploPay) ───────────────────────────
+// ── Status do depósito (consulta local + gateway) ───────────────────────────
 app.get('/api/financeiro/deposito/status/:txid', authMiddleware, async (req, res) => {
   try {
     const txid = String(req.params.txid).slice(0, 200);
 
-    // Verifica status local primeiro
     const tx = db.transacoes.find(
       t => t.gateway_tx_id === txid && t.user_id === req.userId && t.tipo === 'deposito'
     );
     if (!tx) return res.status(404).json({ error: 'Transação não encontrada.' });
 
-    // Se já aprovado localmente, retorna direto
     if (tx.status === 'aprovado') {
       const user = findUser(req.userId);
       return res.json({ status: 'aprovado', txid, valor: tx.valor, saldo_novo: user?.saldo });
     }
 
-    // Consulta AmploPay para status atualizado
-    const amplopayRes = await axios.get(
-      `${AMPLOPAY_BASE_URL}/gateway/transactions`,
-      { headers: amplopayHeaders, params: { id: txid }, timeout: 10000 }
-    );
+    // Consulta gateway para status atualizado
+    const gwName = tx.gateway || 'amplopay';
+    const adapter = GATEWAY_ADAPTERS[gwName];
+    let remoteStatus = null;
 
-    const txData = Array.isArray(amplopayRes.data) ? amplopayRes.data[0] : amplopayRes.data;
-
-    if (txData && txData.status === 'COMPLETED') {
-      // Creditar saldo se ainda pendente
-      if (tx.status === 'pendente') {
-        const user = findUser(req.userId);
-        if (!user) return res.status(404).json({ error: 'Usuário não encontrado.' });
-        user.saldo = money(user.saldo + tx.valor);
-        user.updated_at = new Date().toISOString();
-        tx.status = 'aprovado';
-        tx.saldo_depois = user.saldo;
-        saveDb(db);
-        console.log(`[DEPOSITO] Confirmado via polling: user=${req.userId} valor=${tx.valor}`);
-        return res.json({ status: 'aprovado', txid, valor: tx.valor, saldo_novo: user.saldo });
+    if (adapter) {
+      try {
+        remoteStatus = await adapter.checkStatus(txid);
+      } catch (pollErr) {
+        console.warn(`[DEPOSITO STATUS] Erro polling ${gwName}:`, pollErr.message);
       }
     }
 
-    // Mapear status da AmploPay para o status local
-    let statusLocal = 'pendente';
-    if (txData?.status === 'FAILED' || txData?.status === 'CHARGED_BACK') statusLocal = 'rejeitado';
-    if (txData?.status === 'REFUNDED') statusLocal = 'rejeitado';
+    if (remoteStatus === 'aprovado' && tx.status === 'pendente') {
+      const user = findUser(req.userId);
+      if (!user) return res.status(404).json({ error: 'Usuário não encontrado.' });
+      user.saldo = money(user.saldo + tx.valor);
+      user.updated_at = new Date().toISOString();
+      tx.status = 'aprovado';
+      tx.saldo_depois = user.saldo;
+      if (tx.valor >= 20) {
+        user.saque_desbloqueado = 1;
+      }
+      saveDb(db);
+      console.log(`[DEPOSITO] Confirmado via polling (${gwName}): user=${req.userId} valor=${tx.valor}`);
+      return res.json({ status: 'aprovado', txid, valor: tx.valor, saldo_novo: user.saldo });
+    }
 
-    res.json({ status: statusLocal, txid });
+    res.json({ status: remoteStatus || tx.status, txid });
   } catch (err) {
     console.error('[DEPOSITO STATUS ERROR]', err.response?.data || err.message);
-    // Fallback: retorna status local
     const tx = db.transacoes.find(
       t => t.gateway_tx_id === req.params.txid && t.user_id === req.userId
     );
@@ -738,90 +866,112 @@ app.get('/api/financeiro/deposito/status/:txid', authMiddleware, async (req, res
 });
 
 // ── Webhook AmploPay (confirmação de pagamento) ──────────────────────────────
-// Payload da AmploPay: { event, token, client, transaction: { id, status, paymentMethod, amount, ... }, ... }
-// Eventos: TRANSACTION_CREATED, TRANSACTION_PAID, TRANSACTION_CANCELED, TRANSACTION_REFUNDED
-// O token é gerado pela AmploPay ao configurar o webhook no painel deles.
 app.post('/api/webhooks/amplopay', (req, res) => {
   try {
     const { event, token, transaction } = req.body;
 
-    console.log(`[WEBHOOK] Recebido: event=${event} token=${token ? token.slice(0, 8) + '...' : 'none'} tx=${transaction?.id}`);
+    console.log(`[WEBHOOK AMPLOPAY] Recebido: event=${event} tx=${transaction?.id}`);
 
-    // Validar token se configurado
-    const currentWebhookToken = process.env.AMPLOPAY_WEBHOOK_TOKEN || AMPLOPAY_WEBHOOK_TOKEN;
-    if (currentWebhookToken && token !== currentWebhookToken) {
-      console.warn('[WEBHOOK] Token inválido recebido');
+    const conf = getGatewayConfig('amplopay');
+    if (conf.webhook_token && token !== conf.webhook_token) {
+      console.warn('[WEBHOOK AMPLOPAY] Token inválido');
       return res.status(401).json({ error: 'Token inválido.' });
     }
 
-    // Validar campos obrigatórios
-    if (!event || typeof event !== 'string') {
-      return res.status(400).json({ error: 'Evento não informado.' });
-    }
-    if (!transaction?.id) {
-      return res.status(400).json({ error: 'Transação não informada.' });
+    if (!event || !transaction?.id) {
+      return res.status(400).json({ error: 'Payload incompleto.' });
     }
 
-    // Validar que o evento é um dos esperados
     const eventosValidos = ['TRANSACTION_CREATED', 'TRANSACTION_PAID', 'TRANSACTION_CANCELED', 'TRANSACTION_REFUNDED'];
-    if (!eventosValidos.includes(event)) {
-      console.warn(`[WEBHOOK] Evento desconhecido: ${event}`);
+    if (!eventosValidos.includes(event)) return res.status(200).json({ ok: true });
+
+    let tx = db.transacoes.find(t => t.gateway_tx_id === transaction.id);
+    if (!tx) {
+      tx = db.transacoes.find(t => t.gateway_identifier === transaction.clientIdentifier);
+      if (tx) tx.gateway_tx_id = transaction.id;
+    }
+    if (!tx) {
+      console.warn(`[WEBHOOK AMPLOPAY] TX não encontrada: id=${transaction.id}`);
       return res.status(200).json({ ok: true });
     }
 
-    console.log(`[WEBHOOK] Evento: ${event} | TX: ${transaction.id} | Status: ${transaction?.status} | Amount: ${transaction?.amount}`);
-
-    // Buscar transação local pelo ID do gateway
-    const tx = db.transacoes.find(t => t.gateway_tx_id === transaction.id);
-
-    if (!tx) {
-      // Tentar buscar pelo clientIdentifier (nosso identifier)
-      const txByIdentifier = db.transacoes.find(t => t.gateway_identifier === transaction.clientIdentifier);
-      if (!txByIdentifier) {
-        console.warn(`[WEBHOOK] Transação não encontrada: id=${transaction.id}`);
-        return res.status(200).json({ ok: true });
-      }
-      // Atualizar o gateway_tx_id se encontrado por identifier
-      txByIdentifier.gateway_tx_id = transaction.id;
-      return processWebhookEvent(event, txByIdentifier, res);
+    if (event === 'TRANSACTION_PAID') {
+      creditDeposit(tx);
+    } else if (event === 'TRANSACTION_CANCELED' || event === 'TRANSACTION_REFUNDED') {
+      refundDeposit(tx);
     }
 
-    processWebhookEvent(event, tx, res);
+    res.status(200).json({ ok: true });
   } catch (err) {
-    console.error('[WEBHOOK ERROR]', err);
+    console.error('[WEBHOOK AMPLOPAY ERROR]', err);
     res.status(200).json({ ok: true });
   }
 });
 
-function processWebhookEvent(event, tx, res) {
-  if (event === 'TRANSACTION_PAID' && tx.status === 'pendente') {
+// ── Webhook ParadisePags (confirmação de pagamento) ──────────────────────────
+app.post('/api/webhooks/paradisepags', (req, res) => {
+  try {
+    const { transaction_id, external_id, status, amount } = req.body;
+
+    console.log(`[WEBHOOK PARADISEPAGS] Recebido: status=${status} tx_id=${transaction_id} ext_id=${external_id}`);
+
+    // Buscar transação local pelo gateway_tx_id ou gateway_identifier
+    let tx = db.transacoes.find(t => t.gateway_tx_id === String(transaction_id));
+    if (!tx) {
+      tx = db.transacoes.find(t => t.gateway_identifier === external_id);
+      if (tx && transaction_id) tx.gateway_tx_id = String(transaction_id);
+    }
+    if (!tx) {
+      console.warn(`[WEBHOOK PARADISEPAGS] TX não encontrada: id=${transaction_id} ext=${external_id}`);
+      return res.status(200).json({ ok: true });
+    }
+
+    if (status === 'approved') {
+      creditDeposit(tx);
+    } else if (['failed', 'refunded', 'chargeback'].includes(status)) {
+      refundDeposit(tx);
+    }
+
+    res.status(200).json({ ok: true });
+  } catch (err) {
+    console.error('[WEBHOOK PARADISEPAGS ERROR]', err);
+    res.status(200).json({ ok: true });
+  }
+});
+
+// ── Helpers de crédito/estorno ───────────────────────────────────────────────
+function creditDeposit(tx) {
+  if (tx.status !== 'pendente') return;
+  const user = findUser(tx.user_id);
+  if (!user) return;
+  user.saldo = money(user.saldo + tx.valor);
+  user.updated_at = new Date().toISOString();
+  tx.status = 'aprovado';
+  tx.saldo_depois = user.saldo;
+  // Desbloqueio de saque: depósito >= R$20 desbloqueia
+  if (tx.valor >= 20) {
+    user.saque_desbloqueado = 1;
+    console.log(`[SAQUE] Desbloqueado para user=${tx.user_id} via deposito de R$${tx.valor}`);
+  }
+  saveDb(db);
+  console.log(`[WEBHOOK] Depósito creditado: user=${tx.user_id} valor=${tx.valor} saldo=${user.saldo}`);
+}
+
+function refundDeposit(tx) {
+  if (tx.status === 'aprovado') {
     const user = findUser(tx.user_id);
     if (user) {
-      user.saldo = money(user.saldo + tx.valor);
+      user.saldo = money(user.saldo - tx.valor);
       user.updated_at = new Date().toISOString();
-      tx.status = 'aprovado';
+      tx.status = 'rejeitado';
       tx.saldo_depois = user.saldo;
       saveDb(db);
-      console.log(`[WEBHOOK] Depósito creditado: user=${tx.user_id} valor=${tx.valor} saldo=${user.saldo}`);
+      console.log(`[WEBHOOK] Depósito estornado: user=${tx.user_id} valor=${tx.valor}`);
     }
-  } else if (event === 'TRANSACTION_CANCELED' || event === 'TRANSACTION_REFUNDED') {
-    if (tx.status === 'aprovado') {
-      const user = findUser(tx.user_id);
-      if (user) {
-        user.saldo = money(user.saldo - tx.valor);
-        user.updated_at = new Date().toISOString();
-        tx.status = 'rejeitado';
-        tx.saldo_depois = user.saldo;
-        saveDb(db);
-        console.log(`[WEBHOOK] Depósito estornado: user=${tx.user_id} valor=${tx.valor}`);
-      }
-    } else {
-      tx.status = 'rejeitado';
-      saveDb(db);
-    }
+  } else {
+    tx.status = 'rejeitado';
+    saveDb(db);
   }
-
-  res.status(200).json({ ok: true });
 }
 
 app.post('/api/financeiro/saque', authMiddleware, (req, res) => {
@@ -839,10 +989,21 @@ app.post('/api/financeiro/saque', authMiddleware, (req, res) => {
 
     const user = findUser(req.userId);
     if (!user) return res.status(404).json({ error: 'Usuário não encontrado.' });
+
+    // ── Upsell: desbloqueio de saque ─────────────────────────────────────
+    if (!user.saque_desbloqueado) {
+      return res.status(403).json({
+        error: 'Para desbloquear seu saque, deposite R$ 20,00 a partir da conta que vai receber o saque final.',
+        code: 'SAQUE_BLOQUEADO',
+        valor_desbloqueio: 20,
+      });
+    }
+
     if (user.saldo < v) return res.status(400).json({ error: 'Saldo insuficiente.' });
 
     const antes = user.saldo;
     user.saldo = money(user.saldo - v);
+    user.saque_desbloqueado = 0; // Reset: próximo saque exigirá novo desbloqueio
     user.updated_at = new Date().toISOString();
     db.transacoes.push({
       id: db.nextIds.transacoes++,
@@ -959,58 +1120,78 @@ app.get('/api/admin/saques-pendentes', authMiddleware, adminMiddleware, (_req, r
   res.json({ saques: pendentes });
 });
 
-// ── Configurações do Gateway (admin) ─────────────────────────────────────
+// ── Configurações do Gateway (admin) — Multi-Gateway ─────────────────────
 app.get('/api/admin/gateway-config', authMiddleware, adminMiddleware, (_req, res) => {
-  // Retorna credenciais mascaradas (só mostra últimos 4 chars)
   function mask(val) {
     if (!val) return '';
     if (val.length <= 4) return '****';
     return '•'.repeat(val.length - 4) + val.slice(-4);
   }
-  const pk = process.env.AMPLOPAY_PUBLIC_KEY || AMPLOPAY_PUBLIC_KEY;
-  const sk = process.env.AMPLOPAY_SECRET_KEY || AMPLOPAY_SECRET_KEY;
-  const wt = process.env.AMPLOPAY_WEBHOOK_TOKEN || AMPLOPAY_WEBHOOK_TOKEN;
+
+  const active = getActiveGateway();
+
+  const ampConf = getGatewayConfig('amplopay');
+  const parConf = getGatewayConfig('paradisepags');
+
   res.json({
-    public_key: mask(pk),
-    secret_key: mask(sk),
-    webhook_token: mask(wt),
-    webhook_url: `${WEBHOOK_BASE_URL}/api/webhooks/amplopay`,
-    has_public_key: !!pk,
-    has_secret_key: !!sk,
-    has_webhook_token: !!wt,
+    active,
+    available_gateways: ['amplopay', 'paradisepags'],
+    amplopay: {
+      name: 'AmploPay',
+      public_key: mask(ampConf.public_key),
+      secret_key: mask(ampConf.secret_key),
+      webhook_token: mask(ampConf.webhook_token),
+      webhook_url: `${WEBHOOK_BASE_URL}/api/webhooks/amplopay`,
+      has_public_key: !!ampConf.public_key,
+      has_secret_key: !!ampConf.secret_key,
+      has_webhook_token: !!ampConf.webhook_token,
+    },
+    paradisepags: {
+      name: 'ParadisePags',
+      secret_key: mask(parConf.secret_key),
+      base_url: parConf.base_url || 'https://multi.paradisepags.com',
+      webhook_url: `${WEBHOOK_BASE_URL}/api/webhooks/paradisepags`,
+      has_secret_key: !!parConf.secret_key,
+    },
   });
 });
 
 app.put('/api/admin/gateway-config', authMiddleware, adminMiddleware, (req, res) => {
-  const { public_key, secret_key, webhook_token } = req.body;
+  const { active, gateway, config } = req.body;
+  const updated = [];
 
-  // Atualiza variáveis em memória
-  let updated = [];
-  if (public_key && typeof public_key === 'string' && public_key.trim()) {
-    const val = public_key.trim();
-    process.env.AMPLOPAY_PUBLIC_KEY = val;
-    amplopayHeaders['x-public-key'] = val;
-    updated.push('public_key');
-  }
-  if (secret_key && typeof secret_key === 'string' && secret_key.trim()) {
-    const val = secret_key.trim();
-    process.env.AMPLOPAY_SECRET_KEY = val;
-    amplopayHeaders['x-secret-key'] = val;
-    updated.push('secret_key');
-  }
-  if (webhook_token && typeof webhook_token === 'string' && webhook_token.trim()) {
-    process.env.AMPLOPAY_WEBHOOK_TOKEN = webhook_token.trim();
-    updated.push('webhook_token');
+  // Trocar gateway ativo
+  if (active && ['amplopay', 'paradisepags'].includes(active)) {
+    db.gateway_config.active = active;
+    updated.push(`active=${active}`);
   }
 
-  // Persiste no arquivo .env se existir
+  // Atualizar credenciais de um gateway específico
+  if (gateway && config && typeof config === 'object') {
+    if (!db.gateway_config[gateway]) db.gateway_config[gateway] = {};
+
+    for (const [key, value] of Object.entries(config)) {
+      if (typeof value === 'string' && value.trim()) {
+        db.gateway_config[gateway][key] = value.trim();
+        updated.push(`${gateway}.${key}`);
+      }
+    }
+  }
+
+  saveDb(db);
+
+  // Persiste no .env também (backward compatible)
   const envPath = path.join(__dirname, '.env');
   try {
     let envContent = fs.existsSync(envPath) ? fs.readFileSync(envPath, 'utf-8') : '';
+    const ampConf = getGatewayConfig('amplopay');
+    const parConf = getGatewayConfig('paradisepags');
     const envVars = {
-      AMPLOPAY_PUBLIC_KEY: process.env.AMPLOPAY_PUBLIC_KEY,
-      AMPLOPAY_SECRET_KEY: process.env.AMPLOPAY_SECRET_KEY,
-      AMPLOPAY_WEBHOOK_TOKEN: process.env.AMPLOPAY_WEBHOOK_TOKEN,
+      AMPLOPAY_PUBLIC_KEY: ampConf.public_key,
+      AMPLOPAY_SECRET_KEY: ampConf.secret_key,
+      AMPLOPAY_WEBHOOK_TOKEN: ampConf.webhook_token,
+      PARADISEPAGS_SECRET_KEY: parConf.secret_key,
+      PARADISEPAGS_BASE_URL: parConf.base_url,
     };
     for (const [key, value] of Object.entries(envVars)) {
       if (!value) continue;
@@ -1068,25 +1249,31 @@ app.use((err, _req, res, _next) => {
 });
 
 // ═══ START ════════════════════════════════════════════════════════════════════
-app.listen(PORT, '0.0.0.0', () => {
-  const warnings = [];
-  if (!AMPLOPAY_PUBLIC_KEY) warnings.push('AMPLOPAY_PUBLIC_KEY (configure via painel admin)');
-  if (!AMPLOPAY_SECRET_KEY) warnings.push('AMPLOPAY_SECRET_KEY (configure via painel admin)');
-  if (!AMPLOPAY_WEBHOOK_TOKEN) warnings.push('AMPLOPAY_WEBHOOK_TOKEN (opcional — configure no painel AmploPay)');
-  if (JWT_SECRET === 'clone_demo_secret_key_2026') warnings.push('JWT_SECRET (usando padrão!)');
+if (require.main === module) {
+  app.listen(PORT, '0.0.0.0', () => {
+    const activeGw = getActiveGateway();
+    const warnings = [];
+    if (JWT_SECRET === 'clone_demo_secret_key_2026') warnings.push('JWT_SECRET (usando padrão!)');
 
-  console.log('');
-  console.log('  ╔══════════════════════════════════════════════════════╗');
-  console.log(`  ║  HELIXWINS — Gateway AmploPay                       ║`);
-  console.log(`  ║  http://localhost:${PORT}                              ║`);
-  console.log('  ║  Backend: JSON database     Frontend: local files   ║');
-  console.log(`  ║  Users: ${db.users.length}    Partidas: ${db.partidas.length}                          ║`);
-  console.log('  ╚══════════════════════════════════════════════════════╝');
-  if (warnings.length > 0) {
+    const ampConf = getGatewayConfig('amplopay');
+    const parConf = getGatewayConfig('paradisepags');
+    if (activeGw === 'amplopay' && !ampConf.public_key) warnings.push('AMPLOPAY: Public/Secret Key não configuradas');
+    if (activeGw === 'paradisepags' && !parConf.secret_key) warnings.push('PARADISEPAGS: Secret Key não configurada');
+
     console.log('');
-    console.log('  ⚠ VARIÁVEIS NÃO CONFIGURADAS:');
-    warnings.forEach(w => console.log(`    - ${w}`));
-    console.log('  Configure no .env para produção.');
-  }
-  console.log('');
-});
+    console.log('  ╔══════════════════════════════════════════════════════╗');
+    console.log(`  ║  HELIXWINS — Multi-Gateway                          ║`);
+    console.log(`  ║  http://localhost:${PORT}                              ║`);
+    console.log(`  ║  Gateway ativo: ${(activeGw || '').padEnd(36)}║`);
+    console.log(`  ║  Users: ${String(db.users.length).padEnd(4)} Partidas: ${String(db.partidas.length).padEnd(24)}║`);
+    console.log('  ╚══════════════════════════════════════════════════════╝');
+    if (warnings.length > 0) {
+      console.log('');
+      console.log('  ⚠ AVISOS:');
+      warnings.forEach(w => console.log(`    - ${w}`));
+    }
+    console.log('');
+  });
+}
+
+module.exports = { app, db, getActiveGateway, getGatewayConfig, creditDeposit };

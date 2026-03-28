@@ -4,7 +4,8 @@
   "private": true,
   "description": "HelixWins - Plataforma de jogos com gateway AmploPay",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "test": "jest --forceExit --detectOpenHandles"
   },
   "engines": {
     "node": ">=18.0.0"
@@ -16,5 +17,9 @@
     "dotenv": "^17.3.1",
     "express": "^4.21.0",
     "jsonwebtoken": "^9.0.2"
+  },
+  "devDependencies": {
+    "jest": "^30.3.0",
+    "supertest": "^7.2.2"
   }
 }
