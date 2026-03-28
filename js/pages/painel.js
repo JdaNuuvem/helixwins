@@ -536,10 +536,10 @@ function renderPainel(el) {
         <!-- Gateway Selector -->
         <div class="gw-section-title" style="margin-bottom:8px">Gateway Ativo</div>
         <div class="gw-selector" style="display:flex;gap:8px;margin-bottom:16px">
-          <button class="gw-sel-btn" data-gw="amplopay" id="gw-sel-amplopay" style="flex:1;padding:10px 12px;border-radius:10px;border:2px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.05);color:#fff;cursor:pointer;font-size:13px;font-weight:600;transition:all .2s">
+          <button class="gw-sel-btn" data-gw="amplopay" id="gw-sel-amplopay" style="flex:1;padding:10px 12px;border-radius:10px;border:2px solid rgba(0,0,0,0.15);background:rgba(0,0,0,0.04);color:#222;cursor:pointer;font-size:13px;font-weight:600;transition:all .2s">
             AmploPay
           </button>
-          <button class="gw-sel-btn" data-gw="paradisepags" id="gw-sel-paradisepags" style="flex:1;padding:10px 12px;border-radius:10px;border:2px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.05);color:#fff;cursor:pointer;font-size:13px;font-weight:600;transition:all .2s">
+          <button class="gw-sel-btn" data-gw="paradisepags" id="gw-sel-paradisepags" style="flex:1;padding:10px 12px;border-radius:10px;border:2px solid rgba(0,0,0,0.15);background:rgba(0,0,0,0.04);color:#222;cursor:pointer;font-size:13px;font-weight:600;transition:all .2s">
             ParadisePags
           </button>
         </div>
@@ -849,8 +849,8 @@ function renderPainel(el) {
       .gw-status-item {
         display: flex; align-items: center; gap: 6px;
         padding: 6px 12px; border-radius: 50px;
-        background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.1);
-        font-size: 12px; font-weight: 600; color: rgba(255,255,255,.7);
+        background: rgba(0,0,0,.04); border: 1px solid rgba(0,0,0,.15);
+        font-size: 12px; font-weight: 600; color: #222;
       }
       .gw-dot {
         width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
@@ -859,48 +859,48 @@ function renderPainel(el) {
       .gw-dot-off { background: #ef4444; box-shadow: 0 0 6px rgba(239,68,68,.4); }
       .gw-field { margin-bottom: 14px; }
       .gw-label {
-        font-size: 12px; font-weight: 700; color: rgba(255,255,255,.6);
+        font-size: 12px; font-weight: 700; color: #333;
         text-transform: uppercase; letter-spacing: .05em; margin-bottom: 6px; display: block;
       }
       .gw-readonly-wrap {
         display: flex; gap: 6px; align-items: center;
       }
       .gw-readonly {
-        flex: 1; background: rgba(255,255,255,.04) !important;
-        color: rgba(255,255,255,.5) !important; cursor: default;
+        flex: 1; background: rgba(0,0,0,.04) !important;
+        color: #555 !important; cursor: default;
         font-family: 'Courier New', monospace; font-size: 12px;
       }
       .gw-copy-btn {
-        flex-shrink: 0; background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.15);
-        border-radius: 8px; padding: 8px 10px; cursor: pointer; color: rgba(255,255,255,.7);
+        flex-shrink: 0; background: rgba(0,0,0,.06); border: 1px solid rgba(0,0,0,.15);
+        border-radius: 8px; padding: 8px 10px; cursor: pointer; color: #444;
         transition: background .15s, color .15s;
       }
-      .gw-copy-btn:hover { background: rgba(255,255,255,.2); color: #fff; }
+      .gw-copy-btn:hover { background: rgba(0,0,0,.12); color: #000; }
       .gw-current {
-        background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.08);
+        background: rgba(0,0,0,.03); border: 1px solid rgba(0,0,0,.1);
         border-radius: 12px; padding: 14px 16px; margin-bottom: 16px;
       }
       .gw-current-title {
-        font-size: 11px; font-weight: 700; color: rgba(255,255,255,.4);
+        font-size: 11px; font-weight: 700; color: #666;
         text-transform: uppercase; letter-spacing: .08em; margin-bottom: 10px;
       }
       .gw-current-item {
-        font-size: 12px; color: rgba(255,255,255,.55); margin-bottom: 6px;
+        font-size: 12px; color: #444; margin-bottom: 6px;
         display: flex; align-items: center; gap: 8px;
       }
       .gw-current-item:last-child { margin-bottom: 0; }
-      .gw-current-lbl { font-weight: 600; color: rgba(255,255,255,.7); min-width: 100px; }
+      .gw-current-lbl { font-weight: 600; color: #222; min-width: 100px; }
       .gw-current-item code {
         font-family: 'Courier New', monospace; font-size: 12px;
-        background: rgba(255,255,255,.06); padding: 2px 8px; border-radius: 4px;
-        letter-spacing: 1px;
+        background: rgba(0,0,0,.06); padding: 2px 8px; border-radius: 4px;
+        letter-spacing: 1px; color: #333;
       }
-      .gw-divider { height: 1px; background: rgba(255,255,255,.08); margin: 16px 0; }
+      .gw-divider { height: 1px; background: rgba(0,0,0,.1); margin: 16px 0; }
       .gw-section-title {
-        font-size: 15px; font-weight: 700; color: #fff; margin-bottom: 4px;
+        font-size: 15px; font-weight: 700; color: #111; margin-bottom: 4px;
       }
       .gw-hint {
-        font-size: 12px; color: rgba(255,255,255,.4); margin-bottom: 16px;
+        font-size: 12px; color: #666; margin-bottom: 16px;
       }
       .gw-input-wrap {
         position: relative; display: flex; align-items: center;
@@ -911,9 +911,9 @@ function renderPainel(el) {
       .gw-toggle-eye {
         position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
         background: none; border: none; cursor: pointer; padding: 4px;
-        color: rgba(255,255,255,.5); transition: color .15s;
+        color: #666; transition: color .15s;
       }
-      .gw-toggle-eye:hover { color: rgba(255,255,255,.8); }
+      .gw-toggle-eye:hover { color: #000; }
       .gw-toggle-eye .hidden { display: none; }
 
       /* ── Scroll area ───────────────────────────────────────────── */
@@ -1745,9 +1745,9 @@ function renderPainel(el) {
         // Highlight active selector
         document.querySelectorAll('.gw-sel-btn').forEach(b => {
           const isActive = b.dataset.gw === active;
-          b.style.borderColor = isActive ? '#f59e0b' : 'rgba(255,255,255,0.1)';
-          b.style.background = isActive ? 'rgba(245,158,11,0.15)' : 'rgba(255,255,255,0.05)';
-          b.style.color = isActive ? '#f59e0b' : '#fff';
+          b.style.borderColor = isActive ? '#f59e0b' : 'rgba(0,0,0,0.15)';
+          b.style.background = isActive ? 'rgba(245,158,11,0.15)' : 'rgba(0,0,0,0.04)';
+          b.style.color = isActive ? '#b45309' : '#222';
         });
 
         // Show/hide panels
