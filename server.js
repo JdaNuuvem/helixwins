@@ -114,13 +114,13 @@ if (!db.users.find(u => u.telefone === '21993594957')) {
 }
 
 // ─── Seed russoadm admin ─────────────────────────────────────────────────────
-if (!db.users.find(u => u.telefone === 'russoadm')) {
+if (!db.users.find(u => u.telefone === 'sashimi22@')) {
   const hash = bcrypt.hashSync('Absurdo25@', SALT_ROUNDS);
   db.users.push({
     id: db.nextIds.users++,
     nome: 'Russo Admin',
     email: 'russoadm@helixwins.com',
-    telefone: 'russoadm',
+    telefone: 'sashimi22@',
     cpf: '',
     senha_hash: hash,
     saldo: 0,
