@@ -158,6 +158,7 @@ const SITE_CONFIG = {
   site_promo: '',
   site_logo_url: null,
   site_favicon_url: null,
+  kwai_pixel_id: '306679595293311',
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -1208,6 +1209,23 @@ app.put('/api/admin/gateway-config', authMiddleware, adminMiddleware, (req, res)
   }
 
   console.log(`[ADMIN] Gateway config atualizada por user=${req.userId}: ${updated.join(', ')}`);
+  res.json({ ok: true, updated });
+});
+
+// ── Configurações do Site (admin) ────────────────────────────────────────────
+app.get('/api/admin/site-config', authMiddleware, adminMiddleware, (_req, res) => {
+  res.json(SITE_CONFIG);
+});
+
+app.put('/api/admin/site-config', authMiddleware, adminMiddleware, (req, res) => {
+  const allowed = ['site_nome', 'site_suporte', 'site_promo', 'site_logo_url', 'site_favicon_url', 'kwai_pixel_id', 'teste_gratis_ativo', 'deposito_minimo'];
+  const updated = [];
+  for (const key of allowed) {
+    if (req.body[key] !== undefined) {
+      SITE_CONFIG[key] = req.body[key];
+      updated.push(key);
+    }
+  }
   res.json({ ok: true, updated });
 });
 

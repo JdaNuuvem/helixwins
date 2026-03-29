@@ -152,6 +152,14 @@ const API = (() => {
     return request('PUT', '/admin/gateway-config', { gateway, config });
   }
 
+  // ── Site Config (Admin) ──────────────────────────────────────────────────
+  async function getSiteConfig() {
+    return request('GET', '/admin/site-config');
+  }
+  async function updateSiteConfig(payload) {
+    return request('PUT', '/admin/site-config', payload);
+  }
+
   // ── Cupons ───────────────────────────────────────────────────────────────
   async function validarCupom(codigo) {
     return request('POST', '/cupons/validar', { codigo });
@@ -168,6 +176,7 @@ const API = (() => {
     deposito, depositoStatus, saque, saqueAfiliado, historico, meusSaques,
     indicacaoInfo, suporteLinks,
     getGatewayConfig, updateGatewayConfig, setActiveGateway, updateGatewayCredentials,
+    getSiteConfig, updateSiteConfig,
     validarCupom, resgatarCupom,
   };
 })();

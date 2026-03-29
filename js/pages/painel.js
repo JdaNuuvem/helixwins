@@ -79,6 +79,10 @@ function renderPainel(el) {
                   <span class="ppd-icon" style="color:#f59e0b"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span>
                   <span>Gateway de Pagamento</span>
                 </button>
+                <button class="ppd-item" id="ppd-btn-siteconfig">
+                  <span class="ppd-icon" style="color:#3b82f6"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg></span>
+                  <span>Config do Site</span>
+                </button>
                 ` : ''}
                 <div class="ppd-divider"></div>
                 <button class="ppd-item ppd-item-danger" id="ppd-btn-sair">
@@ -607,6 +611,34 @@ function renderPainel(el) {
         <div class="pnl-info-box pnl-info-orange" style="margin-top:14px">
           Selecione o gateway ativo acima. Configure as credenciais de cada gateway individualmente.
         </div>
+      </div>
+    </div>
+
+    <!-- ══ MODAL: CONFIG DO SITE ═════════════════════════════════════════ -->
+    <div class="pnl-modal-bg hidden" id="modal-siteconfig">
+      <div class="pnl-modal" style="max-width:480px">
+        <div class="pnl-modal-header">
+          <span class="pnl-modal-title">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2" width="20" height="20"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+            Config do Site
+          </span>
+          <button class="pnl-modal-close" id="close-siteconfig">✕</button>
+        </div>
+
+        <div class="gw-field"><label class="gw-label">Nome do Site</label><input id="sc-site-nome" class="pnl-input-modal" type="text" placeholder="HelixWins" autocomplete="off" /></div>
+        <div class="gw-field"><label class="gw-label">Link de Suporte</label><input id="sc-site-suporte" class="pnl-input-modal" type="text" placeholder="https://wa.me/..." autocomplete="off" /></div>
+        <div class="gw-field"><label class="gw-label">Texto Promocional</label><input id="sc-site-promo" class="pnl-input-modal" type="text" placeholder="Promoção especial..." autocomplete="off" /></div>
+        <div class="gw-field"><label class="gw-label">URL do Logo</label><input id="sc-site-logo" class="pnl-input-modal" type="text" placeholder="https://..." autocomplete="off" /></div>
+        <div class="gw-field"><label class="gw-label">URL do Favicon</label><input id="sc-site-favicon" class="pnl-input-modal" type="text" placeholder="https://..." autocomplete="off" /></div>
+        <div class="gw-divider"></div>
+        <div class="gw-section-title" style="margin-bottom:8px">Tracking / Pixels</div>
+        <div class="gw-field"><label class="gw-label">Kwai Pixel ID</label><input id="sc-kwai-pixel" class="pnl-input-modal" type="text" placeholder="306679595293311" autocomplete="off" /></div>
+        <div class="gw-hint">Deixe em branco para desativar o pixel do Kwai.</div>
+
+        <button class="pnl-play-btn" id="sc-save-btn" style="margin-top:14px;background:linear-gradient(135deg,#3b82f6,#2563eb)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="18" height="18"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+          Salvar Configurações
+        </button>
       </div>
     </div>
     ` : ''}
@@ -1782,6 +1814,57 @@ function renderPainel(el) {
       if (dot) {
         dot.classList.toggle('gw-dot-on', active);
         dot.classList.toggle('gw-dot-off', !active);
+      }
+    }
+  }
+
+  // ── Site Config (Admin) ─────────────────────────────────────────────────
+  if (user.admin && document.getElementById('ppd-btn-siteconfig')) {
+    document.getElementById('ppd-btn-siteconfig').addEventListener('click', () => {
+      closeProfileDrop();
+      openModal('modal-siteconfig');
+      _carregarSiteConfig();
+    });
+
+    document.getElementById('close-siteconfig').addEventListener('click', () => closeModal('modal-siteconfig'));
+    document.getElementById('modal-siteconfig').addEventListener('click', e => {
+      if (e.target.id === 'modal-siteconfig') closeModal('modal-siteconfig');
+    });
+
+    document.getElementById('sc-save-btn').addEventListener('click', async () => {
+      const btn = document.getElementById('sc-save-btn');
+      btn.disabled = true;
+      try {
+        const payload = {
+          site_nome: document.getElementById('sc-site-nome').value.trim(),
+          site_suporte: document.getElementById('sc-site-suporte').value.trim(),
+          site_promo: document.getElementById('sc-site-promo').value.trim(),
+          site_logo_url: document.getElementById('sc-site-logo').value.trim() || null,
+          site_favicon_url: document.getElementById('sc-site-favicon').value.trim() || null,
+          kwai_pixel_id: document.getElementById('sc-kwai-pixel').value.trim(),
+        };
+        await API.updateSiteConfig(payload);
+        showToast('Configurações salvas!', 'success');
+        if (typeof applyBranding === 'function') applyBranding(true);
+        if (typeof window.invalidatePublicCfgCache === 'function') window.invalidatePublicCfgCache();
+      } catch (err) {
+        showToast(err.message || 'Erro ao salvar configurações.', 'error');
+      } finally {
+        btn.disabled = false;
+      }
+    });
+
+    async function _carregarSiteConfig() {
+      try {
+        const cfg = await API.getSiteConfig();
+        document.getElementById('sc-site-nome').value = cfg.site_nome || '';
+        document.getElementById('sc-site-suporte').value = cfg.site_suporte || '';
+        document.getElementById('sc-site-promo').value = cfg.site_promo || '';
+        document.getElementById('sc-site-logo').value = cfg.site_logo_url || '';
+        document.getElementById('sc-site-favicon').value = cfg.site_favicon_url || '';
+        document.getElementById('sc-kwai-pixel').value = cfg.kwai_pixel_id || '';
+      } catch (err) {
+        showToast('Erro ao carregar config do site.', 'error');
       }
     }
   }
