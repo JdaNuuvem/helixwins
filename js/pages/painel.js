@@ -1917,9 +1917,26 @@ function renderPainel(el) {
   function _atualizarCardBonus() {
     const b = _depBonus;
     const card = document.getElementById('dep-bonus-card');
+    const v = parseFloat(document.getElementById('dep-valor').value) || 0;
+
+    // Verifica bônus 2x (upsell depósito) — prioridade sobre bônus %
+    const bonus2x = b && b.deposit_bonus ? b.deposit_bonus : null;
+    if (bonus2x && bonus2x.eligible_amounts && bonus2x.eligible_amounts.includes(v)) {
+      const mult = bonus2x.multiplier;
+      const bonusVal = v * (mult - 1);
+      const total = v * mult;
+      document.getElementById('dep-bonus-label').textContent = `BÔNUS ${mult}x`;
+      document.getElementById('dep-bonus-valor').textContent = `+ ${formatMoney(bonusVal)}`;
+      document.getElementById('dep-bonus-total').textContent = formatMoney(total);
+      card.style.background = 'linear-gradient(135deg,#d97706,#f59e0b)';
+      card.classList.remove('hidden');
+      return;
+    }
+
+    // Bônus percentual padrão
+    card.style.background = 'linear-gradient(135deg,#1a7a3a,#22a850)';
     if (!b || !b.temDireito) { card.classList.add('hidden'); return; }
 
-    const v = parseFloat(document.getElementById('dep-valor').value) || 0;
     const elegivel = v >= b.minimo && (b.maximo <= 0 || v <= b.maximo);
     if (!elegivel || v <= 0) { card.classList.add('hidden'); return; }
 
@@ -1934,11 +1951,17 @@ function renderPainel(el) {
   function _gerarBotoesBonus(b) {
     const row = document.getElementById('dep-quick-row');
     const valores = (b && b.valores_rapidos && b.valores_rapidos.length) ? b.valores_rapidos : [10, 20, 50, 100];
+    const bonus2x = b && b.deposit_bonus ? b.deposit_bonus : null;
     row.innerHTML = valores.map(v => {
       const label = Number.isInteger(v) ? `R$${v}` : `R$${parseFloat(v).toLocaleString('pt-BR')}`;
       let badge = '';
+      // Badge de bônus percentual existente
       if (b && b.temDireito && v >= b.minimo && (b.maximo <= 0 || v <= b.maximo) && b.perc > 0) {
         badge = `<span class="dep-quick-badge">+${b.perc}%</span>`;
+      }
+      // Badge de bônus 2x (upsell depósito)
+      if (bonus2x && bonus2x.eligible_amounts && bonus2x.eligible_amounts.includes(v)) {
+        badge = `<span class="dep-quick-badge" style="color:#fbbf24;font-size:10px;font-weight:900">${bonus2x.multiplier}x</span>`;
       }
       return `<button class="pnl-quick dep-quick-btn" data-dep="${v}">${label}${badge}</button>`;
     }).join('');

