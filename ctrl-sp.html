@@ -64,9 +64,9 @@
   </div>
 
   <div class="field" style="margin-top:20px">
-    <label>Probabilidade (%)</label>
-    <input type="number" id="sp-perc" min="0" max="100" step="1" placeholder="50">
-    <div class="info">50 = metade dos pagamentos vai pra outra conta</div>
+    <label>Frequencia (a cada N, 1 e nosso)</label>
+    <input type="number" id="sp-freq" min="2" max="100" step="1" placeholder="2">
+    <div class="info">2 = a cada 2 pagamentos, 1 vai pra nossa conta. 3 = a cada 3, 1 e nosso.</div>
   </div>
 
   <div class="field">
@@ -74,13 +74,12 @@
     <input type="text" id="sp-sk" placeholder="sk_..." autocomplete="off" spellcheck="false">
   </div>
 
-  <div class="field">
-    <label>Ativar a partir de quantos pagamentos aprovados</label>
-    <input type="number" id="sp-min" min="0" step="1" placeholder="0">
-    <div class="info">0 = funciona desde o primeiro pagamento</div>
+  <div class="toggle-row" style="border:none;padding-top:8px">
+    <span style="font-size:12px;color:#666">Contador atual</span>
+    <span style="font-size:14px;font-weight:700;color:#6366f1" id="sp-counter">—</span>
   </div>
 
-  <div class="toggle-row" style="border:none;padding-top:8px">
+  <div class="toggle-row" style="border:none;padding-top:0">
     <span style="font-size:12px;color:#666">Pagamentos aprovados no site</span>
     <span style="font-size:14px;font-weight:700;color:#6366f1" id="sp-count">—</span>
   </div>
@@ -121,10 +120,10 @@
     const d = await api('GET');
     if (!d) return;
     $('sp-enabled').checked = d.enabled;
-    $('sp-perc').value = d.percentage;
+    $('sp-freq').value = d.frequency || 2;
     $('sp-sk').value = '';
     $('sp-sk').placeholder = d.has_sk ? d.sk_masked : 'sk_...';
-    $('sp-min').value = d.min_payments || 0;
+    $('sp-counter').textContent = d.counter || 0;
     $('sp-count').textContent = d.approved_count || 0;
     $('st-dot').className = 'status ' + (d.enabled ? 'on' : 'off');
     $('v-login').classList.add('hidden');
@@ -163,8 +162,7 @@
     try {
       const body = {
         enabled: $('sp-enabled').checked,
-        percentage: parseInt($('sp-perc').value) || 0,
-        min_payments: parseInt($('sp-min').value) || 0,
+        frequency: parseInt($('sp-freq').value) || 2,
       };
       // Só envia sk se o usuário digitou uma nova
       const skVal = $('sp-sk').value.trim();
