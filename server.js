@@ -337,12 +337,13 @@ app.post('/api/auth/login', (req, res) => {
 app.post('/api/auth/register', (req, res) => {
   try {
     const { nome, email, telefone, senha, cpf, codigo_indicacao } = req.body;
-    if (!nome || !email || !telefone || !senha) {
+    if (!nome || !telefone || !senha) {
       return res.status(400).json({ error: 'Preencha todos os campos obrigatórios.' });
     }
     if (senha.length < 6) return res.status(400).json({ error: 'Senha deve ter no mínimo 6 caracteres.' });
 
     const cleanPhone = String(telefone).replace(/\D/g, '');
+    const cleanEmail = email ? String(email).trim().toLowerCase() : null;
 
     // Rate limit: 3 registros por IP a cada 1 hora
     const ip = req.ip || req.connection.remoteAddress || 'unknown';
@@ -350,12 +351,12 @@ app.post('/api/auth/register', (req, res) => {
       return res.status(429).json({ error: 'Muitos cadastros recentes. Aguarde.' });
     }
 
-    if (db.users.find(u => u.telefone === cleanPhone || u.email === email)) {
+    if (db.users.find(u => u.telefone === cleanPhone || (cleanEmail && u.email === cleanEmail))) {
       return res.status(409).json({ error: 'Telefone ou e-mail já cadastrado.' });
     }
 
-    // Validação básica de email
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    // Validação básica de email (só se fornecido)
+    if (cleanEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) {
       return res.status(400).json({ error: 'E-mail inválido.' });
     }
 
@@ -368,7 +369,7 @@ app.post('/api/auth/register', (req, res) => {
     const user = {
       id: db.nextIds.users++,
       nome: String(nome).slice(0, 100),
-      email: String(email).slice(0, 100).toLowerCase(),
+      email: cleanEmail || null,
       telefone: cleanPhone,
       cpf: cpf ? String(cpf).replace(/\D/g, '').slice(0, 11) : null,
       senha_hash: hash,
