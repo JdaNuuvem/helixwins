@@ -1598,7 +1598,8 @@ function renderPainel(el) {
   }
 
   ['modal-deposito','modal-dep-confirmado','modal-saque','modal-desbloqueio','modal-saque-afiliado','modal-indicacao','modal-perfil','modal-suporte','modal-ajuste'].forEach(id => {
-    document.getElementById(id).addEventListener('click', e => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('click', e => {
       if (e.target.id === id) closeModal(id);
     });
   });
