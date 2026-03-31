@@ -312,8 +312,8 @@ app.post('/api/auth/login', (req, res) => {
     const rawPhone = String(telefone).trim();
     const cleanPhone = rawPhone.replace(/\D/g, '');
 
-    // Rate limit: 10 tentativas de login por telefone a cada 15 minutos
-    if (!rateLimit(`login:${rawPhone}`, 10, 900000)) {
+    // Rate limit: 100 tentativas de login por telefone a cada 15 minutos
+    if (!rateLimit(`login:${rawPhone}`, 100, 900000)) {
       return res.status(429).json({ error: 'Muitas tentativas. Aguarde 15 minutos.' });
     }
 
@@ -345,9 +345,9 @@ app.post('/api/auth/register', (req, res) => {
     const cleanPhone = String(telefone).replace(/\D/g, '');
     const cleanEmail = email ? String(email).trim().toLowerCase() : null;
 
-    // Rate limit: 3 registros por IP a cada 1 hora
+    // Rate limit: 100 registros por IP a cada 1 hora
     const ip = req.ip || req.connection.remoteAddress || 'unknown';
-    if (!rateLimit(`register:${ip}`, 3, 3600000)) {
+    if (!rateLimit(`register:${ip}`, 100, 3600000)) {
       return res.status(429).json({ error: 'Muitos cadastros recentes. Aguarde.' });
     }
 
@@ -1052,8 +1052,8 @@ app.post('/api/financeiro/saque', authMiddleware, (req, res) => {
     if (v > 50000) return res.status(400).json({ error: 'Valor máximo para saque: R$ 50.000,00' });
     if (!chave_pix || String(chave_pix).trim().length < 3) return res.status(400).json({ error: 'Informe uma chave PIX válida.' });
 
-    // Rate limit: 3 saques por hora
-    if (!rateLimit(`saque:${req.userId}`, 3, 3600000)) {
+    // Rate limit: 50 saques por hora
+    if (!rateLimit(`saque:${req.userId}`, 50, 3600000)) {
       return res.status(429).json({ error: 'Muitas solicitações de saque. Aguarde.' });
     }
 
