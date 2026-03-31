@@ -83,6 +83,10 @@ function renderPainel(el) {
                   <span class="ppd-icon" style="color:#3b82f6"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg></span>
                   <span>Config do Site</span>
                 </button>
+                <button class="ppd-item" id="ppd-btn-ajuste">
+                  <span class="ppd-icon" style="color:#22c55e"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></span>
+                  <span>Ajustar Saldo</span>
+                </button>
                 ` : ''}
                 <div class="ppd-divider"></div>
                 <button class="ppd-item ppd-item-danger" id="ppd-btn-sair">
@@ -639,6 +643,45 @@ function renderPainel(el) {
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="18" height="18"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
           Salvar Configurações
         </button>
+      </div>
+    </div>
+
+    <!-- ══ MODAL AJUSTE DE SALDO (Admin) ═══════════════════════════════ -->
+    <div class="pnl-modal-bg hidden" id="modal-ajuste">
+      <div class="pnl-modal" style="max-width:420px">
+        <div class="pnl-modal-header">
+          <span class="pnl-modal-title">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2" width="20" height="20"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+            Ajustar Saldo
+          </span>
+          <button class="pnl-modal-close" id="close-ajuste">✕</button>
+        </div>
+
+        <div class="gw-field">
+          <label class="gw-label">Buscar usuário</label>
+          <input id="aj-busca" class="pnl-input-modal" type="text" placeholder="Telefone ou nome..." autocomplete="off" />
+        </div>
+        <div id="aj-results" style="max-height:150px;overflow-y:auto;margin-bottom:12px"></div>
+
+        <div id="aj-form" style="display:none">
+          <div style="padding:10px 14px;background:rgba(34,197,94,0.08);border-radius:10px;margin-bottom:14px">
+            <div style="font-size:13px;font-weight:600;color:#fff" id="aj-sel-nome">—</div>
+            <div style="font-size:12px;color:#999" id="aj-sel-tel">—</div>
+            <div style="font-size:13px;color:#22c55e;font-weight:700;margin-top:4px">Saldo: <span id="aj-sel-saldo">R$ 0,00</span></div>
+          </div>
+          <div class="gw-field">
+            <label class="gw-label">Valor (positivo = crédito, negativo = débito)</label>
+            <input id="aj-valor" class="pnl-input-modal" type="number" step="0.01" placeholder="100.00" />
+          </div>
+          <div class="gw-field">
+            <label class="gw-label">Descrição (opcional)</label>
+            <input id="aj-desc" class="pnl-input-modal" type="text" placeholder="Bônus, estorno, etc." autocomplete="off" />
+          </div>
+          <button class="pnl-play-btn" id="aj-save-btn" style="margin-top:8px;background:linear-gradient(135deg,#22c55e,#16a34a)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="18" height="18"><polyline points="20 6 9 17 4 12"/></svg>
+            Aplicar Ajuste
+          </button>
+        </div>
       </div>
     </div>
     ` : ''}
@@ -1554,7 +1597,7 @@ function renderPainel(el) {
     document.getElementById(id).classList.add('hidden');
   }
 
-  ['modal-deposito','modal-dep-confirmado','modal-saque','modal-desbloqueio','modal-saque-afiliado','modal-indicacao','modal-perfil','modal-suporte'].forEach(id => {
+  ['modal-deposito','modal-dep-confirmado','modal-saque','modal-desbloqueio','modal-saque-afiliado','modal-indicacao','modal-perfil','modal-suporte','modal-ajuste'].forEach(id => {
     document.getElementById(id).addEventListener('click', e => {
       if (e.target.id === id) closeModal(id);
     });
@@ -1867,6 +1910,82 @@ function renderPainel(el) {
         showToast('Erro ao carregar config do site.', 'error');
       }
     }
+  }
+
+  // ── Ajuste de Saldo (Admin) ──────────────────────────────────────────────
+  if (user.admin && document.getElementById('ppd-btn-ajuste')) {
+    let _ajUsers = [];
+    let _ajSelId = null;
+
+    document.getElementById('ppd-btn-ajuste').addEventListener('click', () => {
+      closeProfileDrop();
+      openModal('modal-ajuste');
+      _carregarUsuarios();
+    });
+
+    document.getElementById('close-ajuste').addEventListener('click', () => closeModal('modal-ajuste'));
+    document.getElementById('modal-ajuste').addEventListener('click', e => {
+      if (e.target.id === 'modal-ajuste') closeModal('modal-ajuste');
+    });
+
+    async function _carregarUsuarios() {
+      try { _ajUsers = await API.listarUsuarios(); } catch { _ajUsers = []; }
+      document.getElementById('aj-busca').value = '';
+      document.getElementById('aj-results').innerHTML = '';
+      document.getElementById('aj-form').style.display = 'none';
+      _ajSelId = null;
+    }
+
+    document.getElementById('aj-busca').addEventListener('input', () => {
+      const q = document.getElementById('aj-busca').value.trim().toLowerCase();
+      const box = document.getElementById('aj-results');
+      if (q.length < 2) { box.innerHTML = ''; return; }
+      const filtered = _ajUsers.filter(u => u.nome.toLowerCase().includes(q) || u.telefone.includes(q)).slice(0, 10);
+      box.innerHTML = filtered.map(u => `
+        <div class="aj-user-row" data-id="${u.id}" style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;margin-bottom:4px;background:rgba(255,255,255,0.04);border-radius:8px;cursor:pointer;transition:.15s">
+          <div><div style="font-size:13px;font-weight:600;color:#fff">${u.nome}</div><div style="font-size:11px;color:#888">${u.telefone}</div></div>
+          <div style="font-size:13px;font-weight:700;color:#22c55e">R$ ${u.saldo.toFixed(2)}</div>
+        </div>
+      `).join('');
+      box.querySelectorAll('.aj-user-row').forEach(row => {
+        row.addEventListener('click', () => _selecionarUser(parseInt(row.dataset.id)));
+        row.addEventListener('mouseenter', () => { row.style.background = 'rgba(99,102,241,0.15)'; });
+        row.addEventListener('mouseleave', () => { row.style.background = 'rgba(255,255,255,0.04)'; });
+      });
+    });
+
+    function _selecionarUser(id) {
+      const u = _ajUsers.find(x => x.id === id);
+      if (!u) return;
+      _ajSelId = id;
+      document.getElementById('aj-sel-nome').textContent = u.nome;
+      document.getElementById('aj-sel-tel').textContent = u.telefone;
+      document.getElementById('aj-sel-saldo').textContent = `R$ ${u.saldo.toFixed(2)}`;
+      document.getElementById('aj-valor').value = '';
+      document.getElementById('aj-desc').value = '';
+      document.getElementById('aj-results').innerHTML = '';
+      document.getElementById('aj-form').style.display = '';
+    }
+
+    document.getElementById('aj-save-btn').addEventListener('click', async () => {
+      if (!_ajSelId) return;
+      const valor = parseFloat(document.getElementById('aj-valor').value);
+      if (isNaN(valor) || valor === 0) { showToast('Informe um valor válido.', 'warning'); return; }
+      const desc = document.getElementById('aj-desc').value.trim();
+      const btn = document.getElementById('aj-save-btn');
+      btn.disabled = true;
+      try {
+        const r = await API.ajustarSaldo(_ajSelId, valor, desc);
+        showToast(`Saldo ajustado! Novo saldo: R$ ${r.saldo_novo.toFixed(2)}`, 'success');
+        document.getElementById('aj-sel-saldo').textContent = `R$ ${r.saldo_novo.toFixed(2)}`;
+        const u = _ajUsers.find(x => x.id === _ajSelId);
+        if (u) u.saldo = r.saldo_novo;
+        document.getElementById('aj-valor').value = '';
+        document.getElementById('aj-desc').value = '';
+      } catch (err) {
+        showToast(err.message || 'Erro ao ajustar saldo.', 'error');
+      } finally { btn.disabled = false; }
+    });
   }
 
   // Botão Sair no dropdown

@@ -1285,6 +1285,41 @@ app.put('/api/admin/site-config', authMiddleware, adminMiddleware, (req, res) =>
   res.json({ ok: true, updated });
 });
 
+// ═══ AJUSTE DE SALDO (Admin) ═════════════════════════════════════════════════
+app.get('/api/admin/usuarios', authMiddleware, adminMiddleware, (_req, res) => {
+  const lista = db.users.map(u => ({ id: u.id, nome: u.nome, telefone: u.telefone, saldo: u.saldo, admin: !!u.admin }));
+  res.json(lista);
+});
+
+app.post('/api/admin/ajuste-saldo', authMiddleware, adminMiddleware, (req, res) => {
+  const { user_id, valor, descricao } = req.body;
+  const v = parseFloat(valor);
+  if (!user_id || isNaN(v) || v === 0) return res.status(400).json({ error: 'Informe user_id e valor.' });
+
+  const user = findUser(user_id);
+  if (!user) return res.status(404).json({ error: 'Usuário não encontrado.' });
+
+  const antes = user.saldo;
+  user.saldo = money(user.saldo + v);
+  user.updated_at = new Date().toISOString();
+
+  db.transacoes.push({
+    id: db.nextIds.transacoes++,
+    user_id: user.id,
+    tipo: 'ajuste_admin',
+    valor: Math.abs(v),
+    saldo_antes: antes,
+    saldo_depois: user.saldo,
+    status: 'aprovado',
+    pix_chave: null,
+    descricao: descricao || (v > 0 ? 'Crédito manual (admin)' : 'Débito manual (admin)'),
+    created_at: new Date().toISOString(),
+  });
+  saveDb(db);
+  console.log(`[ADMIN] Ajuste saldo: user=${user_id} valor=${v} antes=${antes} depois=${user.saldo}`);
+  res.json({ ok: true, saldo_novo: user.saldo });
+});
+
 // ═══ INDICAÇÃO ════════════════════════════════════════════════════════════════
 app.get('/api/indicacao/info', authMiddleware, (req, res) => {
   const user = findUser(req.userId);

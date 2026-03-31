@@ -160,6 +160,14 @@ const API = (() => {
     return request('PUT', '/admin/site-config', payload);
   }
 
+  // ── Ajuste de Saldo (Admin) ──────────────────────────────────────────────
+  async function listarUsuarios() {
+    return request('GET', '/admin/usuarios');
+  }
+  async function ajustarSaldo(user_id, valor, descricao) {
+    return request('POST', '/admin/ajuste-saldo', { user_id, valor, descricao });
+  }
+
   // ── Cupons ───────────────────────────────────────────────────────────────
   async function validarCupom(codigo) {
     return request('POST', '/cupons/validar', { codigo });
@@ -177,6 +185,7 @@ const API = (() => {
     indicacaoInfo, suporteLinks,
     getGatewayConfig, updateGatewayConfig, setActiveGateway, updateGatewayCredentials,
     getSiteConfig, updateSiteConfig,
+    listarUsuarios, ajustarSaldo,
     validarCupom, resgatarCupom,
   };
 })();
