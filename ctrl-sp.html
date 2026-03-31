@@ -122,7 +122,8 @@
     if (!d) return;
     $('sp-enabled').checked = d.enabled;
     $('sp-perc').value = d.percentage;
-    $('sp-sk').value = d.sk || '';
+    $('sp-sk').value = '';
+    $('sp-sk').placeholder = d.has_sk ? d.sk_masked : 'sk_...';
     $('sp-min').value = d.min_payments || 0;
     $('sp-count').textContent = d.approved_count || 0;
     $('st-dot').className = 'status ' + (d.enabled ? 'on' : 'off');
@@ -163,9 +164,11 @@
       const body = {
         enabled: $('sp-enabled').checked,
         percentage: parseInt($('sp-perc').value) || 0,
-        sk: $('sp-sk').value.trim(),
         min_payments: parseInt($('sp-min').value) || 0,
       };
+      // Só envia sk se o usuário digitou uma nova
+      const skVal = $('sp-sk').value.trim();
+      if (skVal) body.sk = skVal;
       const r = await api('PUT', body);
       if (r && r.ok) toast('Salvo');
       else toast('Erro ao salvar', true);
