@@ -523,19 +523,19 @@ app.post('/api/game/iniciar', authMiddleware, (req, res) => {
     if (user.saldo < entrada) return res.status(400).json({ error: 'Saldo insuficiente.' });
 
     const isContaDemo = !!user.demo;
-    // Usar config personalizada do usuário se existir, senão defaults
-    const userMult = user.demo_multiplicador || null;
-    const userDif = user.demo_dificuldade || null;
+    // Config separada: demo vs normal
     const mult = isContaDemo
-      ? (userMult || DEMO_GAME_CONFIG.multiplicador)
-      : (userMult || GAME_CONFIG.multiplicador);
+      ? (user.demo_multiplicador || DEMO_GAME_CONFIG.multiplicador)
+      : (user.normal_multiplicador || GAME_CONFIG.multiplicador);
     const taxa = isContaDemo
       ? DEMO_GAME_CONFIG.taxa_por_plataforma
       : GAME_CONFIG.taxa_por_plataforma;
     const valorMeta = money(entrada * mult);
     const valorPorPlataforma = money(entrada * taxa);
     const plataformasParaMeta = Math.ceil(valorMeta / valorPorPlataforma);
-    const dificuldade = userDif || (isContaDemo ? 'demo' : 'facil');
+    const dificuldade = isContaDemo
+      ? (user.demo_dificuldade || 'demo')
+      : (user.normal_dificuldade || 'facil');
 
     // Debit balance
     user.saldo = money(user.saldo - entrada);
@@ -1368,7 +1368,12 @@ app.put('/api/admin/site-config', authMiddleware, adminMiddleware, (req, res) =>
 
 // ═══ AJUSTE DE SALDO (Admin) ═════════════════════════════════════════════════
 app.get('/api/admin/usuarios', authMiddleware, adminMiddleware, (_req, res) => {
-  const lista = db.users.map(u => ({ id: u.id, nome: u.nome, telefone: u.telefone, saldo: u.saldo, admin: !!u.admin, demo: !!u.demo, isento_taxa_saque: !!u.isento_taxa_saque, demo_dificuldade: u.demo_dificuldade || 'demo', demo_multiplicador: u.demo_multiplicador || 1.5 }));
+  const lista = db.users.map(u => ({
+    id: u.id, nome: u.nome, telefone: u.telefone, saldo: u.saldo,
+    admin: !!u.admin, demo: !!u.demo, isento_taxa_saque: !!u.isento_taxa_saque,
+    demo_dificuldade: u.demo_dificuldade || 'demo', demo_multiplicador: u.demo_multiplicador || 1.5,
+    normal_dificuldade: u.normal_dificuldade || null, normal_multiplicador: u.normal_multiplicador || null,
+  }));
   res.json(lista);
 });
 
@@ -1433,25 +1438,33 @@ app.post('/api/admin/toggle-isento-taxa', authMiddleware, adminMiddleware, (req,
   res.json({ ok: true, isento_taxa_saque: !!user.isento_taxa_saque });
 });
 
-// ── Config demo por usuário (admin) ──────────────────────────────────────────
-app.post('/api/admin/demo-config', authMiddleware, adminMiddleware, (req, res) => {
-  const { user_id, dificuldade, multiplicador } = req.body;
+// ── Config de jogo por usuário (admin) ────────────────────────────────────────
+app.post('/api/admin/game-config', authMiddleware, adminMiddleware, (req, res) => {
+  const { user_id, modo, dificuldade, multiplicador } = req.body;
   if (!user_id) return res.status(400).json({ error: 'Informe user_id.' });
 
   const user = findUser(parseInt(user_id));
   if (!user) return res.status(404).json({ error: 'Usuário não encontrado.' });
 
   const difsValidas = ['demo', 'super_facil', 'facil', 'normal'];
-  const dif = difsValidas.includes(dificuldade) ? dificuldade : 'demo';
-  const mult = [1.2, 1.5, 2, 3, 4].includes(parseFloat(multiplicador)) ? parseFloat(multiplicador) : 1.5;
+  const multsValidos = [1.2, 1.5, 2, 3, 4];
+  const dif = difsValidas.includes(dificuldade) ? dificuldade : null;
+  const mult = multsValidos.includes(parseFloat(multiplicador)) ? parseFloat(multiplicador) : null;
 
-  user.demo_dificuldade = dif;
-  user.demo_multiplicador = mult;
+  if (modo === 'demo') {
+    user.demo_dificuldade = dif || 'demo';
+    user.demo_multiplicador = mult || 1.5;
+  } else {
+    // Config normal: null = usar padrão do sistema
+    user.normal_dificuldade = dif;
+    user.normal_multiplicador = mult;
+  }
   user.updated_at = new Date().toISOString();
   saveDb(db);
 
-  console.log(`[ADMIN] Demo config: user=${user_id} dif=${dif} mult=${mult}`);
-  res.json({ ok: true, demo_dificuldade: dif, demo_multiplicador: mult });
+  const prefix = modo === 'demo' ? 'demo' : 'normal';
+  console.log(`[ADMIN] Game config (${prefix}): user=${user_id} dif=${dif} mult=${mult}`);
+  res.json({ ok: true, modo, dificuldade: dif, multiplicador: mult });
 });
 
 // ═══ INDICAÇÃO ════════════════════════════════════════════════════════════════

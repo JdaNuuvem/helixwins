@@ -725,22 +725,49 @@ function renderPainel(el) {
                 Isento Taxa: OFF
               </button>
             </div>
+            <!-- Config Jogo Normal -->
+            <div id="aj-normal-config" style="display:none;margin-top:8px;padding:8px 12px;background:rgba(99,102,241,.06);border:1px solid rgba(99,102,241,.15);border-radius:8px">
+              <div style="font-size:11px;font-weight:700;color:#818cf8;margin-bottom:6px">Config Jogo Normal</div>
+              <label style="font-size:11px;color:#a5b4fc;display:block;margin-bottom:3px">Dificuldade</label>
+              <select id="aj-normal-dificuldade" style="width:100%;padding:6px 10px;border-radius:6px;border:1px solid rgba(99,102,241,.3);background:#1a1028;color:#a5b4fc;font-size:12px;font-family:inherit;cursor:pointer">
+                <option value="">Padrao (facil)</option>
+                <option value="demo">Muito Facil</option>
+                <option value="super_facil">Facil</option>
+                <option value="facil">Normal</option>
+                <option value="normal">Dificil</option>
+              </select>
+              <div style="margin-top:6px">
+                <label style="font-size:11px;color:#a5b4fc;display:block;margin-bottom:3px">Multiplicador Meta</label>
+                <select id="aj-normal-multiplicador" style="width:100%;padding:6px 10px;border-radius:6px;border:1px solid rgba(99,102,241,.3);background:#1a1028;color:#a5b4fc;font-size:12px;font-family:inherit;cursor:pointer">
+                  <option value="">Padrao (4x)</option>
+                  <option value="1.5">1.5x</option>
+                  <option value="2">2x</option>
+                  <option value="3">3x</option>
+                  <option value="4">4x</option>
+                </select>
+              </div>
+              <button id="aj-normal-salvar" style="margin-top:8px;width:100%;padding:6px;border-radius:6px;border:none;background:linear-gradient(135deg,#6366f1,#4f46e5);color:#fff;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">
+                Salvar Config Normal
+              </button>
+            </div>
+            <!-- Config Jogo Demo -->
             <div id="aj-demo-config" style="display:none;margin-top:8px;padding:8px 12px;background:rgba(251,191,36,.06);border:1px solid rgba(251,191,36,.15);border-radius:8px">
-              <label style="font-size:11px;color:#fbbf24;font-weight:600;display:block;margin-bottom:4px">Dificuldade do Jogo</label>
+              <div style="font-size:11px;font-weight:700;color:#fbbf24;margin-bottom:6px">Config Jogo Demo</div>
+              <label style="font-size:11px;color:#fbbf24;display:block;margin-bottom:3px">Dificuldade</label>
               <select id="aj-demo-dificuldade" style="width:100%;padding:6px 10px;border-radius:6px;border:1px solid rgba(251,191,36,.3);background:#1a1028;color:#fbbf24;font-size:12px;font-family:inherit;cursor:pointer">
                 <option value="demo">Muito Facil (quase impossivel perder)</option>
                 <option value="super_facil">Facil (poucas mortes)</option>
-                <option value="facil">Normal (padrao do jogo)</option>
-                <option value="normal">Dificil (original)</option>
+                <option value="facil">Normal</option>
+                <option value="normal">Dificil</option>
               </select>
               <div style="margin-top:6px">
-                <label style="font-size:11px;color:#fbbf24;font-weight:600;display:block;margin-bottom:4px">Multiplicador Meta</label>
+                <label style="font-size:11px;color:#fbbf24;display:block;margin-bottom:3px">Multiplicador Meta</label>
                 <select id="aj-demo-multiplicador" style="width:100%;padding:6px 10px;border-radius:6px;border:1px solid rgba(251,191,36,.3);background:#1a1028;color:#fbbf24;font-size:12px;font-family:inherit;cursor:pointer">
-                  <option value="1.2">1.2x (super facil - poucas plataformas)</option>
-                  <option value="1.5">1.5x (facil)</option>
-                  <option value="2">2x (medio)</option>
-                  <option value="3">3x (alto)</option>
-                  <option value="4">4x (padrao normal)</option>
+                  <option value="1.2">1.2x (super facil)</option>
+                  <option value="1.5">1.5x</option>
+                  <option value="2">2x</option>
+                  <option value="3">3x</option>
+                  <option value="4">4x</option>
                 </select>
               </div>
               <button id="aj-demo-salvar" style="margin-top:8px;width:100%;padding:6px;border-radius:6px;border:none;background:linear-gradient(135deg,#f59e0b,#d97706);color:#000;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">
@@ -2046,18 +2073,24 @@ function renderPainel(el) {
         btn.style.background = 'rgba(251,191,36,.1)';
         btn.style.borderColor = 'rgba(251,191,36,.4)';
       }
-      // Config de dificuldade sempre visível ao selecionar user
-      const cfg = document.getElementById('aj-demo-config');
-      if (cfg) cfg.style.display = 'block';
+      // Config normal sempre visível, config demo só quando demo ON
+      const cfgNormal = document.getElementById('aj-normal-config');
+      const cfgDemo = document.getElementById('aj-demo-config');
+      if (cfgNormal) cfgNormal.style.display = 'block';
+      if (cfgDemo) cfgDemo.style.display = isDemo ? 'block' : 'none';
     }
 
     function _carregarDemoConfig(u) {
-      const selDif = document.getElementById('aj-demo-dificuldade');
-      const selMult = document.getElementById('aj-demo-multiplicador');
-      const defaultDif = u.demo ? 'demo' : 'facil';
-      const defaultMult = u.demo ? '1.5' : '4';
-      if (selDif) selDif.value = u.demo_dificuldade || defaultDif;
-      if (selMult) selMult.value = String(u.demo_multiplicador || defaultMult);
+      // Config normal
+      const nDif = document.getElementById('aj-normal-dificuldade');
+      const nMult = document.getElementById('aj-normal-multiplicador');
+      if (nDif) nDif.value = u.normal_dificuldade || '';
+      if (nMult) nMult.value = u.normal_multiplicador ? String(u.normal_multiplicador) : '';
+      // Config demo
+      const dDif = document.getElementById('aj-demo-dificuldade');
+      const dMult = document.getElementById('aj-demo-multiplicador');
+      if (dDif) dDif.value = u.demo_dificuldade || 'demo';
+      if (dMult) dMult.value = String(u.demo_multiplicador || '1.5');
     }
 
     function _atualizarBtnIsento(isIsento) {
@@ -2125,6 +2158,22 @@ function renderPainel(el) {
       } finally { btn.disabled = false; }
     });
 
+    document.getElementById('aj-normal-salvar')?.addEventListener('click', async () => {
+      if (!_ajSelId) return;
+      const btn = document.getElementById('aj-normal-salvar');
+      const dif = document.getElementById('aj-normal-dificuldade').value || null;
+      const mult = document.getElementById('aj-normal-multiplicador').value ? parseFloat(document.getElementById('aj-normal-multiplicador').value) : null;
+      btn.disabled = true;
+      try {
+        const r = await API.updateGameConfig(_ajSelId, 'normal', dif, mult);
+        const u = _ajUsers.find(x => x.id === _ajSelId);
+        if (u) { u.normal_dificuldade = dif; u.normal_multiplicador = mult; }
+        showToast(dif || mult ? `Config normal salva!` : 'Config normal resetada para padrao.', 'success');
+      } catch (err) {
+        showToast(err.message || 'Erro ao salvar config.', 'error');
+      } finally { btn.disabled = false; }
+    });
+
     document.getElementById('aj-demo-salvar')?.addEventListener('click', async () => {
       if (!_ajSelId) return;
       const btn = document.getElementById('aj-demo-salvar');
@@ -2132,7 +2181,7 @@ function renderPainel(el) {
       const mult = parseFloat(document.getElementById('aj-demo-multiplicador').value);
       btn.disabled = true;
       try {
-        const r = await API.updateDemoConfig(_ajSelId, dif, mult);
+        const r = await API.updateGameConfig(_ajSelId, 'demo', dif, mult);
         const u = _ajUsers.find(x => x.id === _ajSelId);
         if (u) { u.demo_dificuldade = dif; u.demo_multiplicador = mult; }
         showToast(`Config demo salva! Dificuldade: ${dif}, Meta: ${mult}x`, 'success');

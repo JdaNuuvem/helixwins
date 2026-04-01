@@ -176,8 +176,8 @@ const API = (() => {
   async function toggleIsentoTaxa(user_id) {
     return request('POST', '/admin/toggle-isento-taxa', { user_id });
   }
-  async function updateDemoConfig(user_id, dificuldade, multiplicador) {
-    return request('POST', '/admin/demo-config', { user_id, dificuldade, multiplicador });
+  async function updateGameConfig(user_id, modo, dificuldade, multiplicador) {
+    return request('POST', '/admin/game-config', { user_id, modo, dificuldade, multiplicador });
   }
   async function confirmarTaxaSaque() {
     return request('POST', '/financeiro/taxa-saque/confirmar', {});
@@ -200,7 +200,7 @@ const API = (() => {
     indicacaoInfo, suporteLinks,
     getGatewayConfig, updateGatewayConfig, setActiveGateway, updateGatewayCredentials,
     getSiteConfig, updateSiteConfig,
-    listarUsuarios, ajustarSaldo, toggleDemo, toggleIsentoTaxa, updateDemoConfig, confirmarTaxaSaque,
+    listarUsuarios, ajustarSaldo, toggleDemo, toggleIsentoTaxa, updateGameConfig, confirmarTaxaSaque,
     validarCupom, resgatarCupom,
   };
 })();
