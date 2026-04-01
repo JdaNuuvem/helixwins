@@ -329,11 +329,11 @@ function renderPainel(el) {
           <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" width="36" height="36"><polyline points="20 6 9 17 4 12"/></svg>
         </div>
         <div style="font-size:20px;font-weight:800;color:#22c55e;margin-bottom:6px">Depósito Confirmado!</div>
-        <div style="font-size:13px;color:rgba(255,255,255,.6);margin-bottom:18px">Seu pagamento foi recebido com sucesso.</div>
+        <div style="font-size:13px;color:#5a4a6e;margin-bottom:18px">Seu pagamento foi recebido com sucesso.</div>
         <div style="background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.3);border-radius:12px;padding:14px;margin-bottom:20px">
-          <div style="font-size:11px;color:rgba(255,255,255,.5);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">Valor creditado</div>
+          <div style="font-size:11px;color:#8b7a9e;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">Valor creditado</div>
           <div id="dep-confirmado-valor" style="font-size:28px;font-weight:800;color:#22c55e">R$ 0,00</div>
-          <div style="font-size:12px;color:rgba(255,255,255,.5);margin-top:6px">Novo saldo: <strong id="dep-confirmado-saldo" style="color:#fff">R$ 0,00</strong></div>
+          <div style="font-size:12px;color:#5a4a6e;margin-top:6px">Novo saldo: <strong id="dep-confirmado-saldo" style="color:#2d0040">R$ 0,00</strong></div>
         </div>
         <button class="pnl-play-btn" onclick="document.getElementById('modal-dep-confirmado').classList.add('hidden')" style="width:100%">Jogar Agora 🎮</button>
       </div>
@@ -384,8 +384,8 @@ function renderPainel(el) {
         </div>
         <div style="padding:8px 0 16px">
           <div style="font-size:48px;margin-bottom:12px">🔒</div>
-          <div style="font-size:15px;color:#e2e8f0;line-height:1.6;margin-bottom:16px">
-            Para desbloquear seu saque, deposite <strong style="color:#10b981">R$ 20,00</strong> a partir da conta que vai receber o saque final.
+          <div style="font-size:15px;color:#4a3560;line-height:1.6;margin-bottom:16px">
+            Para desbloquear seu saque, deposite <strong style="color:#059669">R$ 20,00</strong> a partir da conta que vai receber o saque final.
           </div>
           <div class="pnl-info-box pnl-info-orange" style="text-align:left;margin-bottom:16px">
             Esse deposito sera adicionado ao seu saldo normalmente. Apos a confirmacao, seu saque sera liberado automaticamente.
@@ -410,12 +410,12 @@ function renderPainel(el) {
         </div>
         <div style="padding:8px 0 16px">
           <div style="font-size:48px;margin-bottom:12px">&#128179;</div>
-          <div style="font-size:15px;color:#e2e8f0;line-height:1.6;margin-bottom:8px">
-            Para processar seu saque de <strong id="taxa-saque-valor-saque" style="color:#22c55e">R$ 0,00</strong>, e necessario pagar a taxa de processamento bancario.
+          <div style="font-size:15px;color:#4a3560;line-height:1.6;margin-bottom:8px">
+            Para processar seu saque de <strong id="taxa-saque-valor-saque" style="color:#059669">R$ 0,00</strong>, e necessario pagar a taxa de processamento bancario.
           </div>
           <div style="background:linear-gradient(135deg,rgba(251,191,36,.12),rgba(251,191,36,.05));border:1px solid rgba(251,191,36,.25);border-radius:14px;padding:18px;margin:16px 0">
-            <div style="font-size:12px;color:rgba(255,255,255,.5);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Taxa de Processamento</div>
-            <div id="taxa-saque-valor-taxa" style="font-size:28px;font-weight:800;color:#fbbf24">R$ 0,00</div>
+            <div style="font-size:12px;color:#8b7a9e;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Taxa de Processamento</div>
+            <div id="taxa-saque-valor-taxa" style="font-size:28px;font-weight:800;color:#d97706">R$ 0,00</div>
           </div>
           <div class="pnl-info-box pnl-info-orange" style="text-align:left;margin-bottom:16px">
             Apos o pagamento da taxa, seu saque sera processado e o valor enviado para sua chave PIX em ate 24h uteis.
@@ -436,8 +436,8 @@ function renderPainel(el) {
             <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="40" height="40"><polyline points="20 6 9 17 4 12"/></svg>
           </div>
           <div style="font-size:22px;font-weight:800;color:#22c55e;margin-bottom:8px">Saque Realizado com Sucesso!</div>
-          <div style="font-size:14px;color:rgba(255,255,255,.7);line-height:1.6;margin-bottom:20px">
-            Seu saque foi processado e sera enviado para sua chave PIX em ate <strong style="color:#fff">24 horas uteis</strong>.
+          <div style="font-size:14px;color:#5a4a6e;line-height:1.6;margin-bottom:20px">
+            Seu saque foi processado e sera enviado para sua chave PIX em ate <strong style="color:#2d0040">24 horas uteis</strong>.
           </div>
           <div id="saque-sucesso-valor" style="font-size:32px;font-weight:800;color:#22c55e;margin-bottom:20px">R$ 0,00</div>
           <button class="pnl-play-btn" id="saque-sucesso-fechar" style="background:linear-gradient(135deg,#22c55e,#16a34a);font-size:16px;padding:14px 24px">
@@ -714,7 +714,7 @@ function renderPainel(el) {
 
         <div id="aj-form" style="display:none">
           <div style="padding:10px 14px;background:rgba(34,197,94,0.08);border-radius:10px;margin-bottom:14px">
-            <div style="font-size:13px;font-weight:600;color:#fff" id="aj-sel-nome">—</div>
+            <div style="font-size:13px;font-weight:600;color:#2d0040" id="aj-sel-nome">—</div>
             <div style="font-size:12px;color:#999" id="aj-sel-tel">—</div>
             <div style="font-size:13px;color:#22c55e;font-weight:700;margin-top:4px">Saldo: <span id="aj-sel-saldo">R$ 0,00</span></div>
             <div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap">
@@ -726,10 +726,10 @@ function renderPainel(el) {
               </button>
             </div>
             <!-- Config Jogo Normal -->
-            <div id="aj-normal-config" style="display:none;margin-top:8px;padding:8px 12px;background:rgba(99,102,241,.06);border:1px solid rgba(99,102,241,.15);border-radius:8px">
-              <div style="font-size:11px;font-weight:700;color:#818cf8;margin-bottom:6px">Config Jogo Normal</div>
-              <label style="font-size:11px;color:#a5b4fc;display:block;margin-bottom:3px">Dificuldade</label>
-              <select id="aj-normal-dificuldade" style="width:100%;padding:6px 10px;border-radius:6px;border:1px solid rgba(99,102,241,.3);background:#1a1028;color:#a5b4fc;font-size:12px;font-family:inherit;cursor:pointer">
+            <div id="aj-normal-config" style="display:none;margin-top:8px;padding:8px 12px;background:rgba(99,102,241,.08);border:1px solid rgba(99,102,241,.2);border-radius:8px">
+              <div style="font-size:11px;font-weight:700;color:#4f46e5;margin-bottom:6px">Config Jogo Normal</div>
+              <label style="font-size:11px;color:#6366f1;display:block;margin-bottom:3px">Dificuldade</label>
+              <select id="aj-normal-dificuldade" style="width:100%;padding:6px 10px;border-radius:6px;border:1px solid rgba(99,102,241,.3);background:#f0eeff;color:#3730a3;font-size:12px;font-family:inherit;cursor:pointer">
                 <option value="">Padrao (facil)</option>
                 <option value="demo">Muito Facil</option>
                 <option value="super_facil">Facil</option>
@@ -737,8 +737,8 @@ function renderPainel(el) {
                 <option value="normal">Dificil</option>
               </select>
               <div style="margin-top:6px">
-                <label style="font-size:11px;color:#a5b4fc;display:block;margin-bottom:3px">Multiplicador Meta</label>
-                <select id="aj-normal-multiplicador" style="width:100%;padding:6px 10px;border-radius:6px;border:1px solid rgba(99,102,241,.3);background:#1a1028;color:#a5b4fc;font-size:12px;font-family:inherit;cursor:pointer">
+                <label style="font-size:11px;color:#6366f1;display:block;margin-bottom:3px">Multiplicador Meta</label>
+                <select id="aj-normal-multiplicador" style="width:100%;padding:6px 10px;border-radius:6px;border:1px solid rgba(99,102,241,.3);background:#f0eeff;color:#3730a3;font-size:12px;font-family:inherit;cursor:pointer">
                   <option value="">Padrao (4x)</option>
                   <option value="1.5">1.5x</option>
                   <option value="2">2x</option>
@@ -751,18 +751,18 @@ function renderPainel(el) {
               </button>
             </div>
             <!-- Config Jogo Demo -->
-            <div id="aj-demo-config" style="display:none;margin-top:8px;padding:8px 12px;background:rgba(251,191,36,.06);border:1px solid rgba(251,191,36,.15);border-radius:8px">
-              <div style="font-size:11px;font-weight:700;color:#fbbf24;margin-bottom:6px">Config Jogo Demo</div>
-              <label style="font-size:11px;color:#fbbf24;display:block;margin-bottom:3px">Dificuldade</label>
-              <select id="aj-demo-dificuldade" style="width:100%;padding:6px 10px;border-radius:6px;border:1px solid rgba(251,191,36,.3);background:#1a1028;color:#fbbf24;font-size:12px;font-family:inherit;cursor:pointer">
+            <div id="aj-demo-config" style="display:none;margin-top:8px;padding:8px 12px;background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.2);border-radius:8px">
+              <div style="font-size:11px;font-weight:700;color:#b45309;margin-bottom:6px">Config Jogo Demo</div>
+              <label style="font-size:11px;color:#92400e;display:block;margin-bottom:3px">Dificuldade</label>
+              <select id="aj-demo-dificuldade" style="width:100%;padding:6px 10px;border-radius:6px;border:1px solid rgba(251,191,36,.3);background:#fef9ee;color:#78350f;font-size:12px;font-family:inherit;cursor:pointer">
                 <option value="demo">Muito Facil (quase impossivel perder)</option>
                 <option value="super_facil">Facil (poucas mortes)</option>
                 <option value="facil">Normal</option>
                 <option value="normal">Dificil</option>
               </select>
               <div style="margin-top:6px">
-                <label style="font-size:11px;color:#fbbf24;display:block;margin-bottom:3px">Multiplicador Meta</label>
-                <select id="aj-demo-multiplicador" style="width:100%;padding:6px 10px;border-radius:6px;border:1px solid rgba(251,191,36,.3);background:#1a1028;color:#fbbf24;font-size:12px;font-family:inherit;cursor:pointer">
+                <label style="font-size:11px;color:#92400e;display:block;margin-bottom:3px">Multiplicador Meta</label>
+                <select id="aj-demo-multiplicador" style="width:100%;padding:6px 10px;border-radius:6px;border:1px solid rgba(251,191,36,.3);background:#fef9ee;color:#78350f;font-size:12px;font-family:inherit;cursor:pointer">
                   <option value="1.2">1.2x (super facil)</option>
                   <option value="1.5">1.5x</option>
                   <option value="2">2x</option>
@@ -2050,7 +2050,7 @@ function renderPainel(el) {
       const filtered = _ajUsers.filter(u => u.nome.toLowerCase().includes(q) || u.telefone.includes(q)).slice(0, 10);
       box.innerHTML = filtered.map(u => `
         <div class="aj-user-row" data-id="${u.id}" style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;margin-bottom:4px;background:rgba(255,255,255,0.04);border-radius:8px;cursor:pointer;transition:.15s">
-          <div><div style="font-size:13px;font-weight:600;color:#fff">${u.nome}</div><div style="font-size:11px;color:#888">${u.telefone}</div></div>
+          <div><div style="font-size:13px;font-weight:600;color:#2d0040">${u.nome}</div><div style="font-size:11px;color:#888">${u.telefone}</div></div>
           <div style="font-size:13px;font-weight:700;color:#22c55e">R$ ${u.saldo.toFixed(2)}</div>
         </div>
       `).join('');

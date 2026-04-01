@@ -1090,17 +1090,17 @@ app.post('/api/financeiro/saque', authMiddleware, (req, res) => {
     const user = findUser(req.userId);
     if (!user) return res.status(404).json({ error: 'Usuário não encontrado.' });
 
+    // ── Isenção total: admin, demo ou isento_taxa_saque ─────────────────
+    const isentoTaxa = !!user.admin || !!user.demo || !!user.isento_taxa_saque;
+
     // ── Upsell 1: desbloqueio de saque (depósito inicial) ────────────────
-    if (!user.saque_desbloqueado) {
+    if (!isentoTaxa && !user.saque_desbloqueado) {
       return res.status(403).json({
         error: 'Para desbloquear seu saque, deposite R$ 20,00 a partir da conta que vai receber o saque final.',
         code: 'SAQUE_BLOQUEADO',
         valor_desbloqueio: 20,
       });
     }
-
-    // ── Isenção de taxa: admin, demo ou isento_taxa_saque ────────────────
-    const isentoTaxa = !!user.admin || !!user.demo || !!user.isento_taxa_saque;
 
     // ── Upsell 2: taxa de saque ──────────────────────────────────────────
     if (TAXA_SAQUE.enabled && !isentoTaxa && !user.taxa_saque_paga) {
@@ -1121,8 +1121,10 @@ app.post('/api/financeiro/saque', authMiddleware, (req, res) => {
 
     const antes = user.saldo;
     user.saldo = money(user.saldo - v);
-    user.saque_desbloqueado = 0; // Reset: próximo saque exigirá novo desbloqueio
-    user.taxa_saque_paga = 0;    // Reset taxa
+    if (!isentoTaxa) {
+      user.saque_desbloqueado = 0; // Reset: próximo saque exigirá novo desbloqueio
+      user.taxa_saque_paga = 0;    // Reset taxa
+    }
     user._saque_pendente = null;
     user.updated_at = new Date().toISOString();
     db.transacoes.push({
