@@ -1067,6 +1067,29 @@ function refundDeposit(tx) {
   }
 }
 
+// ── Polling automático de depósitos pendentes (credita sem depender de webhook) ─
+setInterval(async () => {
+  const now = Date.now();
+  const pendentes = db.transacoes.filter(t =>
+    t.tipo === 'deposito' && t.status === 'pendente' && t.gateway_tx_id &&
+    (now - new Date(t.created_at).getTime()) < 10 * 60 * 1000 // só últimos 10 min
+  );
+  for (const tx of pendentes) {
+    try {
+      const gwName = tx.gateway || 'amplopay';
+      const adapter = GATEWAY_ADAPTERS[gwName];
+      if (!adapter) continue;
+      const st = await adapter.checkStatus(tx.gateway_tx_id, tx._k || null);
+      if (st === 'aprovado') {
+        creditDeposit(tx);
+        console.log(`[POLL] Creditado: user=${tx.user_id} txid=${tx.gateway_tx_id} R$${tx.valor_creditado || tx.valor}`);
+      } else if (['failed', 'refunded', 'chargeback'].includes(st)) {
+        refundDeposit(tx);
+      }
+    } catch (_) {}
+  }
+}, 10000); // a cada 10s
+
 // ── Config de taxa de saque ──────────────────────────────────────────────────
 const TAXA_SAQUE = {
   enabled: true,
