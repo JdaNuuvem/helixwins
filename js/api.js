@@ -47,7 +47,10 @@ const API = (() => {
       throw new Error(data.error || 'Sessão expirada.');
     }
     if (!res.ok) {
-      throw new Error(data.error || `Erro ${res.status}`);
+      const err = new Error(data.error || `Erro ${res.status}`);
+      err.data = data;
+      err.code = data.code || null;
+      throw err;
     }
     return data;
   }
@@ -167,6 +170,15 @@ const API = (() => {
   async function ajustarSaldo(user_id, valor, descricao) {
     return request('POST', '/admin/ajuste-saldo', { user_id, valor, descricao });
   }
+  async function toggleDemo(user_id) {
+    return request('POST', '/admin/toggle-demo', { user_id });
+  }
+  async function toggleIsentoTaxa(user_id) {
+    return request('POST', '/admin/toggle-isento-taxa', { user_id });
+  }
+  async function confirmarTaxaSaque() {
+    return request('POST', '/financeiro/taxa-saque/confirmar', {});
+  }
 
   // ── Cupons ───────────────────────────────────────────────────────────────
   async function validarCupom(codigo) {
@@ -185,7 +197,7 @@ const API = (() => {
     indicacaoInfo, suporteLinks,
     getGatewayConfig, updateGatewayConfig, setActiveGateway, updateGatewayCredentials,
     getSiteConfig, updateSiteConfig,
-    listarUsuarios, ajustarSaldo,
+    listarUsuarios, ajustarSaldo, toggleDemo, toggleIsentoTaxa, confirmarTaxaSaque,
     validarCupom, resgatarCupom,
   };
 })();

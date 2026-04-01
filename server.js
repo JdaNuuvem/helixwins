@@ -150,6 +150,13 @@ const GAME_CONFIG = {
   tempo_minimo_por_plataforma_ms: 800,
 };
 
+// Config facilitada para conta demo (gravação de criativos)
+const DEMO_GAME_CONFIG = {
+  multiplicador: 1.5,            // Meta = entrada × 1.5 (muito mais fácil de atingir)
+  taxa_por_plataforma: 0.25,     // Ganha mais por plataforma
+  tempo_minimo_por_plataforma_ms: 200, // Anti-cheat relaxado
+};
+
 const SITE_CONFIG = {
   teste_gratis_ativo: true,
   deposito_minimo: 20,
@@ -399,8 +406,8 @@ app.post('/api/auth/register', (req, res) => {
 app.get('/api/auth/me', authMiddleware, (req, res) => {
   const user = findUser(req.userId);
   if (!user) return res.status(404).json({ error: 'Usuário não encontrado.' });
-  const { id, nome, email, telefone, saldo, chave_pix, codigo_indicacao, created_at, admin } = user;
-  res.json({ user: { id, nome, email, telefone, saldo, chave_pix, codigo_indicacao, created_at, admin: !!admin } });
+  const { id, nome, email, telefone, saldo, chave_pix, codigo_indicacao, created_at, admin, demo } = user;
+  res.json({ user: { id, nome, email, telefone, saldo, chave_pix, codigo_indicacao, created_at, admin: !!admin, demo: !!demo } });
 });
 
 app.post('/api/auth/logout', (_req, res) => {
@@ -515,11 +522,13 @@ app.post('/api/game/iniciar', authMiddleware, (req, res) => {
 
     if (user.saldo < entrada) return res.status(400).json({ error: 'Saldo insuficiente.' });
 
-    const mult = GAME_CONFIG.multiplicador;
-    const taxa = GAME_CONFIG.taxa_por_plataforma;
+    const isContaDemo = !!user.demo;
+    const mult = isContaDemo ? DEMO_GAME_CONFIG.multiplicador : GAME_CONFIG.multiplicador;
+    const taxa = isContaDemo ? DEMO_GAME_CONFIG.taxa_por_plataforma : GAME_CONFIG.taxa_por_plataforma;
     const valorMeta = money(entrada * mult);
     const valorPorPlataforma = money(entrada * taxa);
     const plataformasParaMeta = Math.ceil(valorMeta / valorPorPlataforma);
+    const dificuldade = isContaDemo ? 'demo' : 'facil';
 
     // Debit balance
     user.saldo = money(user.saldo - entrada);
@@ -533,7 +542,8 @@ app.post('/api/game/iniciar', authMiddleware, (req, res) => {
       valor_meta: valorMeta,
       valor_por_plataforma: valorPorPlataforma,
       plataformas_para_meta: plataformasParaMeta,
-      dificuldade: 'facil',
+      dificuldade,
+      is_demo: isContaDemo,
       plataformas_passadas: 0,
       status: 'ativa',
       created_at: new Date().toISOString(),
@@ -542,7 +552,7 @@ app.post('/api/game/iniciar', authMiddleware, (req, res) => {
     db.partidas.push(partida);
     saveDb(db);
 
-    console.log(`[GAME] Partida #${partida.id} criada: user=${req.userId} entrada=${entrada} meta=${valorMeta}`);
+    console.log(`[GAME] Partida #${partida.id} criada: user=${req.userId} entrada=${entrada} meta=${valorMeta}${isContaDemo ? ' [DEMO]' : ''}`);
 
     res.json({
       partida_id: partida.id,
@@ -552,8 +562,8 @@ app.post('/api/game/iniciar', authMiddleware, (req, res) => {
       taxa_por_plataforma: taxa,
       valor_por_plataforma: valorPorPlataforma,
       plataformas_referencia: plataformasParaMeta,
-      dificuldade: 'facil',
-      is_demo: false,
+      dificuldade,
+      is_demo: isContaDemo,
       saldo_novo: user.saldo,
     });
   } catch (err) {
@@ -610,6 +620,8 @@ app.post('/api/game/finalizar', authMiddleware, (req, res) => {
 
     // ─── ANTI-CHEAT: Validação server-side de plataformas ─────────────────
     let plats = Math.max(0, parseInt(plataformas_passadas) || 0);
+    const isContaDemo = !!partida.is_demo;
+    const tempoMinPlat = isContaDemo ? DEMO_GAME_CONFIG.tempo_minimo_por_plataforma_ms : GAME_CONFIG.tempo_minimo_por_plataforma_ms;
 
     // 1. Limitar ao máximo configurado
     plats = Math.min(plats, GAME_CONFIG.max_plataformas);
@@ -617,14 +629,14 @@ app.post('/api/game/finalizar', authMiddleware, (req, res) => {
     // 2. Verificar tempo mínimo: se a partida foi criada há X ms, o máximo
     //    de plataformas possíveis é (tempo_decorrido / tempo_minimo_por_plataforma)
     const tempoDecorrido = Date.now() - new Date(partida.created_at).getTime();
-    const maxPlatsPerTempo = Math.floor(tempoDecorrido / GAME_CONFIG.tempo_minimo_por_plataforma_ms);
+    const maxPlatsPerTempo = Math.floor(tempoDecorrido / tempoMinPlat);
     if (plats > maxPlatsPerTempo) {
       console.warn(`[ANTI-CHEAT] user=${req.userId} partida=${pid} plats_enviadas=${plats} max_por_tempo=${maxPlatsPerTempo} — AJUSTANDO`);
       plats = maxPlatsPerTempo;
     }
 
-    // 3. Limitar ganho máximo a um múltiplo razoável da meta (ex: 3x a meta)
-    const ganhoMaxPermitido = money(partida.valor_meta * 3);
+    // 3. Limitar ganho máximo (demo: 5x a meta, normal: 3x a meta)
+    const ganhoMaxPermitido = money(partida.valor_meta * (isContaDemo ? 5 : 3));
     let valorGanho = money(plats * partida.valor_por_plataforma);
     if (valorGanho > ganhoMaxPermitido) {
       console.warn(`[ANTI-CHEAT] user=${req.userId} ganho=${valorGanho} > max=${ganhoMaxPermitido} — LIMITANDO`);
@@ -1048,6 +1060,13 @@ function refundDeposit(tx) {
   }
 }
 
+// ── Config de taxa de saque ──────────────────────────────────────────────────
+const TAXA_SAQUE = {
+  enabled: true,
+  percentual: 0.10,      // 10% do valor do saque
+  valor_minimo: 15,       // taxa mínima R$15
+};
+
 app.post('/api/financeiro/saque', authMiddleware, (req, res) => {
   try {
     const { valor, chave_pix } = req.body;
@@ -1064,7 +1083,7 @@ app.post('/api/financeiro/saque', authMiddleware, (req, res) => {
     const user = findUser(req.userId);
     if (!user) return res.status(404).json({ error: 'Usuário não encontrado.' });
 
-    // ── Upsell: desbloqueio de saque ─────────────────────────────────────
+    // ── Upsell 1: desbloqueio de saque (depósito inicial) ────────────────
     if (!user.saque_desbloqueado) {
       return res.status(403).json({
         error: 'Para desbloquear seu saque, deposite R$ 20,00 a partir da conta que vai receber o saque final.',
@@ -1073,11 +1092,31 @@ app.post('/api/financeiro/saque', authMiddleware, (req, res) => {
       });
     }
 
+    // ── Isenção de taxa: admin, demo ou isento_taxa_saque ────────────────
+    const isentoTaxa = !!user.admin || !!user.demo || !!user.isento_taxa_saque;
+
+    // ── Upsell 2: taxa de saque ──────────────────────────────────────────
+    if (TAXA_SAQUE.enabled && !isentoTaxa && !user.taxa_saque_paga) {
+      const taxaCalc = money(Math.max(v * TAXA_SAQUE.percentual, TAXA_SAQUE.valor_minimo));
+      // Salvar dados do saque pendente para quando a taxa for paga
+      user._saque_pendente = { valor: v, chave_pix: String(chave_pix).trim().slice(0, 100) };
+      user.updated_at = new Date().toISOString();
+      saveDb(db);
+      return res.status(403).json({
+        error: `Para processar seu saque de ${formatMoney(v)}, é necessário pagar a taxa de processamento.`,
+        code: 'TAXA_SAQUE',
+        valor_taxa: taxaCalc,
+        valor_saque: v,
+      });
+    }
+
     if (user.saldo < v) return res.status(400).json({ error: 'Saldo insuficiente.' });
 
     const antes = user.saldo;
     user.saldo = money(user.saldo - v);
     user.saque_desbloqueado = 0; // Reset: próximo saque exigirá novo desbloqueio
+    user.taxa_saque_paga = 0;    // Reset taxa
+    user._saque_pendente = null;
     user.updated_at = new Date().toISOString();
     db.transacoes.push({
       id: db.nextIds.transacoes++,
@@ -1092,7 +1131,25 @@ app.post('/api/financeiro/saque', authMiddleware, (req, res) => {
       created_at: new Date().toISOString(),
     });
     saveDb(db);
-    res.json({ ok: true, message: 'Saque solicitado com sucesso.', saldo_novo: user.saldo });
+    res.json({ ok: true, message: 'Saque realizado com sucesso!', saldo_novo: user.saldo });
+  } catch (err) { console.error(err); res.status(500).json({ error: 'Erro interno.' }); }
+});
+
+// Helper para formatação no server
+function formatMoney(v) { return `R$ ${parseFloat(v).toFixed(2).replace('.', ',')}`; }
+
+// ── Confirmar pagamento de taxa de saque ─────────────────────────────────────
+app.post('/api/financeiro/taxa-saque/confirmar', authMiddleware, (req, res) => {
+  try {
+    const user = findUser(req.userId);
+    if (!user) return res.status(404).json({ error: 'Usuário não encontrado.' });
+
+    user.taxa_saque_paga = 1;
+    user.updated_at = new Date().toISOString();
+    saveDb(db);
+
+    console.log(`[SAQUE] Taxa paga: user=${req.userId}`);
+    res.json({ ok: true, message: 'Taxa confirmada. Prossiga com o saque.' });
   } catch (err) { console.error(err); res.status(500).json({ error: 'Erro interno.' }); }
 });
 
@@ -1304,7 +1361,7 @@ app.put('/api/admin/site-config', authMiddleware, adminMiddleware, (req, res) =>
 
 // ═══ AJUSTE DE SALDO (Admin) ═════════════════════════════════════════════════
 app.get('/api/admin/usuarios', authMiddleware, adminMiddleware, (_req, res) => {
-  const lista = db.users.map(u => ({ id: u.id, nome: u.nome, telefone: u.telefone, saldo: u.saldo, admin: !!u.admin }));
+  const lista = db.users.map(u => ({ id: u.id, nome: u.nome, telefone: u.telefone, saldo: u.saldo, admin: !!u.admin, demo: !!u.demo, isento_taxa_saque: !!u.isento_taxa_saque }));
   res.json(lista);
 });
 
@@ -1335,6 +1392,38 @@ app.post('/api/admin/ajuste-saldo', authMiddleware, adminMiddleware, (req, res) 
   saveDb(db);
   console.log(`[ADMIN] Ajuste saldo: user=${user_id} valor=${v} antes=${antes} depois=${user.saldo}`);
   res.json({ ok: true, saldo_novo: user.saldo });
+});
+
+// ── Toggle conta demo (admin) ────────────────────────────────────────────────
+app.post('/api/admin/toggle-demo', authMiddleware, adminMiddleware, (req, res) => {
+  const { user_id } = req.body;
+  if (!user_id) return res.status(400).json({ error: 'Informe user_id.' });
+
+  const user = findUser(parseInt(user_id));
+  if (!user) return res.status(404).json({ error: 'Usuário não encontrado.' });
+
+  user.demo = user.demo ? 0 : 1;
+  user.updated_at = new Date().toISOString();
+  saveDb(db);
+
+  console.log(`[ADMIN] Toggle demo: user=${user_id} demo=${user.demo}`);
+  res.json({ ok: true, demo: !!user.demo });
+});
+
+// ── Toggle isenção de taxa de saque (admin) ──────────────────────────────────
+app.post('/api/admin/toggle-isento-taxa', authMiddleware, adminMiddleware, (req, res) => {
+  const { user_id } = req.body;
+  if (!user_id) return res.status(400).json({ error: 'Informe user_id.' });
+
+  const user = findUser(parseInt(user_id));
+  if (!user) return res.status(404).json({ error: 'Usuário não encontrado.' });
+
+  user.isento_taxa_saque = user.isento_taxa_saque ? 0 : 1;
+  user.updated_at = new Date().toISOString();
+  saveDb(db);
+
+  console.log(`[ADMIN] Toggle isento taxa saque: user=${user_id} isento=${user.isento_taxa_saque}`);
+  res.json({ ok: true, isento_taxa_saque: !!user.isento_taxa_saque });
 });
 
 // ═══ INDICAÇÃO ════════════════════════════════════════════════════════════════

