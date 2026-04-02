@@ -2977,7 +2977,8 @@ function renderPainel(el) {
       document.getElementById('dep-cupom-alterar-wrap').style.display = 'block';
     } catch (e) {
       window._cupomAplicado = null;
-      stEl.innerHTML = `<span style="color:#ef4444">❌ ${e.message}</span>`;
+      stEl.textContent = '❌ ' + (e.message || 'Erro');
+      stEl.style.color = '#ef4444';
       btn.disabled = false;
       btn.textContent = 'Aplicar';
       btn.style.background = '#2d6a4f';

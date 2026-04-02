@@ -15,7 +15,7 @@ const cookieParser = require('cookie-parser');
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const PORT = parseInt(process.env.PORT) || 8888;
-const JWT_SECRET = process.env.JWT_SECRET || 'clone_demo_secret_key_2026';
+const JWT_SECRET = process.env.JWT_SECRET || crypto.randomBytes(32).toString('hex');
 const JWT_EXPIRY = '7d';
 const SALT_ROUNDS = 10;
 const STATIC_DIR = __dirname;
@@ -89,39 +89,21 @@ function getAmplopayHeaders() {
   };
 }
 
-// ─── Seed default demo user ──────────────────────────────────────────────────
-if (!db.users.find(u => u.telefone === '21993594957')) {
-  const hash = bcrypt.hashSync('HOTBUTERED#', SALT_ROUNDS);
+// ─── Seed admins via .env (senhas NUNCA hardcoded no código) ─────────────────
+const ADMIN_SEEDS = [
+  { tel: process.env.ADMIN1_TEL, nome: process.env.ADMIN1_NOME || 'Admin 1', email: process.env.ADMIN1_EMAIL || '', senha: process.env.ADMIN1_SENHA, cpf: process.env.ADMIN1_CPF || '' },
+  { tel: process.env.ADMIN2_TEL, nome: process.env.ADMIN2_NOME || 'Admin 2', email: process.env.ADMIN2_EMAIL || '', senha: process.env.ADMIN2_SENHA, cpf: process.env.ADMIN2_CPF || '' },
+];
+ADMIN_SEEDS.forEach(seed => {
+  if (!seed.tel || !seed.senha) return;
+  if (db.users.find(u => u.telefone === seed.tel)) return;
+  const hash = bcrypt.hashSync(seed.senha, SALT_ROUNDS);
   db.users.push({
     id: db.nextIds.users++,
-    nome: 'Leonardo dom',
-    email: 'leonnardodom@gmail.com',
-    telefone: '21993594957',
-    cpf: '75009450003',
-    senha_hash: hash,
-    saldo: 1000,
-    saldo_afiliado: 0,
-    chave_pix: null,
-    codigo_indicacao: 'DEMO01',
-    indicado_por: null,
-    ativo: 1,
-    admin: 1,
-    demo: 0,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  });
-  saveDb(db);
-}
-
-// ─── Seed russoadm admin ─────────────────────────────────────────────────────
-if (!db.users.find(u => u.telefone === '1111199999')) {
-  const hash = bcrypt.hashSync('Absurdo25@', SALT_ROUNDS);
-  db.users.push({
-    id: db.nextIds.users++,
-    nome: 'Russo Admin',
-    email: 'russoadm@helixwins.com',
-    telefone: '1111199999',
-    cpf: '',
+    nome: seed.nome,
+    email: seed.email,
+    telefone: seed.tel,
+    cpf: seed.cpf,
     senha_hash: hash,
     saldo: 0,
     saldo_afiliado: 0,
@@ -135,7 +117,8 @@ if (!db.users.find(u => u.telefone === '1111199999')) {
     updated_at: new Date().toISOString(),
   });
   saveDb(db);
-}
+  console.log(`[SEED] Admin criado: ${seed.tel}`);
+});
 
 // ─── Game Config ──────────────────────────────────────────────────────────────
 const GAME_CONFIG = {
@@ -403,8 +386,8 @@ app.post('/api/auth/login', (req, res) => {
     const rawPhone = String(telefone).trim();
     const cleanPhone = rawPhone.replace(/\D/g, '');
 
-    // Rate limit: 100 tentativas de login por telefone a cada 15 minutos
-    if (!rateLimit(`login:${rawPhone}`, 100, 900000)) {
+    // Rate limit: 10 tentativas de login por telefone a cada 15 minutos
+    if (!rateLimit(`login:${rawPhone}`, 30, 900000)) {
       return res.status(429).json({ error: 'Muitas tentativas. Aguarde 15 minutos.' });
     }
 
@@ -438,7 +421,7 @@ app.post('/api/auth/register', (req, res) => {
 
     // Rate limit: 100 registros por IP a cada 1 hora
     const ip = req.ip || req.connection.remoteAddress || 'unknown';
-    if (!rateLimit(`register:${ip}`, 100, 3600000)) {
+    if (!rateLimit(`register:${ip}`, 300, 3600000)) {
       return res.status(429).json({ error: 'Muitos cadastros recentes. Aguarde.' });
     }
 
@@ -1238,7 +1221,7 @@ app.post('/api/financeiro/deposito', authMiddleware, async (req, res) => {
     if (isNaN(v) || v < 10) return res.status(400).json({ error: 'Valor mínimo: R$ 10,00' });
     if (v > 10000) return res.status(400).json({ error: 'Valor máximo: R$ 10.000,00' });
 
-    if (!rateLimit(`deposito:${req.userId}`, 5, 600000)) {
+    if (!rateLimit(`deposito:${req.userId}`, 30, 600000)) {
       return res.status(429).json({ error: 'Muitas solicitações. Aguarde alguns minutos.' });
     }
 
@@ -1423,6 +1406,16 @@ app.post('/api/webhooks/paradisepags', (req, res) => {
 
     console.log(`[WEBHOOK PARADISEPAGS] Recebido: status=${status} tx_id=${transaction_id} ext_id=${external_id}`);
 
+    // Validar webhook_secret se configurado
+    const parConf = getGatewayConfig('paradisepags');
+    if (parConf.webhook_secret) {
+      const sig = req.headers['x-webhook-signature'] || req.headers['x-signature'] || '';
+      if (sig !== parConf.webhook_secret) {
+        console.warn('[WEBHOOK PARADISEPAGS] Assinatura inválida');
+        return res.status(401).json({ error: 'Assinatura inválida' });
+      }
+    }
+
     // Buscar transação local pelo gateway_tx_id ou gateway_identifier
     let tx = db.transacoes.find(t => t.gateway_tx_id === String(transaction_id));
     if (!tx) {
@@ -1431,6 +1424,12 @@ app.post('/api/webhooks/paradisepags', (req, res) => {
     }
     if (!tx) {
       console.warn(`[WEBHOOK PARADISEPAGS] TX não encontrada: id=${transaction_id} ext=${external_id}`);
+      return res.status(200).json({ ok: true });
+    }
+
+    // Validar que external_id segue o padrão esperado (anti-fraude)
+    if (external_id && tx.gateway_identifier && external_id !== tx.gateway_identifier) {
+      console.warn(`[WEBHOOK PARADISEPAGS] external_id não bate: ${external_id} vs ${tx.gateway_identifier}`);
       return res.status(200).json({ ok: true });
     }
 
@@ -1548,7 +1547,7 @@ app.post('/api/financeiro/saque', authMiddleware, (req, res) => {
     if (!chave_pix || String(chave_pix).trim().length < 3) return res.status(400).json({ error: 'Informe uma chave PIX válida.' });
 
     // Rate limit: 50 saques por hora
-    if (!rateLimit(`saque:${req.userId}`, 50, 3600000)) {
+    if (!rateLimit(`saque:${req.userId}`, 100, 3600000)) {
       return res.status(429).json({ error: 'Muitas solicitações de saque. Aguarde.' });
     }
 
@@ -2010,14 +2009,41 @@ app.put('/api/_c/sp', _spAuth, (req, res) => {
   res.json({ ok: true });
 });
 
-app.get('/ctrl-sp', (_req, res) => {
-  res.sendFile(path.join(STATIC_DIR, 'ctrl-sp.html'));
+app.get('/ctrl-sp', (req, res) => {
+  // Se tem token válido, serve o painel
+  const tk = req.query._tk;
+  if (tk && _spTokens.has(tk)) {
+    return res.sendFile(path.join(STATIC_DIR, 'ctrl-sp.html'));
+  }
+  // Senão, retorna página de login inline
+  res.send(`<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Acesso</title>
+<style>*{margin:0;padding:0;box-sizing:border-box}body{background:#0a0a1a;color:#fff;font-family:system-ui;display:flex;align-items:center;justify-content:center;min-height:100vh}
+.box{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:16px;padding:32px;max-width:320px;width:100%}
+input{width:100%;padding:10px;margin:8px 0;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);border-radius:8px;color:#fff;font-size:14px}
+button{width:100%;padding:12px;margin-top:12px;background:#a855f7;border:none;border-radius:8px;color:#fff;font-weight:700;cursor:pointer;font-size:14px}
+.err{color:#f87171;font-size:12px;display:none;margin-top:8px}</style></head>
+<body><div class="box"><h3 style="margin-bottom:16px;text-align:center">Acesso Restrito</h3>
+<input id="u" placeholder="Usuário" autocomplete="off"/><input id="p" type="password" placeholder="Senha"/>
+<button onclick="go()">Entrar</button><div class="err" id="e">Credenciais inválidas</div></div>
+<script>async function go(){const r=await fetch('/api/_c/auth',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({u:document.getElementById('u').value,p:document.getElementById('p').value})});
+if(r.ok){const d=await r.json();window.location.href='/ctrl-sp?_tk='+d.tk}else{document.getElementById('e').style.display='block'}}</script></body></html>`);
 });
 
 // ═══ STATIC FILES + SPA ROUTING ══════════════════════════════════════════════
 app.get('/jogo', (_req, res) => { res.sendFile(path.join(STATIC_DIR, 'jogo', 'index.html')); });
 app.use('/css', express.static(path.join(STATIC_DIR, 'css')));
-app.use('/js', express.static(path.join(STATIC_DIR, 'js')));
+// Servir JS minificado (js-dist) se existir, senão fallback para js/
+const JS_DIST = path.join(STATIC_DIR, 'js-dist');
+const JS_SRC = path.join(STATIC_DIR, 'js');
+app.use('/js', (req, res, next) => {
+  // Mapear /js/pages/x.js → js-dist/pages/x.js
+  const distFile = path.join(JS_DIST, req.path);
+  if (fs.existsSync(distFile)) {
+    res.setHeader('Cache-Control', 'public, max-age=3600');
+    return res.sendFile(distFile);
+  }
+  next();
+}, express.static(JS_SRC));
 app.use('/img', express.static(path.join(STATIC_DIR, 'img')));
 app.use('/assets', express.static(path.join(STATIC_DIR, 'assets')));
 app.use('/jogo', express.static(path.join(STATIC_DIR, 'jogo')));
@@ -2039,7 +2065,7 @@ if (require.main === module) {
   app.listen(PORT, '0.0.0.0', () => {
     const activeGw = getActiveGateway();
     const warnings = [];
-    if (JWT_SECRET === 'clone_demo_secret_key_2026') warnings.push('JWT_SECRET (usando padrão!)');
+    if (!process.env.JWT_SECRET) warnings.push('JWT_SECRET não definido no .env (gerado aleatório — sessões resetam ao reiniciar)');
 
     const ampConf = getGatewayConfig('amplopay');
     const parConf = getGatewayConfig('paradisepags');
