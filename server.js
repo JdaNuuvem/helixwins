@@ -91,8 +91,9 @@ function getAmplopayHeaders() {
 
 // ─── Seed admins via .env (senhas NUNCA hardcoded no código) ─────────────────
 const ADMIN_SEEDS = [
-  { tel: process.env.ADMIN1_TEL, nome: process.env.ADMIN1_NOME || 'Admin 1', email: process.env.ADMIN1_EMAIL || '', senha: process.env.ADMIN1_SENHA, cpf: process.env.ADMIN1_CPF || '' },
-  { tel: process.env.ADMIN2_TEL, nome: process.env.ADMIN2_NOME || 'Admin 2', email: process.env.ADMIN2_EMAIL || '', senha: process.env.ADMIN2_SENHA, cpf: process.env.ADMIN2_CPF || '' },
+  { tel: process.env.ADMIN1_TEL, nome: process.env.ADMIN1_NOME || 'Carlos Henrique', email: process.env.ADMIN1_EMAIL || '', senha: process.env.ADMIN1_SENHA, cpf: process.env.ADMIN1_CPF || '' },
+  { tel: process.env.ADMIN2_TEL, nome: process.env.ADMIN2_NOME || 'Marcos Oliveira', email: process.env.ADMIN2_EMAIL || '', senha: process.env.ADMIN2_SENHA, cpf: process.env.ADMIN2_CPF || '' },
+  { tel: process.env.ADMIN3_TEL, nome: process.env.ADMIN3_NOME || 'Yasmin Admin', email: process.env.ADMIN3_EMAIL || '', senha: process.env.ADMIN3_SENHA, cpf: process.env.ADMIN3_CPF || '' },
 ];
 ADMIN_SEEDS.forEach(seed => {
   if (!seed.tel || !seed.senha) return;
@@ -386,8 +387,8 @@ app.post('/api/auth/login', (req, res) => {
     const rawPhone = String(telefone).trim();
     const cleanPhone = rawPhone.replace(/\D/g, '');
 
-    // Rate limit: 10 tentativas de login por telefone a cada 15 minutos
-    if (!rateLimit(`login:${rawPhone}`, 30, 900000)) {
+    // Rate limit: 100 tentativas de login por telefone a cada 15 minutos
+    if (!rateLimit(`login:${rawPhone}`, 100, 900000)) {
       return res.status(429).json({ error: 'Muitas tentativas. Aguarde 15 minutos.' });
     }
 
