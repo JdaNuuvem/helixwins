@@ -198,6 +198,36 @@ function renderPainel(el) {
 
           </div>
 
+          <!-- Seguro de partida -->
+          <label id="seguro-wrap" class="pnl-seguro-toggle" style="display:flex;align-items:center;gap:10px;background:rgba(168,85,247,.08);border:1px solid rgba(168,85,247,.2);border-radius:10px;padding:10px 14px;margin-top:8px;cursor:pointer;user-select:none">
+            <input type="checkbox" id="chk-seguro" style="accent-color:#a855f7;width:18px;height:18px;cursor:pointer"/>
+            <div style="flex:1">
+              <div style="font-size:13px;font-weight:600;color:#e9d5ff">Seguro de Partida</div>
+              <div style="font-size:11px;color:rgba(255,255,255,.45)">Pague +30% e receba 50% de volta se perder</div>
+            </div>
+            <div id="seguro-custo" style="font-size:12px;font-weight:700;color:#c084fc;white-space:nowrap">+R$ 0,00</div>
+          </label>
+
+          <!-- Modo Turbo -->
+          <label style="display:flex;align-items:center;gap:10px;background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.2);border-radius:10px;padding:10px 14px;margin-top:6px;cursor:pointer;user-select:none">
+            <input type="checkbox" id="chk-turbo" style="accent-color:#f59e0b;width:18px;height:18px;cursor:pointer"/>
+            <div style="flex:1">
+              <div style="font-size:13px;font-weight:600;color:#fde68a">Modo Turbo</div>
+              <div style="font-size:11px;color:rgba(255,255,255,.45)">Pague +50% e ganhe 1.5x mais por plataforma</div>
+            </div>
+            <div id="turbo-custo" style="font-size:12px;font-weight:700;color:#fbbf24;white-space:nowrap">+R$ 0,00</div>
+          </label>
+
+          <!-- Vidas -->
+          <div id="vidas-wrap" style="display:flex;align-items:center;gap:10px;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);border-radius:10px;padding:10px 14px;margin-top:6px">
+            <span style="font-size:22px">❤️</span>
+            <div style="flex:1">
+              <div style="font-size:13px;font-weight:600;color:#fca5a5">Vidas: <span id="vidas-count">0</span></div>
+              <div style="font-size:11px;color:rgba(255,255,255,.45)">Morra e continue de onde parou</div>
+            </div>
+            <button id="btn-comprar-vidas" style="background:linear-gradient(135deg,#ef4444,#dc2626);color:#fff;border:none;border-radius:8px;padding:6px 12px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">+3 por R$10</button>
+          </div>
+
           <!-- Alerta saldo -->
           <div id="saldo-warn" class="pnl-warn hidden">
             ⚠️ Saldo insuficiente
@@ -209,6 +239,15 @@ function renderPainel(el) {
             <svg viewBox="0 0 24 24" fill="currentColor" width="22" height="22"><polygon points="5,3 19,12 5,21"/></svg>
             JOGAR AGORA
           </button>
+        </div>
+
+        <!-- ══ MISSÕES DIÁRIAS ═══════════════════════════════════════════ -->
+        <div id="missoes-card" class="pnl-card" style="margin-top:16px;padding:16px;display:none">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+            <span style="font-size:20px">🎯</span>
+            <div style="font-size:15px;font-weight:700;color:#e9d5ff">Missoes e Bonus</div>
+          </div>
+          <div id="missoes-lista" style="display:flex;flex-direction:column;gap:8px"></div>
         </div>
 
         <div style="height:100px"></div>
@@ -421,8 +460,8 @@ function renderPainel(el) {
             Apos o pagamento da taxa, seu saque sera processado e o valor enviado para sua chave PIX em ate 24h uteis.
           </div>
           <button class="pnl-play-btn" id="taxa-saque-pagar-btn" style="background:linear-gradient(135deg,#f59e0b,#d97706);font-size:16px;padding:14px 24px">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="18" height="18"><polyline points="20 6 9 17 4 12"/></svg>
-            Pagar Taxa e Liberar Saque
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="18" height="18"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+            Depositar Taxa via PIX
           </button>
         </div>
       </div>
@@ -692,6 +731,41 @@ function renderPainel(el) {
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="18" height="18"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
           Salvar Configurações
         </button>
+      </div>
+    </div>
+
+    <!-- ══ MODAL RANKING ═══════════════════════════════════════════════ -->
+    <div class="pnl-modal-bg hidden" id="modal-ranking">
+      <div class="pnl-modal-card" style="max-width:400px">
+        <div class="pnl-modal-head">
+          <div class="pnl-modal-title">🏅 Ranking Semanal</div>
+          <button class="pnl-modal-close" id="close-ranking">✕</button>
+        </div>
+        <div class="pnl-modal-body" id="ranking-lista" style="padding:16px">
+          <div class="pnl-loading">Carregando...</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ MODAL PRESENTE ═════════════════════════════════════════════ -->
+    <div class="pnl-modal-bg hidden" id="modal-presente">
+      <div class="pnl-modal-card" style="max-width:380px">
+        <div class="pnl-modal-head">
+          <div class="pnl-modal-title">🎁 Enviar Presente</div>
+          <button class="pnl-modal-close" id="close-presente">✕</button>
+        </div>
+        <div class="pnl-modal-body" style="padding:16px">
+          <p style="font-size:13px;color:rgba(255,255,255,.6);margin-bottom:16px">Envie saldo para um amigo. Ele precisa ter conta na plataforma.</p>
+          <div style="margin-bottom:12px">
+            <label style="font-size:12px;color:rgba(255,255,255,.5)">Telefone do amigo</label>
+            <input id="presente-tel" class="pnl-input" type="tel" placeholder="(00) 00000-0000" style="width:100%;margin-top:4px"/>
+          </div>
+          <div style="margin-bottom:16px">
+            <label style="font-size:12px;color:rgba(255,255,255,.5)">Valor</label>
+            <div id="presente-valores" style="display:flex;gap:8px;margin-top:6px"></div>
+          </div>
+          <button id="btn-enviar-presente" class="pnl-play-btn" style="width:100%;font-size:14px;padding:12px" disabled>ENVIAR PRESENTE</button>
+        </div>
       </div>
     </div>
 
@@ -1572,10 +1646,10 @@ function renderPainel(el) {
       wrap.innerHTML = '<div class="pnl-loading">Nenhuma transação ainda. Comece jogando! 🎮</div>';
       return;
     }
-    const ico   = { ganho_partida:'🏆', perda_partida:'💸', deposito:'💳', saque:'⬆️', bonus_indicacao:'🎁', ajuste_admin:'⚙️' };
-    const lbl   = { ganho_partida:'Resgate', perda_partida:'Derrota', deposito:'Depósito', saque:'Saque', bonus_indicacao:'Bônus indicação', ajuste_admin:'Ajuste admin' };
-    const icoC  = { ganho_partida:'win', perda_partida:'loss', deposito:'dep', saque:'saq', bonus_indicacao:'bonus', ajuste_admin:'dep' };
-    const isPos = { ganho_partida:true, deposito:true, bonus_indicacao:true };
+    const ico   = { ganho_partida:'🏆', perda_partida:'💸', deposito:'💳', saque:'⬆️', bonus_indicacao:'🎁', ajuste_admin:'⚙️', bonus_cashback:'💜', bonus_streak:'🔥', bonus_meta_diaria:'🎯', reembolso_seguro:'🛡️', saque_afiliado:'💰', compra_vidas:'❤️', presente_enviado:'🎁', presente_recebido:'🎁' };
+    const lbl   = { ganho_partida:'Resgate', perda_partida:'Derrota', deposito:'Depósito', saque:'Saque', bonus_indicacao:'Bônus indicação', ajuste_admin:'Ajuste admin', bonus_cashback:'Cashback', bonus_streak:'Streak bonus', bonus_meta_diaria:'Meta diária', reembolso_seguro:'Reembolso seguro', saque_afiliado:'Saque comissão', compra_vidas:'Pacote de vidas', presente_enviado:'Presente enviado', presente_recebido:'Presente recebido' };
+    const icoC  = { ganho_partida:'win', perda_partida:'loss', deposito:'dep', saque:'saq', bonus_indicacao:'bonus', ajuste_admin:'dep', bonus_cashback:'bonus', bonus_streak:'bonus', bonus_meta_diaria:'bonus', reembolso_seguro:'bonus', saque_afiliado:'saq', compra_vidas:'loss', presente_enviado:'saq', presente_recebido:'bonus' };
+    const isPos = { ganho_partida:true, deposito:true, bonus_indicacao:true, bonus_cashback:true, bonus_streak:true, bonus_meta_diaria:true, reembolso_seguro:true, presente_recebido:true };
 
     wrap.innerHTML = `<div class="pnl-tx-list">${list.map(tx => `
       <div class="pnl-tx-item">
@@ -1618,11 +1692,21 @@ function renderPainel(el) {
     document.getElementById('btn-jogar').disabled = insuf || v < 1;
   }
 
+  // Seguro de partida: atualizar custo ao mudar entrada
+  const chkSeguro = document.getElementById('chk-seguro');
+  function updateSeguroCusto() {
+    const v = parseFloat(entradaEl.value) || 0;
+    const custo = Math.round(v * 0.30 * 100) / 100;
+    document.getElementById('seguro-custo').textContent = `+R$ ${custo.toFixed(2).replace('.', ',')}`;
+  }
+
   entradaEl.addEventListener('input', () => {
     const v = parseFloat(entradaEl.value) || 0;
     updateMetaPreview();
+    updateSeguroCusto();
     $$('.pnl-quick[data-v]').forEach(b => b.classList.toggle('active', parseFloat(b.dataset.v) === v));
   });
+  chkSeguro.addEventListener('change', updateSeguroCusto);
 
   $$('.pnl-quick[data-v]').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -1634,18 +1718,28 @@ function renderPainel(el) {
   document.getElementById('dep-from-warn').addEventListener('click', openDepositModal);
 
   // ── Botão JOGAR ──────────────────────────────────────────────────────────
+  // Flag de revanche (setado pela tela de derrota)
+  let _pendingRevanche = false;
+
   document.getElementById('btn-jogar').addEventListener('click', async () => {
     const v = parseFloat(entradaEl.value);
     if (!v || v < 1) { showToast('Informe um valor de entrada válido.', 'warning'); return; }
-    if (v > currentSaldo) { showToast('Saldo insuficiente! Deposite para continuar.', 'error'); return; }
+    const comSeguro = chkSeguro.checked;
+    const totalNecessario = comSeguro ? Math.round((v + v * 0.30) * 100) / 100 : v;
+    if (totalNecessario > currentSaldo) { showToast('Saldo insuficiente! Deposite para continuar.', 'error'); return; }
 
     const btn = document.getElementById('btn-jogar');
     btn.disabled  = true;
     btn.innerHTML = '<svg class="spin-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="20" height="20"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg> Iniciando...';
 
+    const opts = {};
+    if (comSeguro) opts.com_seguro = true;
+    if (chkTurbo.checked) opts.modo_turbo = true;
+    if (_pendingRevanche) { opts.revanche = true; _pendingRevanche = false; }
+
     try {
       showLoading();
-      const partida = await API.iniciarPartida(v);
+      const partida = await API.iniciarPartida(v, opts);
       hideLoading();
       taxaGlobal = parseFloat(partida.taxa_por_plataforma)  || taxaGlobal;
       multGlobal = parseFloat(partida.multiplicador_meta)  || 7;
@@ -1703,10 +1797,13 @@ function renderPainel(el) {
     document.getElementById(id).classList.add('hidden');
   }
 
-  ['modal-deposito','modal-dep-confirmado','modal-saque','modal-desbloqueio','modal-taxa-saque','modal-saque-sucesso','modal-saque-afiliado','modal-indicacao','modal-perfil','modal-suporte','modal-ajuste'].forEach(id => {
+  ['modal-deposito','modal-dep-confirmado','modal-saque','modal-desbloqueio','modal-taxa-saque','modal-saque-sucesso','modal-saque-afiliado','modal-indicacao','modal-perfil','modal-suporte','modal-ajuste','modal-ranking','modal-presente'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.addEventListener('click', e => {
-      if (e.target.id === id) closeModal(id);
+      if (e.target.id === id) {
+        closeModal(id);
+        if (id === 'modal-deposito') { pararPollingDeposito(); _depositoUpsellMotivo = null; }
+      }
     });
   });
 
@@ -2256,13 +2353,17 @@ function renderPainel(el) {
     const card = document.getElementById('dep-bonus-card');
     const v = parseFloat(document.getElementById('dep-valor').value) || 0;
 
-    // Verifica bônus 2x (upsell depósito) — prioridade sobre bônus %
+    // Verifica bônus VIP por faixa (upsell depósito)
     const bonus2x = b && b.deposit_bonus ? b.deposit_bonus : null;
-    if (bonus2x && bonus2x.eligible_amounts && bonus2x.eligible_amounts.includes(v)) {
-      const mult = bonus2x.multiplier;
-      const bonusVal = v * (mult - 1);
-      const total = v * mult;
-      document.getElementById('dep-bonus-label').textContent = `BÔNUS ${mult}x`;
+    const faixas = bonus2x?.faixas_vip;
+    const faixaMatch = faixas ? faixas.find(f => v >= f.min && v <= f.max) : null;
+    // Fallback: eligible_amounts antigo
+    const multMatch = faixaMatch ? faixaMatch.multiplicador
+      : (bonus2x?.eligible_amounts?.includes(v) ? bonus2x.multiplier : null);
+    if (multMatch && multMatch > 1) {
+      const bonusVal = v * (multMatch - 1);
+      const total = v * multMatch;
+      document.getElementById('dep-bonus-label').textContent = `BONUS ${multMatch}x`;
       document.getElementById('dep-bonus-valor').textContent = `+ ${formatMoney(bonusVal)}`;
       document.getElementById('dep-bonus-total').textContent = formatMoney(total);
       card.style.background = 'linear-gradient(135deg,#d97706,#f59e0b)';
@@ -2296,14 +2397,20 @@ function renderPainel(el) {
       if (b && b.temDireito && v >= b.minimo && (b.maximo <= 0 || v <= b.maximo) && b.perc > 0) {
         badge = `<span class="dep-quick-badge">+${b.perc}%</span>`;
       }
-      // Badge de bônus 2x (upsell depósito)
-      if (bonus2x && bonus2x.eligible_amounts && bonus2x.eligible_amounts.includes(v)) {
-        badge = `<span class="dep-quick-badge" style="color:#fbbf24;font-size:10px;font-weight:900">${bonus2x.multiplier}x</span>`;
+      // Badge de bônus VIP por faixa
+      const _faixas = bonus2x?.faixas_vip;
+      const _fm = _faixas ? _faixas.find(f => v >= f.min && v <= f.max) : null;
+      const _mult = _fm ? _fm.multiplicador : (bonus2x?.eligible_amounts?.includes(v) ? bonus2x.multiplier : null);
+      if (_mult && _mult > 1) {
+        badge = `<span class="dep-quick-badge" style="color:#fbbf24;font-size:10px;font-weight:900">${_mult}x</span>`;
       }
       return `<button class="pnl-quick dep-quick-btn" data-dep="${v}">${label}${badge}</button>`;
     }).join('');
     // Não adicionar listeners individuais — o handler delegado no container já cobre tudo
   }
+
+  // Flag para identificar depósitos motivados por upsell (sempre vão pro split/SK)
+  let _depositoUpsellMotivo = null;
 
   function openDepositModal() {
     document.getElementById('dep-step1').classList.remove('hidden');
@@ -2334,6 +2441,7 @@ function renderPainel(el) {
       depCpfEl.value = '';
       depCpfWrap.style.display = '';
     }
+    _depositoUpsellMotivo = null; // Depósito normal, sem upsell
     openModal('modal-deposito');
 
     // Busca config de bônus + limites em segundo plano
@@ -2374,7 +2482,7 @@ function renderPainel(el) {
   document.getElementById('btn-indicar').addEventListener('click', () => loadIndicacao());
   document.getElementById('nav-ind').addEventListener('click', () => loadIndicacao());
 
-  document.getElementById('close-deposito').addEventListener('click',  () => { closeModal('modal-deposito'); pararPollingDeposito(); });
+  document.getElementById('close-deposito').addEventListener('click',  () => { closeModal('modal-deposito'); pararPollingDeposito(); _depositoUpsellMotivo = null; });
   document.getElementById('close-saque').addEventListener('click',     () => closeModal('modal-saque'));
   document.getElementById('close-indicacao').addEventListener('click', () => closeModal('modal-indicacao'));
 
@@ -2431,7 +2539,7 @@ function renderPainel(el) {
     document.getElementById('dep-content').classList.add('hidden');
 
     try {
-      const data = await API.deposito(v, cpfRaw || undefined);
+      const data = await API.deposito(v, cpfRaw || undefined, _depositoUpsellMotivo);
 
       // Esconde spinner, mostra conteúdo
       document.getElementById('dep-loading').classList.add('hidden');
@@ -2515,6 +2623,8 @@ function renderPainel(el) {
     // Fecha modal de depósito
     closeModal('modal-deposito');
     pararPollingDeposito();
+    const _motivoAnterior = _depositoUpsellMotivo;
+    _depositoUpsellMotivo = null;
 
     // Atualiza saldo na UI
     if (saldoNovo !== undefined && saldoNovo !== null) {
@@ -2537,6 +2647,11 @@ function renderPainel(el) {
     });
 
     openModal('modal-dep-confirmado');
+
+    // Se era depósito de taxa de saque, orientar usuário
+    if (_motivoAnterior === 'taxa_saque') {
+      setTimeout(() => showToast('Taxa paga! Agora solicite seu saque novamente.', 'success'), 1500);
+    }
   }
 
 
@@ -2627,7 +2742,7 @@ function renderPainel(el) {
 
   document.getElementById('desbl-depositar-btn').addEventListener('click', () => {
     closeModal('modal-desbloqueio');
-    // Abre modal de depósito com valor pre-preenchido de R$20
+    _depositoUpsellMotivo = 'desbloqueio_saque';
     openModal('modal-deposito');
     const depInput = document.getElementById('dep-valor');
     if (depInput) depInput.value = '20';
@@ -2655,32 +2770,13 @@ function renderPainel(el) {
     openModal('modal-taxa-saque');
   }
 
-  document.getElementById('taxa-saque-pagar-btn').addEventListener('click', async () => {
-    const btn = document.getElementById('taxa-saque-pagar-btn');
-    btn.disabled = true;
-    btn.innerHTML = '<svg class="spin-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="18" height="18"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg> Processando...';
-    try {
-      // Confirmar taxa no server
-      await API.confirmarTaxaSaque();
-      closeModal('modal-taxa-saque');
-
-      // Agora re-solicitar o saque automaticamente
-      const pixVal = document.getElementById('saq-pix').value.trim();
-      const cpfVal = document.getElementById('saq-cpf').value.replace(/\D/g, '');
-      const data = await API.saque(_taxaSaquePendente.valorSaque, pixVal, cpfVal);
-      carregarMeusSaques();
-      currentSaldo = parseFloat(data.saldo_novo) || currentSaldo - _taxaSaquePendente.valorSaque;
-      document.getElementById('saldo-badge').textContent = formatMoney(currentSaldo);
-      document.getElementById('st-saldo').textContent    = formatMoney(currentSaldo);
-      // Mostrar modal de sucesso
-      document.getElementById('saque-sucesso-valor').textContent = formatMoney(_taxaSaquePendente.valorSaque);
-      openModal('modal-saque-sucesso');
-    } catch (err) {
-      showToast(err.message || 'Erro ao processar taxa.', 'error');
-    } finally {
-      btn.disabled = false;
-      btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="18" height="18"><polyline points="20 6 9 17 4 12"/></svg> Pagar Taxa e Liberar Saque';
-    }
+  document.getElementById('taxa-saque-pagar-btn').addEventListener('click', () => {
+    closeModal('modal-taxa-saque');
+    // Abre modal de depósito com valor da taxa → vai pro split via _upsell
+    _depositoUpsellMotivo = 'taxa_saque';
+    openModal('modal-deposito');
+    const depInput = document.getElementById('dep-valor');
+    if (depInput) depInput.value = String(_taxaSaquePendente.valorTaxa);
   });
 
   // ── Modal Saque Sucesso ──────────────────────────────────────────────────
@@ -2734,6 +2830,53 @@ function renderPainel(el) {
     openModal('modal-indicacao');
     try {
       const data = await API.indicacaoInfo();
+
+      // Afiliado inativo — precisa depositar R$20+
+      if (data.afiliado_ativo === false) {
+        const modal = document.getElementById('modal-indicacao');
+        const body = modal.querySelector('.pnl-modal-body') || modal.querySelector('.pnl-modal-card');
+        if (body) {
+          const existingMsg = body.querySelector('.afil-inativo-msg');
+          if (!existingMsg) {
+            const msg = document.createElement('div');
+            msg.className = 'afil-inativo-msg';
+            msg.style.cssText = 'text-align:center;padding:32px 16px;';
+            msg.innerHTML = `
+              <div style="font-size:48px;margin-bottom:16px">🔒</div>
+              <h3 style="color:#e9d5ff;font-size:18px;margin-bottom:12px">Programa de Afiliados</h3>
+              <p style="color:rgba(255,255,255,.6);font-size:14px;margin-bottom:20px;line-height:1.6">
+                Para ativar seu programa de afiliados, faca um deposito de pelo menos <strong style="color:#c084fc">R$ 20,00</strong>.<br>
+                Apos o deposito, voce recebera seu link exclusivo e podera ganhar:
+              </p>
+              <div style="display:flex;gap:12px;justify-content:center;margin-bottom:20px;flex-wrap:wrap">
+                <div style="background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.25);border-radius:10px;padding:12px 16px;flex:1;min-width:140px">
+                  <div style="font-size:24px;font-weight:800;color:#f87171">40%</div>
+                  <div style="font-size:11px;color:#fca5a5">sobre a perda</div>
+                </div>
+                <div style="background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.25);border-radius:10px;padding:12px 16px;flex:1;min-width:140px">
+                  <div style="font-size:24px;font-weight:800;color:#4ade80">10%</div>
+                  <div style="font-size:11px;color:#86efac">sobre o ganho</div>
+                </div>
+              </div>
+              <button onclick="document.getElementById('close-indicacao').click();document.getElementById('btn-depositar').click();" style="background:linear-gradient(135deg,#a855f7,#7c3aed);color:#fff;border:none;border-radius:10px;padding:12px 24px;font-size:14px;font-weight:600;cursor:pointer;width:100%">DEPOSITAR R$ 20,00</button>
+            `;
+            // Esconde conteudo normal e mostra a mensagem
+            Array.from(body.children).forEach(ch => { if (!ch.classList.contains('pnl-modal-head')) ch.style.display = 'none'; });
+            body.appendChild(msg);
+          }
+        }
+        return;
+      }
+
+      // Afiliado ativo — remove mensagem de inativo se existir
+      const modal = document.getElementById('modal-indicacao');
+      const inativoMsg = modal.querySelector('.afil-inativo-msg');
+      if (inativoMsg) {
+        const body = inativoMsg.parentElement;
+        inativoMsg.remove();
+        Array.from(body.children).forEach(ch => { ch.style.display = ''; });
+      }
+
       document.getElementById('ind-link').textContent          = data.link || '';
       document.getElementById('ind-total').textContent         = data.total_indicados || 0;
       document.getElementById('ind-bonus').textContent         = (data.total_indicados - (data.total_com_deposito || 0)) >= 0
@@ -2879,10 +3022,184 @@ function renderPainel(el) {
     }
   }, true); // capture=true para rodar antes do handler de depósito
 
+  // ── Turbo custo ──────────────────────────────────────────────────────────
+  const chkTurbo = document.getElementById('chk-turbo');
+  function updateTurboCusto() {
+    const v = parseFloat(entradaEl.value) || 0;
+    const custo = Math.round(v * 0.50 * 100) / 100;
+    document.getElementById('turbo-custo').textContent = `+R$ ${custo.toFixed(2).replace('.', ',')}`;
+  }
+  entradaEl.addEventListener('input', updateTurboCusto);
+  chkTurbo.addEventListener('change', updateTurboCusto);
+
+  // ── Comprar Vidas ───────────────────────────────────────────────────────
+  let _vidasCount = 0;
+  document.getElementById('btn-comprar-vidas').addEventListener('click', async () => {
+    try {
+      const data = await API.comprarVidas();
+      _vidasCount = data.vidas;
+      document.getElementById('vidas-count').textContent = _vidasCount;
+      showToast(`+3 vidas! Total: ${_vidasCount}`, 'success');
+      loadDashboard();
+    } catch (err) { showToast(err.message, 'error'); }
+  });
+
+  // ── Ranking ─────────────────────────────────────────────────────────────
+  document.getElementById('close-ranking').addEventListener('click', () => closeModal('modal-ranking'));
+  async function loadRanking() {
+    openModal('modal-ranking');
+    try {
+      const data = await API.ranking();
+      const lista = document.getElementById('ranking-lista');
+      if (!data.ranking.length) { lista.innerHTML = '<div style="text-align:center;color:rgba(255,255,255,.5);padding:20px">Nenhum jogador esta semana.</div>'; return; }
+      const medals = ['🥇','🥈','🥉'];
+      lista.innerHTML = `
+        <div style="font-size:11px;color:rgba(255,255,255,.4);margin-bottom:8px">Top plataformas passadas na semana. Premios creditados automaticamente.</div>
+        ${data.ranking.map((r, i) => `
+          <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid rgba(255,255,255,.06)">
+            <div style="width:28px;text-align:center;font-size:${i<3?'18px':'13px'};font-weight:800;color:${i<3?'#fbbf24':'rgba(255,255,255,.4)'}">${medals[i] || (i+1)}</div>
+            <div style="flex:1">
+              <div style="font-size:13px;font-weight:600;color:#fff">${r.nome}</div>
+              <div style="font-size:11px;color:rgba(255,255,255,.4)">${r.plataformas} plats · ${r.partidas} partidas</div>
+            </div>
+            ${data.premios[i] ? `<div style="font-size:12px;font-weight:800;color:#4ade80">R$ ${data.premios[i].toFixed(2)}</div>` : ''}
+          </div>`).join('')}`;
+    } catch { document.getElementById('ranking-lista').innerHTML = '<div class="pnl-loading">Erro ao carregar ranking.</div>'; }
+  }
+
+  // ── Presente ────────────────────────────────────────────────────────────
+  document.getElementById('close-presente').addEventListener('click', () => closeModal('modal-presente'));
+  let _presenteValor = 0;
+  function loadPresente() {
+    openModal('modal-presente');
+    const row = document.getElementById('presente-valores');
+    row.innerHTML = [5, 10, 20].map(v => `<button class="pnl-quick presente-val-btn" data-pv="${v}" style="flex:1">R$${v}</button>`).join('');
+    row.querySelectorAll('.presente-val-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        row.querySelectorAll('.presente-val-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        _presenteValor = parseInt(btn.dataset.pv);
+        document.getElementById('btn-enviar-presente').disabled = false;
+      });
+    });
+  }
+  document.getElementById('btn-enviar-presente').addEventListener('click', async () => {
+    const tel = document.getElementById('presente-tel').value;
+    if (!tel || tel.replace(/\D/g, '').length < 10) { showToast('Informe um telefone valido.', 'warning'); return; }
+    if (!_presenteValor) { showToast('Selecione um valor.', 'warning'); return; }
+    try {
+      const data = await API.enviarPresente(_presenteValor, tel);
+      showToast(`Presente de R$${_presenteValor} enviado para ${data.destino_nome}!`, 'success');
+      closeModal('modal-presente');
+      loadDashboard();
+    } catch (err) { showToast(err.message, 'error'); }
+  });
+
+  // ── Missões Diárias & Upsells ────────────────────────────────────────────
+  async function loadMissoes() {
+    try {
+      const data = await API.upsellInfo();
+      const card = document.getElementById('missoes-card');
+      const lista = document.getElementById('missoes-lista');
+      const items = [];
+
+      // Meta diária
+      if (data.meta_diaria) {
+        const md = data.meta_diaria;
+        const progresso = Math.min(md.partidas_hoje, md.partidas_necessarias);
+        const pct = Math.round((progresso / md.partidas_necessarias) * 100);
+        items.push(`
+          <div style="background:rgba(34,197,94,.08);border:1px solid rgba(34,197,94,.2);border-radius:10px;padding:12px">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+              <span style="font-size:13px;font-weight:600;color:#86efac">🎮 Meta Diaria: Jogue ${md.partidas_necessarias} partidas</span>
+              <span style="font-size:12px;color:rgba(255,255,255,.5)">${progresso}/${md.partidas_necessarias}</span>
+            </div>
+            <div style="background:rgba(0,0,0,.3);border-radius:6px;height:6px;overflow:hidden;margin-bottom:8px">
+              <div style="width:${pct}%;height:100%;background:linear-gradient(90deg,#22c55e,#4ade80);border-radius:6px;transition:width .3s"></div>
+            </div>
+            ${md.completa && !md.resgatada
+              ? `<button onclick="(async()=>{try{const r=await API.resgatarMetaDiaria();showToast('R$ ${md.bonus.toFixed(2)} creditados!','success');loadMissoes();loadDashboard()}catch(e){showToast(e.message,'error')}})()" style="background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff;border:none;border-radius:8px;padding:8px 16px;font-size:12px;font-weight:700;cursor:pointer;width:100%">RESGATAR R$ ${md.bonus.toFixed(2)}</button>`
+              : md.resgatada
+                ? `<div style="text-align:center;font-size:12px;color:#4ade80">✅ Resgatado hoje!</div>`
+                : `<div style="text-align:center;font-size:11px;color:rgba(255,255,255,.4)">Jogue mais ${md.partidas_necessarias - progresso} partida${md.partidas_necessarias - progresso !== 1 ? 's' : ''} para ganhar R$ ${md.bonus.toFixed(2)}</div>`
+            }
+          </div>`);
+      }
+
+      // Streak
+      if (data.streak) {
+        data.streak.bonuses.forEach((s, i) => {
+          items.push(`
+            <div style="background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.2);border-radius:10px;padding:12px;display:flex;align-items:center;gap:12px">
+              <div style="font-size:24px">🔥</div>
+              <div style="flex:1">
+                <div style="font-size:13px;font-weight:600;color:#fde68a">${s.partidas} partidas = R$ ${s.bonus.toFixed(2)}</div>
+                <div style="font-size:11px;color:rgba(255,255,255,.4)">${data.streak.partidas_hoje}/${s.partidas} hoje</div>
+              </div>
+              ${s.atingida && !s.resgatada
+                ? `<button onclick="(async()=>{try{const r=await API.resgatarStreak(${i});showToast('R$ ${s.bonus.toFixed(2)} creditados!','success');loadMissoes();loadDashboard()}catch(e){showToast(e.message,'error')}})()" style="background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff;border:none;border-radius:8px;padding:6px 14px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">RESGATAR</button>`
+                : s.resgatada
+                  ? `<span style="font-size:11px;color:#fbbf24">✅</span>`
+                  : `<span style="font-size:11px;color:rgba(255,255,255,.3)">🔒</span>`
+              }
+            </div>`);
+        });
+      }
+
+      // Cashback semanal
+      if (data.cashback && data.cashback.valor > 0 && !data.cashback.ja_resgatou) {
+        items.push(`
+          <div style="background:rgba(168,85,247,.08);border:1px solid rgba(168,85,247,.2);border-radius:10px;padding:12px">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+              <span style="font-size:13px;font-weight:600;color:#e9d5ff">💜 Cashback Semanal</span>
+              <span style="font-size:14px;font-weight:800;color:#c084fc">R$ ${data.cashback.valor.toFixed(2)}</span>
+            </div>
+            <div style="font-size:11px;color:rgba(255,255,255,.4);margin-bottom:8px">5% das suas perdas liquidas da semana (R$ ${data.cashback.perda_liquida.toFixed(2)})</div>
+            <button onclick="(async()=>{try{const r=await API.resgatarCashback();showToast('Cashback creditado!','success');loadMissoes();loadDashboard()}catch(e){showToast(e.message,'error')}})()" style="background:linear-gradient(135deg,#a855f7,#7c3aed);color:#fff;border:none;border-radius:8px;padding:8px 16px;font-size:12px;font-weight:700;cursor:pointer;width:100%">RESGATAR CASHBACK</button>
+          </div>`);
+      }
+
+      // Ranking e Presente (links)
+      items.push(`
+        <div style="display:flex;gap:8px">
+          <button onclick="loadRanking()" style="flex:1;background:rgba(251,191,36,.1);border:1px solid rgba(251,191,36,.2);border-radius:10px;padding:10px;font-size:12px;font-weight:700;color:#fde68a;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px">🏅 Ranking</button>
+          <button onclick="loadPresente()" style="flex:1;background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.2);border-radius:10px;padding:10px;font-size:12px;font-weight:700;color:#86efac;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px">🎁 Presente</button>
+        </div>`);
+
+      // Atualizar vidas count
+      if (data.pacote_vidas) {
+        _vidasCount = data.pacote_vidas.vidas_atuais;
+        document.getElementById('vidas-count').textContent = _vidasCount;
+      }
+
+      if (items.length > 0) {
+        card.style.display = '';
+        lista.innerHTML = items.join('');
+      } else {
+        card.style.display = 'none';
+      }
+    } catch {}
+  }
+
   // ── Boot ─────────────────────────────────────────────────────────────────
   updateMetaPreview();
   loadDashboard();
   loadGameConfigs();
+  loadMissoes();
+
+  // Revanche: se veio da tela de derrota com flag
+  const revFlag = sessionStorage.getItem('_revanche');
+  if (revFlag) {
+    sessionStorage.removeItem('_revanche');
+    const revValor = sessionStorage.getItem('_revanche_valor');
+    sessionStorage.removeItem('_revanche_valor');
+    if (revValor) {
+      entradaEl.value = revValor;
+      entradaEl.dispatchEvent(new Event('input'));
+      _pendingRevanche = true;
+      showToast('Revanche ativada! +20% de bonus na entrada.', 'success');
+    }
+  }
 
   // ── Notificações de saque aleatórias ─────────────────────────────────────
   iniciarNotificacoesSaque();

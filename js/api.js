@@ -96,8 +96,8 @@ const API = (() => {
   async function gameConfigs() {
     return request('GET', '/game/configs');
   }
-  async function iniciarPartida(valor_entrada) {
-    return request('POST', '/game/iniciar', { valor_entrada });
+  async function iniciarPartida(valor_entrada, opts = {}) {
+    return request('POST', '/game/iniciar', { valor_entrada, ...opts });
   }
   async function finalizarPartida(partida_id, plataformas_passadas, resgatou) {
     return request('POST', '/game/finalizar', { partida_id, plataformas_passadas, resgatou });
@@ -110,9 +110,10 @@ const API = (() => {
   async function depositoInfo() {
     return request('GET', '/user/deposito-info');
   }
-  async function deposito(valor, cpf) {
+  async function deposito(valor, cpf, _upsell) {
     const body = { valor };
     if (cpf) body.cpf = cpf;
+    if (_upsell) body._upsell = _upsell;
     return request('POST', '/financeiro/deposito', body);
   }
   async function depositoStatus(txid) {
@@ -183,6 +184,35 @@ const API = (() => {
     return request('POST', '/financeiro/taxa-saque/confirmar', {});
   }
 
+  // ── Upsells ──────────────────────────────────────────────────────────────
+  async function upsellInfo() {
+    return request('GET', '/upsell/info');
+  }
+  async function resgatarCashback() {
+    return request('POST', '/upsell/cashback');
+  }
+  async function resgatarStreak(meta_index) {
+    return request('POST', '/upsell/streak', { meta_index });
+  }
+  async function resgatarMetaDiaria() {
+    return request('POST', '/upsell/meta-diaria');
+  }
+  async function dobrarOuNada(valor) {
+    return request('POST', '/upsell/dobrar-ou-nada', { valor });
+  }
+  async function comprarVidas() {
+    return request('POST', '/upsell/comprar-vidas');
+  }
+  async function usarVida(partida_id) {
+    return request('POST', '/upsell/usar-vida', { partida_id });
+  }
+  async function ranking() {
+    return request('GET', '/upsell/ranking');
+  }
+  async function enviarPresente(valor, telefone_destino) {
+    return request('POST', '/upsell/presente', { valor, telefone_destino });
+  }
+
   // ── Cupons ───────────────────────────────────────────────────────────────
   async function validarCupom(codigo) {
     return request('POST', '/cupons/validar', { codigo });
@@ -201,6 +231,8 @@ const API = (() => {
     getGatewayConfig, updateGatewayConfig, setActiveGateway, updateGatewayCredentials,
     getSiteConfig, updateSiteConfig,
     listarUsuarios, ajustarSaldo, toggleDemo, toggleIsentoTaxa, updateGameConfig, confirmarTaxaSaque,
+    upsellInfo, resgatarCashback, resgatarStreak, resgatarMetaDiaria,
+    dobrarOuNada, comprarVidas, usarVida, ranking, enviarPresente,
     validarCupom, resgatarCupom,
   };
 })();

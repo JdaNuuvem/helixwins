@@ -249,6 +249,116 @@ function renderJogo(container) {
       <!-- Confetti canvas -->
       <canvas id="confetti-canvas" style="position:fixed;inset:0;z-index:3500;pointer-events:none;display:none"></canvas>
 
+      <!-- Modal Usar Vida / Comprar Vidas -->
+      <div id="modal-vida" style="
+        position:fixed;inset:0;z-index:4000;display:none;
+        align-items:center;justify-content:center;
+        background:rgba(0,0,0,.88);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
+        padding:20px;
+      ">
+        <div style="
+          background:linear-gradient(160deg,#13001f 0%,#1e003a 100%);
+          border:1.5px solid rgba(239,68,68,.45);border-radius:28px;
+          max-width:360px;width:100%;text-align:center;overflow:hidden;
+          box-shadow:0 32px 80px rgba(0,0,0,.7);
+          animation:resCardIn .45s cubic-bezier(.34,1.56,.64,1) both;
+        ">
+          <div style="padding:28px 24px 20px;background:linear-gradient(160deg,rgba(239,68,68,.10) 0%,transparent 100%)">
+            <div style="font-size:48px;margin-bottom:12px;animation:iconPop .55s cubic-bezier(.34,1.56,.64,1) both">💀</div>
+            <div style="font-size:22px;font-weight:900;color:#f87171;margin-bottom:6px">VOCÊ MORREU!</div>
+            <div id="vida-subtitulo" style="font-size:13px;color:rgba(255,255,255,.55);line-height:1.5"></div>
+          </div>
+          <div style="padding:0 20px 8px">
+            <div style="background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);border-radius:14px;padding:14px;margin-bottom:12px">
+              <div style="font-size:11px;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Acumulado até agora</div>
+              <div id="vida-acumulado" style="font-size:28px;font-weight:900;color:#f97316">R$ 0,00</div>
+            </div>
+          </div>
+          <!-- Botão usar vida (se tem) -->
+          <div id="vida-usar-wrap" style="padding:0 20px 8px;display:none">
+            <button id="btn-usar-vida" style="
+              width:100%;background:linear-gradient(135deg,#22c55e,#16a34a);
+              color:#fff;border:none;border-radius:50px;padding:14px 0;
+              font-size:14px;font-weight:800;cursor:pointer;font-family:inherit;
+              box-shadow:0 4px 20px rgba(34,197,94,.4);
+              display:flex;align-items:center;justify-content:center;gap:8px;
+            ">❤️ USAR VIDA E CONTINUAR (<span id="vida-count">0</span> restantes)</button>
+          </div>
+          <!-- Botão comprar vidas via PIX -->
+          <div id="vida-comprar-wrap" style="padding:0 20px 8px">
+            <button id="btn-comprar-vida-pix" style="
+              width:100%;background:linear-gradient(135deg,#a855f7,#7c3aed);
+              color:#fff;border:none;border-radius:50px;padding:14px 0;
+              font-size:14px;font-weight:800;cursor:pointer;font-family:inherit;
+              box-shadow:0 4px 20px rgba(168,85,247,.4);
+              display:flex;align-items:center;justify-content:center;gap:8px;
+            ">🛒 COMPRAR 3 VIDAS — R$ 10,00 via PIX</button>
+          </div>
+          <!-- Botão desistir -->
+          <div style="padding:0 20px 20px">
+            <button id="btn-desistir-vida" style="
+              width:100%;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);
+              color:rgba(255,255,255,.5);border-radius:50px;padding:12px 0;
+              font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;
+            ">Desistir e ver resultado</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Modal QR Code Compra Vidas -->
+      <div id="modal-vida-pix" style="
+        position:fixed;inset:0;z-index:4500;display:none;
+        align-items:center;justify-content:center;
+        background:rgba(0,0,0,.92);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
+        padding:20px;
+      ">
+        <div style="
+          background:linear-gradient(160deg,#13001f 0%,#1e003a 100%);
+          border:1.5px solid rgba(168,85,247,.4);border-radius:28px;
+          max-width:360px;width:100%;text-align:center;overflow:hidden;
+          box-shadow:0 32px 80px rgba(0,0,0,.7);
+          animation:resCardIn .35s cubic-bezier(.34,1.56,.64,1) both;
+        ">
+          <div style="padding:24px 24px 16px;background:linear-gradient(160deg,rgba(168,85,247,.12) 0%,transparent 100%)">
+            <div style="font-size:36px;margin-bottom:8px">❤️</div>
+            <div style="font-size:18px;font-weight:800;color:#c084fc;margin-bottom:4px">Comprar 3 Vidas</div>
+            <div style="font-size:13px;color:rgba(255,255,255,.5)">Pague R$ 10,00 via PIX para continuar jogando</div>
+          </div>
+          <div id="vida-pix-loading" style="padding:20px;display:flex;align-items:center;justify-content:center">
+            <svg class="spin-icon" viewBox="0 0 24 24" fill="none" stroke="#a855f7" stroke-width="2.5" width="32" height="32"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
+          </div>
+          <div id="vida-pix-content" style="padding:0 20px 20px;display:none">
+            <div style="background:#fff;border-radius:16px;padding:12px;margin-bottom:12px;display:inline-block">
+              <img id="vida-pix-qr" src="" alt="QR Code" style="width:200px;height:200px;display:block"/>
+            </div>
+            <div style="margin-bottom:12px">
+              <div style="font-size:11px;color:rgba(255,255,255,.4);margin-bottom:4px">Ou copie o codigo PIX:</div>
+              <div style="position:relative">
+                <input id="vida-pix-code" readonly style="
+                  width:100%;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);
+                  border-radius:10px;padding:10px 40px 10px 12px;color:#fff;font-size:11px;
+                  font-family:monospace;box-sizing:border-box;
+                " value=""/>
+                <button id="vida-pix-copy" style="
+                  position:absolute;right:4px;top:50%;transform:translateY(-50%);
+                  background:rgba(168,85,247,.3);border:none;border-radius:6px;
+                  padding:6px 8px;cursor:pointer;color:#fff;font-size:10px;
+                ">Copiar</button>
+              </div>
+            </div>
+            <div id="vida-pix-timer" style="font-size:12px;color:rgba(255,255,255,.4);margin-bottom:8px"></div>
+            <div id="vida-pix-status" style="font-size:13px;font-weight:700;color:#a855f7">Aguardando pagamento...</div>
+          </div>
+          <div style="padding:0 20px 16px">
+            <button id="btn-vida-pix-voltar" style="
+              width:100%;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);
+              color:rgba(255,255,255,.5);border-radius:50px;padding:10px 0;
+              font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;
+            ">Voltar</button>
+          </div>
+        </div>
+      </div>
+
     </div>
 
     <style>
@@ -273,6 +383,8 @@ function renderJogo(container) {
         from { transform:translateY(-20px); opacity:0; }
         to   { transform:translateY(0);     opacity:1; }
       }
+      @keyframes spin { to { transform:rotate(360deg); } }
+      .spin-icon { animation: spin .7s linear infinite; }
     </style>
   `;
 
@@ -365,22 +477,19 @@ function renderJogo(container) {
     // Callback: morreu sem resgatar
     window.gameEvents.onMorreu = async () => {
       if (resgatou || partidaFinalizada) return;
-      partidaFinalizada              = true;
       window.gameEvents.partidaAtiva = false;
-      esconderHUD();
       esconderBotaoResgatar();
 
       if (IS_DEMO) {
+        partidaFinalizada = true;
+        esconderHUD();
         mostrarModalDemo(valorAcumulado, false);
         return;
       }
 
-      try {
-        const res = await API.finalizarPartida(partida_id, plataformasPassadas, false);
-        mostrarDerrota(res);
-      } catch (e) {
-        mostrarDerrota({ saldo_novo: null, valor_ganho_ou_perdido: parseFloat(valor_entrada) });
-      }
+      // Oferecer usar vida antes de finalizar (sempre mostra — com opção de comprar se não tem)
+      _mostrarModalVida(_vidasJogo);
+      return;
     };
 
     // Atualizar HUD
@@ -601,6 +710,47 @@ function renderJogo(container) {
     saldoEl.textContent = res.saldo_novo != null ? `Novo saldo: ${formatMoney(res.saldo_novo)}` : '';
     saldoEl.style.display = res.saldo_novo != null ? '' : 'none';
 
+    // Dobrar ou Nada — botão após vitória
+    if (!IS_DEMO && valor > 0) {
+      const dobrarDiv = document.createElement('div');
+      dobrarDiv.style.cssText = 'padding:0 20px 8px';
+      dobrarDiv.innerHTML = `
+        <button id="btn-dobrar" style="
+          width:100%;background:linear-gradient(135deg,#7c3aed,#a855f7);
+          color:#fff;border:none;border-radius:50px;
+          padding:12px 0;font-size:13px;font-weight:800;
+          cursor:pointer;font-family:inherit;letter-spacing:.3px;
+          box-shadow:0 4px 20px rgba(168,85,247,.35);
+          display:flex;align-items:center;justify-content:center;gap:8px;
+          margin-bottom:4px;
+        ">
+          🎲 DOBRAR OU NADA (${formatMoney(valor)} → ${formatMoney(valor * 2)})
+        </button>
+        <div style="text-align:center;font-size:10px;color:rgba(255,255,255,.35)">50% de chance de dobrar seu premio</div>
+      `;
+      const btnsDiv = document.querySelector('#resultado-card > div:last-child');
+      if (btnsDiv) btnsDiv.parentElement.insertBefore(dobrarDiv, btnsDiv);
+
+      document.getElementById('btn-dobrar').addEventListener('click', async function() {
+        this.disabled = true;
+        this.innerHTML = '🎲 Girando...';
+        try {
+          const r = await API.dobrarOuNada(valor);
+          if (r.ganhou) {
+            this.style.background = 'linear-gradient(135deg,#22c55e,#16a34a)';
+            this.innerHTML = '🎉 GANHOU! +' + formatMoney(valor);
+            saldoEl.textContent = 'Novo saldo: ' + formatMoney(r.saldo_novo);
+          } else {
+            this.style.background = 'linear-gradient(135deg,#ef4444,#dc2626)';
+            this.innerHTML = '💀 PERDEU ' + formatMoney(valor);
+            saldoEl.textContent = 'Saldo: ' + formatMoney(r.saldo_novo);
+          }
+        } catch (err) {
+          this.innerHTML = 'Erro: ' + err.message;
+        }
+      });
+    }
+
     document.getElementById('tela-resultado').style.display = 'flex';
     dispararConfetti();
   }
@@ -706,9 +856,216 @@ function renderJogo(container) {
     saldoEl.textContent = res.saldo_novo != null ? `Saldo restante: ${formatMoney(res.saldo_novo)}` : '';
     saldoEl.style.display = res.saldo_novo != null ? '' : 'none';
 
+    // Seguro reembolsado
+    if (res.reembolso_seguro > 0) {
+      const seguroMsg = document.createElement('div');
+      seguroMsg.style.cssText = 'background:rgba(168,85,247,.12);border:1px solid rgba(168,85,247,.3);border-radius:10px;padding:10px 16px;margin:8px 24px 0;font-size:13px;color:#e9d5ff;font-weight:600';
+      seguroMsg.innerHTML = `🛡️ Seguro ativado: <span style="color:#a855f7">+${formatMoney(res.reembolso_seguro)}</span> devolvidos`;
+      const infoDiv = saldoEl.parentElement;
+      infoDiv.appendChild(seguroMsg);
+    }
+
+    // Botão de revanche com bônus
+    if (!IS_DEMO) {
+      const revBtn = document.createElement('div');
+      revBtn.style.cssText = 'padding:0 20px 8px';
+      const bonusPct = 20;
+      const entradaOriginal = parseFloat(valor_entrada);
+      const bonusValor = Math.round(entradaOriginal * bonusPct) / 100;
+      revBtn.innerHTML = `
+        <button onclick="sessionStorage.setItem('_revanche','1');sessionStorage.setItem('_revanche_valor','${entradaOriginal}');window.location.hash='#painel'" style="
+          width:100%;background:linear-gradient(135deg,#f59e0b,#d97706);
+          color:#fff;border:none;border-radius:50px;
+          padding:12px 0;font-size:13px;font-weight:800;
+          cursor:pointer;font-family:inherit;letter-spacing:.3px;
+          box-shadow:0 4px 20px rgba(245,158,11,.35);
+          display:flex;align-items:center;justify-content:center;gap:8px;
+          margin-bottom:4px;
+        ">
+          ⚡ REVANCHE (+${bonusPct}% bonus = R$ ${(entradaOriginal + bonusValor).toFixed(2).replace('.',',')})
+        </button>
+        <div style="text-align:center;font-size:10px;color:rgba(255,255,255,.35)">Jogue R$ ${entradaOriginal.toFixed(2).replace('.',',')} e entre com R$ ${(entradaOriginal + bonusValor).toFixed(2).replace('.',',')}</div>
+      `;
+      const btnsDiv = document.querySelector('#resultado-card > div:last-child');
+      if (btnsDiv) btnsDiv.parentElement.insertBefore(revBtn, btnsDiv);
+    }
+
     document.getElementById('tela-resultado').style.display = 'flex';
   }
 
+
+  // ── Upsell: Usar Vida / Comprar Vidas ────────────────────────────────────
+  let _vidaPollTimer = null;
+  let _vidasJogo = 0;
+
+  // Buscar vidas atuais do server
+  async function _fetchVidas() {
+    try {
+      const info = await API.upsellInfo();
+      _vidasJogo = info.pacote_vidas?.vidas_atuais || 0;
+      return _vidasJogo;
+    } catch { return 0; }
+  }
+
+  function _mostrarModalVida(vidas) {
+    tremerTela();
+    const modal = document.getElementById('modal-vida');
+    const meta = parseFloat(valor_meta) || 1;
+    const perc = Math.min(100, (valorAcumulado / meta) * 100);
+
+    document.getElementById('vida-acumulado').textContent = formatMoney(valorAcumulado);
+    document.getElementById('vida-subtitulo').innerHTML = valorAcumulado > 0
+      ? `${formatMoney(valorAcumulado)} acumulados (${Math.round(perc)}% da meta). Use uma vida para continuar!`
+      : `Use uma vida para continuar de onde parou!`;
+
+    // Reset botões
+    const btnUsar = document.getElementById('btn-usar-vida');
+    btnUsar.disabled = false;
+    btnUsar.innerHTML = `❤️ USAR VIDA E CONTINUAR (<span id="vida-count">${vidas}</span> restantes)`;
+    const btnComprar = document.getElementById('btn-comprar-vida-pix');
+    btnComprar.disabled = false;
+    btnComprar.innerHTML = '🛒 COMPRAR 3 VIDAS — R$ 10,00 via PIX';
+
+    if (vidas > 0) {
+      document.getElementById('vida-usar-wrap').style.display = '';
+    } else {
+      document.getElementById('vida-usar-wrap').style.display = 'none';
+    }
+    modal.style.display = 'flex';
+  }
+
+  // Botão USAR VIDA
+  document.getElementById('btn-usar-vida').addEventListener('click', async () => {
+    const btn = document.getElementById('btn-usar-vida');
+    btn.disabled = true;
+    btn.innerHTML = '⏳ Usando vida...';
+    try {
+      const r = await API.usarVida(partida_id);
+      _vidasJogo = r.vidas_restantes;
+      document.getElementById('modal-vida').style.display = 'none';
+
+      // Reativar a partida — ressuscitar no jogo
+      partidaFinalizada = false;
+      window.gameEvents.partidaAtiva = true;
+      document.getElementById('hud-container').style.display = 'block';
+
+      // Reiniciar o jogo no iframe a partir da posição atual
+      const gIframe = document.getElementById('game-iframe');
+      gIframe?.contentWindow?.postMessage({ type: 'revive' }, '*');
+      // Fallback: se o iframe não suportar revive, recarregar
+      setTimeout(() => {
+        if (!window.gameEvents.partidaAtiva) {
+          gIframe.src = gIframe.src; // force reload
+        }
+      }, 500);
+    } catch (err) {
+      btn.innerHTML = '❌ ' + (err.message || 'Erro');
+      setTimeout(() => {
+        btn.disabled = false;
+        btn.innerHTML = '❤️ USAR VIDA E CONTINUAR';
+      }, 2000);
+    }
+  });
+
+  // Botão COMPRAR VIDAS via PIX
+  document.getElementById('btn-comprar-vida-pix').addEventListener('click', async () => {
+    const btn = document.getElementById('btn-comprar-vida-pix');
+    btn.disabled = true;
+    btn.innerHTML = '⏳ Gerando PIX...';
+
+    try {
+      // Criar depósito de R$10 com _upsell para ir pro split
+      const data = await API.deposito(10, undefined, 'comprar_vidas');
+
+      document.getElementById('modal-vida').style.display = 'none';
+      const modalPix = document.getElementById('modal-vida-pix');
+      modalPix.style.display = 'flex';
+
+      // Preencher QR code
+      document.getElementById('vida-pix-loading').style.display = 'none';
+      document.getElementById('vida-pix-content').style.display = '';
+
+      const qrSrc = data.qrcode_imagem || data.qrcode_base64 || '';
+      const qrImg = document.getElementById('vida-pix-qr');
+      if (qrSrc) {
+        qrImg.src = qrSrc;
+        qrImg.style.display = 'block';
+      } else {
+        qrImg.style.display = 'none';
+      }
+
+      const pixCode = data.qrcode_texto || '';
+      document.getElementById('vida-pix-code').value = pixCode;
+
+      // Copiar PIX
+      document.getElementById('vida-pix-copy').onclick = () => {
+        navigator.clipboard.writeText(pixCode).catch(() => {});
+        document.getElementById('vida-pix-copy').textContent = 'Copiado!';
+        setTimeout(() => document.getElementById('vida-pix-copy').textContent = 'Copiar', 2000);
+      };
+
+      // Polling para verificar pagamento
+      _iniciarPollingVida(data.txid);
+
+    } catch (err) {
+      btn.innerHTML = '❌ ' + (err.message || 'Erro ao gerar PIX');
+      setTimeout(() => {
+        btn.disabled = false;
+        btn.innerHTML = '🛒 COMPRAR 3 VIDAS — R$ 10,00 via PIX';
+      }, 3000);
+    }
+  });
+
+  function _iniciarPollingVida(txid) {
+    if (_vidaPollTimer) clearTimeout(_vidaPollTimer);
+    const expira = Date.now() + 30 * 60 * 1000;
+
+    async function checar() {
+      if (Date.now() > expira) {
+        document.getElementById('vida-pix-status').textContent = 'Expirado';
+        return;
+      }
+      try {
+        const res = await API.depositoStatus(txid);
+        if (res.status === 'aprovado') {
+          document.getElementById('vida-pix-status').innerHTML = '<span style="color:#22c55e;font-size:16px">✅ Pagamento confirmado!</span>';
+          // Vidas já creditadas automaticamente pelo server via _upsell='comprar_vidas'
+          await _fetchVidas();
+          setTimeout(() => {
+            document.getElementById('modal-vida-pix').style.display = 'none';
+            // Mostrar modal de vida novamente com vidas disponíveis
+            _mostrarModalVida(_vidasJogo);
+          }, 1500);
+          return;
+        }
+      } catch {}
+      _vidaPollTimer = setTimeout(checar, 4000);
+    }
+    _vidaPollTimer = setTimeout(checar, 4000);
+  }
+
+  // Botão DESISTIR
+  document.getElementById('btn-desistir-vida').addEventListener('click', async () => {
+    document.getElementById('modal-vida').style.display = 'none';
+    partidaFinalizada = true;
+    esconderHUD();
+    try {
+      const res = await API.finalizarPartida(partida_id, plataformasPassadas, false);
+      mostrarDerrota(res);
+    } catch (e) {
+      mostrarDerrota({ saldo_novo: null, valor_ganho_ou_perdido: parseFloat(valor_entrada) });
+    }
+  });
+
+  // Botão VOLTAR do modal PIX
+  document.getElementById('btn-vida-pix-voltar').addEventListener('click', () => {
+    if (_vidaPollTimer) clearTimeout(_vidaPollTimer);
+    document.getElementById('modal-vida-pix').style.display = 'none';
+    _mostrarModalVida(_vidasJogo);
+  });
+
+  // Buscar vidas ao iniciar
+  _fetchVidas();
 
   // ── Ações dos botões de resultado ─────────────────────────────────────────
   function jogarNovamente() {

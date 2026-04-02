@@ -100,6 +100,37 @@ function renderLanding(el) {
       </div>
     </div>
 
+    <!-- ── Jackpot + Ranking ────────────────────────────────────────── -->
+    <section class="lnd-how" style="padding-top:40px;padding-bottom:32px;background:linear-gradient(180deg,rgba(255,215,0,.04) 0%,transparent 100%)">
+      <div class="lnd-container">
+        <!-- Jackpot Counter -->
+        <div style="text-align:center;margin-bottom:28px">
+          <div style="font-size:11px;text-transform:uppercase;letter-spacing:2px;color:rgba(255,215,0,.6);font-weight:700;margin-bottom:8px">Jackpot do Dia</div>
+          <div id="jackpot-valor" style="
+            font-size:48px;font-weight:900;color:#fbbf24;line-height:1;
+            text-shadow:0 0 40px rgba(251,191,36,.5),0 0 80px rgba(251,191,36,.2);
+            font-variant-numeric:tabular-nums;letter-spacing:1px;
+          ">R$ 0,00</div>
+          <div style="font-size:12px;color:rgba(255,255,255,.35);margin-top:6px">
+            Reseta em <span id="jackpot-timer" style="color:#fbbf24;font-weight:700">00:00:00</span>
+          </div>
+          <div style="font-size:11px;color:rgba(255,255,255,.3);margin-top:4px">O 1o lugar do ranking leva o jackpot!</div>
+        </div>
+
+        <!-- Ranking -->
+        <div style="max-width:420px;margin:0 auto;background:linear-gradient(160deg,rgba(13,0,31,.9),rgba(30,0,58,.7));border:1px solid rgba(255,215,0,.15);border-radius:20px;overflow:hidden;box-shadow:0 16px 48px rgba(0,0,0,.4)">
+          <div style="padding:16px 20px 12px;border-bottom:1px solid rgba(255,255,255,.06);display:flex;align-items:center;justify-content:space-between">
+            <div style="font-size:14px;font-weight:800;color:#fff;display:flex;align-items:center;gap:8px">
+              <svg viewBox="0 0 24 24" fill="none" stroke="#fbbf24" stroke-width="2" width="18" height="18"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2z"/></svg>
+              Ranking do Dia
+            </div>
+            <div style="font-size:10px;color:rgba(255,255,255,.3);text-transform:uppercase;letter-spacing:.5px">Top 10</div>
+          </div>
+          <div id="ranking-list" style="padding:8px 0"></div>
+        </div>
+      </div>
+    </section>
+
     <!-- ── Stats ──────────────────────────────────────────────────────── -->
     <div class="lnd-stats">
       <div class="lnd-stat">
@@ -203,6 +234,38 @@ function renderLanding(el) {
       </div>
     </section>
 
+    <!-- ── Programa de Afiliados ────────────────────────────────────── -->
+    <section class="lnd-how" style="background:linear-gradient(180deg,rgba(168,85,247,.06) 0%,rgba(0,0,0,0) 100%)">
+      <div class="lnd-container">
+        <div class="lnd-section-head">
+          <h2>Programa de Afiliados</h2>
+          <p>Indique amigos e ganhe comissao sobre cada partida deles</p>
+        </div>
+        <div style="max-width:520px;margin:0 auto;background:linear-gradient(135deg,rgba(168,85,247,.12),rgba(139,92,246,.08));border:1px solid rgba(168,85,247,.25);border-radius:16px;padding:32px 28px;text-align:center">
+          <div style="font-size:48px;margin-bottom:12px">💰</div>
+          <h3 style="color:#e9d5ff;font-size:20px;margin-bottom:16px">Ganhe dinheiro indicando amigos</h3>
+          <div style="display:flex;gap:16px;justify-content:center;margin-bottom:20px;flex-wrap:wrap">
+            <div style="flex:1;min-width:180px;background:rgba(0,0,0,.3);border-radius:12px;padding:16px;border:1px solid rgba(239,68,68,.25)">
+              <div style="font-size:32px;font-weight:800;color:#f87171;line-height:1">40%</div>
+              <div style="font-size:12px;color:#fca5a5;margin-top:6px">de comissao em cima da<br><strong>perda</strong> de cada indicado</div>
+            </div>
+            <div style="flex:1;min-width:180px;background:rgba(0,0,0,.3);border-radius:12px;padding:16px;border:1px solid rgba(34,197,94,.25)">
+              <div style="font-size:32px;font-weight:800;color:#4ade80;line-height:1">10%</div>
+              <div style="font-size:12px;color:#86efac;margin-top:6px">de comissao em cima do<br><strong>ganho</strong> de cada indicado</div>
+            </div>
+          </div>
+          <p style="font-size:13px;color:rgba(255,255,255,.5);margin-bottom:20px">Cadastre-se e faca um deposito minimo de <strong style="color:#e9d5ff">R$ 20,00</strong> para ativar seu programa de afiliados. Depois disso, compartilhe seu link e ganhe comissao automatica sobre cada partida dos seus indicados. Saque via PIX a qualquer momento.</p>
+          <button class="lnd-cta-btn" onclick="navigate('#cadastro')" style="width:100%;justify-content:center">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="18" height="18">
+              <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
+              <line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/>
+            </svg>
+            QUERO SER AFILIADO
+          </button>
+        </div>
+      </div>
+    </section>
+
     <!-- ── CTA final ──────────────────────────────────────────────────── -->
     <section class="lnd-cta-sec">
       <div class="lnd-orbs" aria-hidden="true">
@@ -298,4 +361,98 @@ function renderLanding(el) {
 
     btn.disabled = false;
   });
+
+  // ── Jackpot + Ranking ───────────────────────────────────────────────────
+  const JACKPOT_BASE = 1247.50;
+
+  // Jackpot com incrementos aleatórios
+  let _jackpotAtual = JACKPOT_BASE + ((new Date() - new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate())) / 1000) * 0.55;
+  function _tickJackpot() {
+    _jackpotAtual += 0.01 + Math.random() * 1.99;
+    return _jackpotAtual;
+  }
+
+  function _timeToMidnight() {
+    const now = new Date();
+    const midnight = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+    const diff = midnight - now;
+    const h = Math.floor(diff / 3600000);
+    const m = Math.floor((diff % 3600000) / 60000);
+    const s = Math.floor((diff % 60000) / 1000);
+    return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+  }
+
+  function _formatMoney(v) {
+    return 'R$ ' + v.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  }
+
+  const avatarColors = ['#FF6B9D','#a855f7','#4D9EFF','#00C97A','#f59e0b','#ec4899','#06b6d4','#8b5cf6','#ef4444','#14b8a6'];
+
+  function _renderRanking(rankingData) {
+    const list = document.getElementById('ranking-list');
+    if (!list) return;
+
+    // Identificar usuário logado
+    const currentUser = API.getUser();
+    const userId = currentUser?.id;
+
+    // Marcar o usuário no ranking
+    const data = rankingData.map(p => ({
+      ...p,
+      isUser: !!p.user_id && p.user_id === userId,
+    }));
+
+    const medals = ['🥇', '🥈', '🥉'];
+    const bonuses = ['JACKPOT', '+R$1.000', '+R$500'];
+    const posColors = [
+      'background:linear-gradient(90deg,rgba(251,191,36,.15),transparent);border-left:3px solid #fbbf24',
+      'background:linear-gradient(90deg,rgba(192,192,192,.1),transparent);border-left:3px solid #c0c0c0',
+      'background:linear-gradient(90deg,rgba(205,127,50,.1),transparent);border-left:3px solid #cd7f32',
+    ];
+
+    list.innerHTML = data.map((p, i) => {
+      const isTop3 = i < 3;
+      const isUser = !!p.isUser;
+      const color = avatarColors[i % avatarColors.length];
+      const posStyle = isTop3 ? posColors[i] : (isUser ? 'background:rgba(255,107,157,.08);border-left:3px solid #FF6B9D' : 'border-left:3px solid transparent');
+      const medal = isTop3 ? medals[i] : `<span style="color:rgba(255,255,255,.3);font-weight:700;font-size:13px">${i + 1}</span>`;
+      const bonus = isTop3 ? `<span style="font-size:9px;font-weight:800;padding:2px 6px;border-radius:4px;${i === 0 ? 'background:linear-gradient(135deg,#fbbf24,#f59e0b);color:#000' : 'background:rgba(255,255,255,.1);color:rgba(255,255,255,.5)'}">${bonuses[i]}</span>` : '';
+      const nameStyle = isUser ? 'color:#FF6B9D;font-weight:800' : 'color:rgba(255,255,255,.8)';
+      const displayName = isUser ? p.nome + ' (você)' : p.nome;
+
+      return `
+        <div style="display:flex;align-items:center;gap:10px;padding:10px 16px;${posStyle};transition:background .2s">
+          <div style="width:24px;text-align:center;flex-shrink:0">${medal}</div>
+          <div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,${color},${color}88);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:#fff;flex-shrink:0">
+            ${p.nome[0]}
+          </div>
+          <div style="flex:1;min-width:0">
+            <div style="font-size:13px;font-weight:600;${nameStyle};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${displayName}</div>
+          </div>
+          <div style="text-align:right;flex-shrink:0">
+            <div style="font-size:13px;font-weight:800;color:#22c55e">${_formatMoney(p.ganho)}</div>
+            ${bonus}
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  // Atualizar jackpot e timer a cada segundo
+  function _updateJackpot() {
+    const el = document.getElementById('jackpot-valor');
+    const timerEl = document.getElementById('jackpot-timer');
+    if (!el) return;
+    el.textContent = _formatMoney(_tickJackpot());
+    if (timerEl) timerEl.textContent = _timeToMidnight();
+  }
+
+  _updateJackpot();
+  setInterval(_updateJackpot, 1000);
+
+  // Buscar ranking real do servidor
+  fetch('/api/public/ranking')
+    .then(r => r.json())
+    .then(data => _renderRanking(data.ranking || []))
+    .catch(() => _renderRanking([]));
 }

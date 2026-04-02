@@ -5,7 +5,7 @@
   "description": "HelixWins - Plataforma de jogos com gateway AmploPay",
   "scripts": {
     "start": "node server.js",
-    "test": "jest --forceExit --detectOpenHandles"
+    "test": "jest --forceExit --detectOpenHandles --silent"
   },
   "engines": {
     "node": ">=18.0.0"
