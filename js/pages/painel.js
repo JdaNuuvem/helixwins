@@ -2831,6 +2831,9 @@ function renderPainel(el) {
     try {
       const data = await API.indicacaoInfo();
 
+      // Preencher comissão mesmo se inativo
+      document.getElementById('ind-comissao-perc').textContent = (data.comissao_nivel1_perc ?? 40) + '%';
+
       // Afiliado inativo — precisa depositar R$20+
       if (data.afiliado_ativo === false) {
         const modal = document.getElementById('modal-indicacao');
