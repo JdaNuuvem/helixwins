@@ -136,6 +136,9 @@ const API = (() => {
   async function indicacaoInfo() {
     return request('GET', '/indicacao/info');
   }
+  async function indicacaoRede() {
+    return request('GET', '/indicacao/rede');
+  }
 
   // ── Suporte ──────────────────────────────────────────────────────────────
   async function suporteLinks() {
@@ -227,7 +230,7 @@ const API = (() => {
     dashboard, salvarPix, alterarSenha, depositoInfo,
     gameConfigs, iniciarPartida, finalizarPartida, abandonarPartida,
     deposito, depositoStatus, saque, saqueAfiliado, historico, meusSaques,
-    indicacaoInfo, suporteLinks,
+    indicacaoInfo, indicacaoRede, suporteLinks,
     getGatewayConfig, updateGatewayConfig, setActiveGateway, updateGatewayCredentials,
     getSiteConfig, updateSiteConfig,
     listarUsuarios, ajustarSaldo, toggleDemo, toggleIsentoTaxa, updateGameConfig, confirmarTaxaSaque,

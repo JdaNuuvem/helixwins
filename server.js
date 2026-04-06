@@ -184,6 +184,13 @@ const UPSELL_CONFIG = {
   presente: { enabled: true, valores: [5, 10, 20], minimo_deposito: 20 },
 };
 
+// ─── Comissão de Afiliados ───────────────────────────────────────────────────
+const COMISSAO_CONFIG = {
+  nivel1_perc: 0.10,  // 10% do depósito para quem indicou direto
+  nivel2_perc: 0.03,  // 3% do depósito para quem indicou o indicador
+  bonus_primeiro_deposito: 2, // R$2 bônus fixo no 1º depósito do indicado
+};
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function findUser(id) { return db.users.find(u => u.id === id); }
 
@@ -1486,6 +1493,91 @@ function creditDeposit(tx) {
   }
   saveDb(db);
   console.log(`[WEBHOOK] Depósito creditado: user=${tx.user_id} pago=R$${tx.valor} creditado=R$${valorCreditar} saldo=${user.saldo}`);
+
+  // ── Comissão de afiliados ──
+  creditarComissao(tx, user);
+}
+
+function creditarComissao(tx, depositante) {
+  if (!depositante.indicado_por) return;
+
+  // Nível 1: quem indicou o depositante
+  const referrer1 = db.users.find(u => u.codigo_indicacao === depositante.indicado_por);
+  if (!referrer1) return;
+
+  // Referrer1 precisa ter feito depósito >= R$20 para receber comissão
+  const ref1TemDep = db.transacoes.some(t =>
+    t.user_id === referrer1.id && t.tipo === 'deposito' && t.status === 'aprovado' && t.valor >= 20
+  );
+  if (!ref1TemDep) return;
+
+  const valorBase = tx.valor; // comissão sobre o valor pago (sem bônus)
+  const comissao1 = money(valorBase * COMISSAO_CONFIG.nivel1_perc);
+
+  if (comissao1 > 0) {
+    const antes1 = referrer1.saldo_afiliado;
+    referrer1.saldo_afiliado = money(referrer1.saldo_afiliado + comissao1);
+    referrer1.updated_at = new Date().toISOString();
+    db.transacoes.push({
+      id: db.nextIds.transacoes++, user_id: referrer1.id,
+      tipo: 'bonus_indicacao', valor: comissao1,
+      saldo_antes: antes1, saldo_depois: referrer1.saldo_afiliado,
+      status: 'aprovado', pix_chave: null,
+      descricao: `Comissão nível 1 — depósito de ${depositante.nome || 'indicado'}`,
+      referido_id: depositante.id, nivel: 1,
+      created_at: new Date().toISOString(),
+    });
+    console.log(`[AFILIADO] Nível 1: user=${referrer1.id} +R$${comissao1} (dep R$${valorBase} de user=${depositante.id})`);
+  }
+
+  // Bônus de primeiro depósito do indicado
+  const isFirstDep = db.transacoes.filter(t =>
+    t.user_id === depositante.id && t.tipo === 'deposito' && t.status === 'aprovado'
+  ).length === 1;
+  if (isFirstDep && COMISSAO_CONFIG.bonus_primeiro_deposito > 0) {
+    const bonus = COMISSAO_CONFIG.bonus_primeiro_deposito;
+    referrer1.saldo_afiliado = money(referrer1.saldo_afiliado + bonus);
+    db.transacoes.push({
+      id: db.nextIds.transacoes++, user_id: referrer1.id,
+      tipo: 'bonus_indicacao', valor: bonus,
+      saldo_antes: referrer1.saldo_afiliado - bonus, saldo_depois: referrer1.saldo_afiliado,
+      status: 'aprovado', pix_chave: null,
+      descricao: `Bônus 1º depósito de ${depositante.nome || 'indicado'}`,
+      referido_id: depositante.id, nivel: 1,
+      created_at: new Date().toISOString(),
+    });
+    console.log(`[AFILIADO] Bônus 1º dep: user=${referrer1.id} +R$${bonus}`);
+  }
+
+  // Nível 2: quem indicou o referrer1
+  if (referrer1.indicado_por) {
+    const referrer2 = db.users.find(u => u.codigo_indicacao === referrer1.indicado_por);
+    if (referrer2) {
+      const ref2TemDep = db.transacoes.some(t =>
+        t.user_id === referrer2.id && t.tipo === 'deposito' && t.status === 'aprovado' && t.valor >= 20
+      );
+      if (ref2TemDep) {
+        const comissao2 = money(valorBase * COMISSAO_CONFIG.nivel2_perc);
+        if (comissao2 > 0) {
+          const antes2 = referrer2.saldo_afiliado;
+          referrer2.saldo_afiliado = money(referrer2.saldo_afiliado + comissao2);
+          referrer2.updated_at = new Date().toISOString();
+          db.transacoes.push({
+            id: db.nextIds.transacoes++, user_id: referrer2.id,
+            tipo: 'bonus_indicacao', valor: comissao2,
+            saldo_antes: antes2, saldo_depois: referrer2.saldo_afiliado,
+            status: 'aprovado', pix_chave: null,
+            descricao: `Comissão nível 2 — depósito de ${depositante.nome || 'indicado'}`,
+            referido_id: depositante.id, nivel: 2,
+            created_at: new Date().toISOString(),
+          });
+          console.log(`[AFILIADO] Nível 2: user=${referrer2.id} +R$${comissao2} (dep R$${valorBase} de user=${depositante.id})`);
+        }
+      }
+    }
+  }
+
+  saveDb(db);
 }
 
 function refundDeposit(tx) {
@@ -1949,12 +2041,100 @@ app.get('/api/indicacao/info', authMiddleware, (req, res) => {
   }
 
   const indicados = db.users.filter(u => u.indicado_por === user.codigo_indicacao);
+
+  // Calcular dados reais
+  const comissoesTx = db.transacoes.filter(t => t.user_id === req.userId && t.tipo === 'bonus_indicacao' && t.status === 'aprovado');
+  const totalComissao = comissoesTx.reduce((s, t) => s + t.valor, 0);
+
+  const indicadosComDep = indicados.filter(ind =>
+    db.transacoes.some(t => t.user_id === ind.id && t.tipo === 'deposito' && t.status === 'aprovado')
+  );
+
+  // Indicados nível 2 (indicados dos meus indicados)
+  const indicadosN2 = [];
+  for (const ind of indicados) {
+    const subInds = db.users.filter(u => u.indicado_por === ind.codigo_indicacao);
+    for (const si of subInds) indicadosN2.push({ ...si, via: ind.nome || ind.id });
+  }
+
+  // Comissão gerada por cada indicado
+  const indicadosRecentes = indicados.slice(0, 20).map(ind => {
+    const comInd = comissoesTx.filter(t => t.referido_id === ind.id && t.nivel === 1).reduce((s, t) => s + t.valor, 0);
+    const hasDep = db.transacoes.some(t => t.user_id === ind.id && t.tipo === 'deposito' && t.status === 'aprovado');
+    return {
+      id: ind.id, nome: ind.nome, data_cadastro: ind.created_at,
+      has_deposited: hasDep, total_comissao_indicado: money(comInd),
+    };
+  });
+
   res.json({
     afiliado_ativo: true,
-    codigo: user.codigo_indicacao, link: `${WEBHOOK_BASE_URL}/?ref=${user.codigo_indicacao}`,
-    total_indicados: indicados.length, total_com_deposito: 0, bonus_total_ganho: 0, bonus_total_previsto: 0,
-    bonus_por_indicacao: 2, comissao_nivel1_perc: 40, saldo_afiliado: user.saldo_afiliado, total_comissao: 0,
-    indicados_recentes: indicados.slice(0, 10).map(u => ({ id: u.id, nome: u.nome, created_at: u.created_at })),
+    codigo: user.codigo_indicacao,
+    link: `${WEBHOOK_BASE_URL}/?ref=${user.codigo_indicacao}`,
+    total_indicados: indicados.length,
+    total_com_deposito: indicadosComDep.length,
+    total_indicados_n2: indicadosN2.length,
+    comissao_nivel1_perc: Math.round(COMISSAO_CONFIG.nivel1_perc * 100),
+    comissao_nivel2_perc: Math.round(COMISSAO_CONFIG.nivel2_perc * 100),
+    bonus_primeiro_deposito: COMISSAO_CONFIG.bonus_primeiro_deposito,
+    saldo_afiliado: user.saldo_afiliado,
+    total_comissao: money(totalComissao),
+    indicados_recentes: indicadosRecentes,
+  });
+});
+
+// ── Rede de afiliados (árvore multinível) ───────────────────────────────────
+app.get('/api/indicacao/rede', authMiddleware, (req, res) => {
+  const user = findUser(req.userId);
+  if (!user) return res.status(404).json({ error: 'Usuário não encontrado.' });
+
+  const comissoesTx = db.transacoes.filter(t => t.user_id === req.userId && t.tipo === 'bonus_indicacao' && t.status === 'aprovado');
+
+  // Nível 1
+  const nivel1 = db.users.filter(u => u.indicado_por === user.codigo_indicacao).map(ind => {
+    const hasDep = db.transacoes.some(t => t.user_id === ind.id && t.tipo === 'deposito' && t.status === 'aprovado');
+    const comInd = comissoesTx.filter(t => t.referido_id === ind.id && t.nivel === 1).reduce((s, t) => s + t.valor, 0);
+    const subCount = db.users.filter(u => u.indicado_por === ind.codigo_indicacao).length;
+    return {
+      id: ind.id, nome: ind.nome, data_cadastro: ind.created_at,
+      has_deposited: hasDep, comissao_gerada: money(comInd), sub_indicados: subCount,
+    };
+  });
+
+  // Nível 2
+  const nivel2 = [];
+  for (const ind of db.users.filter(u => u.indicado_por === user.codigo_indicacao)) {
+    const subInds = db.users.filter(u => u.indicado_por === ind.codigo_indicacao);
+    for (const si of subInds) {
+      const hasDep = db.transacoes.some(t => t.user_id === si.id && t.tipo === 'deposito' && t.status === 'aprovado');
+      const comSi = comissoesTx.filter(t => t.referido_id === si.id && t.nivel === 2).reduce((s, t) => s + t.valor, 0);
+      nivel2.push({
+        id: si.id, nome: si.nome, data_cadastro: si.created_at,
+        via_nome: ind.nome, via_id: ind.id,
+        has_deposited: hasDep, comissao_gerada: money(comSi),
+      });
+    }
+  }
+
+  // Histórico de comissões (últimas 50)
+  const historico = comissoesTx.slice(-50).reverse().map(t => ({
+    valor: t.valor, nivel: t.nivel, descricao: t.descricao, data: t.created_at,
+  }));
+
+  const totalN1 = comissoesTx.filter(t => t.nivel === 1).reduce((s, t) => s + t.valor, 0);
+  const totalN2 = comissoesTx.filter(t => t.nivel === 2).reduce((s, t) => s + t.valor, 0);
+
+  res.json({
+    saldo_afiliado: user.saldo_afiliado,
+    total_comissao: money(totalN1 + totalN2),
+    total_nivel1: money(totalN1),
+    total_nivel2: money(totalN2),
+    nivel1, nivel2, historico,
+    config: {
+      nivel1_perc: Math.round(COMISSAO_CONFIG.nivel1_perc * 100),
+      nivel2_perc: Math.round(COMISSAO_CONFIG.nivel2_perc * 100),
+      bonus_primeiro_deposito: COMISSAO_CONFIG.bonus_primeiro_deposito,
+    },
   });
 });
 
@@ -2087,4 +2267,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { app, db, getActiveGateway, getGatewayConfig, creditDeposit };
+module.exports = { app, db, getActiveGateway, getGatewayConfig, creditDeposit, creditarComissao, findUser, money, COMISSAO_CONFIG };

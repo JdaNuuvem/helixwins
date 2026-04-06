@@ -566,54 +566,81 @@ function renderPainel(el) {
     </div>
 
     <div class="pnl-modal-bg hidden" id="modal-indicacao">
-      <div class="pnl-modal">
+      <div class="pnl-modal" style="max-width:500px">
         <div class="pnl-modal-header">
-          <span class="pnl-modal-title">Indicar Amigos</span>
+          <span class="pnl-modal-title">Programa de Afiliados</span>
           <button class="pnl-modal-close" id="close-indicacao">✕</button>
         </div>
-        <div class="pnl-info-box pnl-info-pink" style="text-align:center;margin-bottom:16px">
-          🎉 Ganhe <strong id="ind-comissao-perc">...</strong> de comissão para cada amigo que fizer o primeiro depósito!
+
+        <!-- Tabs -->
+        <div id="ind-tabs" style="display:flex;gap:4px;margin-bottom:14px;background:rgba(0,0,0,.2);border-radius:10px;padding:4px">
+          <button class="ind-tab ind-tab-active" data-tab="resumo" style="flex:1;padding:10px 8px;border:none;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;transition:all .2s">Resumo</button>
+          <button class="ind-tab" data-tab="rede" style="flex:1;padding:10px 8px;border:none;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;transition:all .2s">Minha Rede</button>
+          <button class="ind-tab" data-tab="historico" style="flex:1;padding:10px 8px;border:none;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;transition:all .2s">Histórico</button>
         </div>
 
-        <!-- Saldo Afiliado destaque -->
-        <div id="ind-saldo-box" style="background:linear-gradient(135deg,#4a1080,#2d0a50);border-radius:14px;padding:18px 20px;margin-bottom:14px">
-          <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px">
-            <div>
-              <div style="font-size:11px;color:#c084fc;text-transform:uppercase;letter-spacing:.6px;margin-bottom:4px">Saldo de Afiliado</div>
-              <div id="ind-saldo-afil" style="font-size:24px;font-weight:700;color:#fff">R$ 0,00</div>
-              <div style="font-size:11px;color:#9d74c5;margin-top:2px">disponível para saque</div>
+        <!-- Tab: Resumo -->
+        <div id="ind-tab-resumo">
+          <div class="pnl-info-box pnl-info-pink" style="text-align:center;margin-bottom:16px">
+            Ganhe <strong id="ind-comissao-perc">...</strong> no nível 1 e <strong id="ind-comissao-n2">...</strong> no nível 2 sobre cada depósito dos seus indicados!
+          </div>
+
+          <div id="ind-saldo-box" style="background:linear-gradient(135deg,#4a1080,#2d0a50);border-radius:14px;padding:18px 20px;margin-bottom:14px">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px">
+              <div>
+                <div style="font-size:11px;color:#c084fc;text-transform:uppercase;letter-spacing:.6px;margin-bottom:4px">Saldo de Afiliado</div>
+                <div id="ind-saldo-afil" style="font-size:24px;font-weight:700;color:#fff">R$ 0,00</div>
+                <div style="font-size:11px;color:#9d74c5;margin-top:2px">disponível para saque</div>
+              </div>
+              <div style="text-align:right">
+                <div style="font-size:11px;color:#c084fc;text-transform:uppercase;letter-spacing:.6px;margin-bottom:4px">Total Recebido</div>
+                <div id="ind-total-comissao" style="font-size:18px;font-weight:600;color:#e9d5ff">R$ 0,00</div>
+                <div style="font-size:11px;color:#9d74c5;margin-top:2px">em comissões</div>
+              </div>
             </div>
-            <div style="text-align:right">
-              <div style="font-size:11px;color:#c084fc;text-transform:uppercase;letter-spacing:.6px;margin-bottom:4px">Total Recebido</div>
-              <div id="ind-total-comissao" style="font-size:18px;font-weight:600;color:#e9d5ff">R$ 0,00</div>
-              <div style="font-size:11px;color:#9d74c5;margin-top:2px">em comissões</div>
+            <button id="btn-sacar-afil" style="width:100%;padding:12px;border-radius:10px;border:none;cursor:pointer;background:linear-gradient(135deg,#7c3aed,#a855f7);color:#fff;font-weight:700;font-size:14px;display:flex;align-items:center;justify-content:center;gap:8px;transition:opacity .2s">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
+              Sacar Comissão
+            </button>
+          </div>
+
+          <div class="pnl-link-box">
+            <div class="pnl-link-label">Seu link exclusivo</div>
+            <div class="pnl-link-val" id="ind-link">...</div>
+            <button class="pnl-btn-copy" onclick="copyToClipboard(document.getElementById('ind-link').textContent)">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+              Copiar
+            </button>
+          </div>
+
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:16px">
+            <div class="pnl-mini-stat">
+              <div class="pnl-mini-val" id="ind-total">0</div>
+              <div class="pnl-mini-lbl">Nível 1</div>
+            </div>
+            <div class="pnl-mini-stat">
+              <div class="pnl-mini-val" id="ind-total-n2">0</div>
+              <div class="pnl-mini-lbl">Nível 2</div>
+            </div>
+            <div class="pnl-mini-stat">
+              <div class="pnl-mini-val" id="ind-bonus">0</div>
+              <div class="pnl-mini-lbl">Com depósito</div>
             </div>
           </div>
-          <button id="btn-sacar-afil" style="width:100%;padding:12px;border-radius:10px;border:none;cursor:pointer;background:linear-gradient(135deg,#7c3aed,#a855f7);color:#fff;font-weight:700;font-size:14px;display:flex;align-items:center;justify-content:center;gap:8px;transition:opacity .2s">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
-            Sacar Comissão
-          </button>
+          <div id="ind-lista"></div>
         </div>
 
-        <div class="pnl-link-box">
-          <div class="pnl-link-label">Seu link exclusivo</div>
-          <div class="pnl-link-val" id="ind-link">...</div>
-          <button class="pnl-btn-copy" onclick="copyToClipboard(document.getElementById('ind-link').textContent)">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-            Copiar
-          </button>
+        <!-- Tab: Rede -->
+        <div id="ind-tab-rede" style="display:none">
+          <div id="ind-rede-loading" style="text-align:center;padding:24px;color:#9980aa">Carregando rede...</div>
+          <div id="ind-rede-content"></div>
         </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
-          <div class="pnl-mini-stat">
-            <div class="pnl-mini-val" id="ind-total">0</div>
-            <div class="pnl-mini-lbl">Indicados</div>
-          </div>
-          <div class="pnl-mini-stat">
-            <div class="pnl-mini-val" id="ind-bonus">R$ 0,00</div>
-            <div class="pnl-mini-lbl">Com depósito</div>
-          </div>
+
+        <!-- Tab: Histórico -->
+        <div id="ind-tab-historico" style="display:none">
+          <div id="ind-hist-loading" style="text-align:center;padding:24px;color:#9980aa">Carregando...</div>
+          <div id="ind-hist-content"></div>
         </div>
-        <div id="ind-lista"></div>
       </div>
     </div>
 
@@ -2826,71 +2853,106 @@ function renderPainel(el) {
   });
 
   // ── Indicação ────────────────────────────────────────────────────────────
+  // ── Tab switching para modal indicação ──
+  let _indTabLoaded = { rede: false, historico: false };
+
+  function _initIndTabs() {
+    document.querySelectorAll('.ind-tab').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.ind-tab').forEach(b => {
+          b.classList.remove('ind-tab-active');
+          b.style.background = 'transparent';
+          b.style.color = '#9980aa';
+        });
+        btn.classList.add('ind-tab-active');
+        btn.style.background = 'linear-gradient(135deg,#7c3aed,#a855f7)';
+        btn.style.color = '#fff';
+
+        const tab = btn.dataset.tab;
+        ['resumo', 'rede', 'historico'].forEach(t => {
+          const el = document.getElementById('ind-tab-' + t);
+          if (el) el.style.display = t === tab ? '' : 'none';
+        });
+
+        if (tab === 'rede' && !_indTabLoaded.rede) loadIndicacaoRede();
+        if (tab === 'historico' && !_indTabLoaded.historico) loadIndicacaoRede();
+      });
+    });
+    // Estilizar tab ativa inicialmente
+    const activeTab = document.querySelector('.ind-tab-active');
+    if (activeTab) { activeTab.style.background = 'linear-gradient(135deg,#7c3aed,#a855f7)'; activeTab.style.color = '#fff'; }
+    document.querySelectorAll('.ind-tab:not(.ind-tab-active)').forEach(b => { b.style.background = 'transparent'; b.style.color = '#9980aa'; });
+  }
+
   async function loadIndicacao() {
     openModal('modal-indicacao');
+    _indTabLoaded = { rede: false, historico: false };
+    _initIndTabs();
+    // Reset para tab resumo
+    document.querySelectorAll('.ind-tab').forEach(b => {
+      b.classList.remove('ind-tab-active');
+      b.style.background = 'transparent'; b.style.color = '#9980aa';
+    });
+    const firstTab = document.querySelector('.ind-tab[data-tab="resumo"]');
+    if (firstTab) { firstTab.classList.add('ind-tab-active'); firstTab.style.background = 'linear-gradient(135deg,#7c3aed,#a855f7)'; firstTab.style.color = '#fff'; }
+    ['resumo','rede','historico'].forEach(t => {
+      const el = document.getElementById('ind-tab-' + t);
+      if (el) el.style.display = t === 'resumo' ? '' : 'none';
+    });
+
     try {
       const data = await API.indicacaoInfo();
+      const percN1 = data.comissao_nivel1_perc ?? 10;
+      const percN2 = data.comissao_nivel2_perc ?? 3;
+      document.getElementById('ind-comissao-perc').textContent = percN1 + '%';
+      const n2El = document.getElementById('ind-comissao-n2');
+      if (n2El) n2El.textContent = percN2 + '%';
 
-      // Preencher comissão mesmo se inativo
-      document.getElementById('ind-comissao-perc').textContent = (data.comissao_nivel1_perc ?? 40) + '%';
-
-      // Afiliado inativo — precisa depositar R$20+
+      // Afiliado inativo
       if (data.afiliado_ativo === false) {
-        const modal = document.getElementById('modal-indicacao');
-        const body = modal.querySelector('.pnl-modal-body') || modal.querySelector('.pnl-modal-card');
-        if (body) {
-          const existingMsg = body.querySelector('.afil-inativo-msg');
-          if (!existingMsg) {
-            const msg = document.createElement('div');
-            msg.className = 'afil-inativo-msg';
-            msg.style.cssText = 'text-align:center;padding:32px 16px;';
-            msg.innerHTML = `
-              <div style="font-size:48px;margin-bottom:16px">🔒</div>
-              <h3 style="color:#e9d5ff;font-size:18px;margin-bottom:12px">Programa de Afiliados</h3>
-              <p style="color:rgba(255,255,255,.6);font-size:14px;margin-bottom:20px;line-height:1.6">
-                Para ativar seu programa de afiliados, faca um deposito de pelo menos <strong style="color:#c084fc">R$ 20,00</strong>.<br>
-                Apos o deposito, voce recebera seu link exclusivo e podera ganhar:
-              </p>
-              <div style="display:flex;gap:12px;justify-content:center;margin-bottom:20px;flex-wrap:wrap">
-                <div style="background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.25);border-radius:10px;padding:12px 16px;flex:1;min-width:140px">
-                  <div style="font-size:24px;font-weight:800;color:#f87171">40%</div>
-                  <div style="font-size:11px;color:#fca5a5">sobre a perda</div>
-                </div>
-                <div style="background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.25);border-radius:10px;padding:12px 16px;flex:1;min-width:140px">
-                  <div style="font-size:24px;font-weight:800;color:#4ade80">10%</div>
-                  <div style="font-size:11px;color:#86efac">sobre o ganho</div>
-                </div>
+        const tabsEl = document.getElementById('ind-tabs');
+        const resumoEl = document.getElementById('ind-tab-resumo');
+        if (tabsEl) tabsEl.style.display = 'none';
+        if (resumoEl) resumoEl.innerHTML = `
+          <div style="text-align:center;padding:32px 16px;">
+            <div style="font-size:48px;margin-bottom:16px">🔒</div>
+            <h3 style="color:#e9d5ff;font-size:18px;margin-bottom:12px">Programa de Afiliados</h3>
+            <p style="color:rgba(255,255,255,.6);font-size:14px;margin-bottom:20px;line-height:1.6">
+              Para ativar, faca um deposito de pelo menos <strong style="color:#c084fc">R$ 20,00</strong>.<br>
+              Apos o deposito, voce ganha:
+            </p>
+            <div style="display:flex;gap:12px;justify-content:center;margin-bottom:20px;flex-wrap:wrap">
+              <div style="background:rgba(168,85,247,.12);border:1px solid rgba(168,85,247,.3);border-radius:10px;padding:12px 16px;flex:1;min-width:120px">
+                <div style="font-size:24px;font-weight:800;color:#c084fc">${percN1}%</div>
+                <div style="font-size:11px;color:#9d74c5">Nível 1</div>
               </div>
-              <button onclick="document.getElementById('close-indicacao').click();document.getElementById('btn-depositar').click();" style="background:linear-gradient(135deg,#a855f7,#7c3aed);color:#fff;border:none;border-radius:10px;padding:12px 24px;font-size:14px;font-weight:600;cursor:pointer;width:100%">DEPOSITAR R$ 20,00</button>
-            `;
-            // Esconde conteudo normal e mostra a mensagem
-            Array.from(body.children).forEach(ch => { if (!ch.classList.contains('pnl-modal-head')) ch.style.display = 'none'; });
-            body.appendChild(msg);
-          }
-        }
+              <div style="background:rgba(168,85,247,.08);border:1px solid rgba(168,85,247,.2);border-radius:10px;padding:12px 16px;flex:1;min-width:120px">
+                <div style="font-size:24px;font-weight:800;color:#a78bfa">${percN2}%</div>
+                <div style="font-size:11px;color:#9d74c5">Nível 2</div>
+              </div>
+              <div style="background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.25);border-radius:10px;padding:12px 16px;flex:1;min-width:120px">
+                <div style="font-size:24px;font-weight:800;color:#4ade80">R$ ${data.bonus_primeiro_deposito || 2}</div>
+                <div style="font-size:11px;color:#86efac">1º depósito</div>
+              </div>
+            </div>
+            <button onclick="document.getElementById('close-indicacao').click();document.getElementById('btn-depositar').click();" style="background:linear-gradient(135deg,#a855f7,#7c3aed);color:#fff;border:none;border-radius:10px;padding:12px 24px;font-size:14px;font-weight:600;cursor:pointer;width:100%">DEPOSITAR R$ 20,00</button>
+          </div>`;
         return;
       }
 
-      // Afiliado ativo — remove mensagem de inativo se existir
-      const modal = document.getElementById('modal-indicacao');
-      const inativoMsg = modal.querySelector('.afil-inativo-msg');
-      if (inativoMsg) {
-        const body = inativoMsg.parentElement;
-        inativoMsg.remove();
-        Array.from(body.children).forEach(ch => { ch.style.display = ''; });
-      }
+      // Afiliado ativo — preencher dados
+      const tabsEl = document.getElementById('ind-tabs');
+      if (tabsEl) tabsEl.style.display = '';
 
-      document.getElementById('ind-link').textContent          = data.link || '';
-      document.getElementById('ind-total').textContent         = data.total_indicados || 0;
-      document.getElementById('ind-bonus').textContent         = (data.total_indicados - (data.total_com_deposito || 0)) >= 0
-        ? `${data.total_com_deposito || 0} / ${data.total_indicados}`
-        : data.total_indicados;
+      document.getElementById('ind-link').textContent = data.link || '';
+      document.getElementById('ind-total').textContent = data.total_indicados || 0;
+      document.getElementById('ind-total-n2').textContent = data.total_indicados_n2 || 0;
+      document.getElementById('ind-bonus').textContent = data.total_com_deposito || 0;
       currentSaldoAfil = parseFloat(data.saldo_afiliado || 0);
-      document.getElementById('ind-saldo-afil').textContent    = formatMoney(currentSaldoAfil);
-      document.getElementById('ind-total-comissao').textContent = formatMoney(data.total_comissao  || 0);
+      document.getElementById('ind-saldo-afil').textContent = formatMoney(currentSaldoAfil);
+      document.getElementById('ind-total-comissao').textContent = formatMoney(data.total_comissao || 0);
       _atualizarBadgeAfil(currentSaldoAfil);
-      const perc = data.comissao_nivel1_perc ?? 0;
-      document.getElementById('ind-comissao-perc').textContent = `${perc}%`;
+
       if (data.indicados_recentes?.length) {
         document.getElementById('ind-lista').innerHTML = `
           <div style="font-size:12px;color:#9980aa;text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">Indicados recentes</div>
@@ -2899,14 +2961,119 @@ function renderPainel(el) {
               <div class="pnl-tx-ico pnl-tx-ico-bonus">👤</div>
               <div class="pnl-tx-body">
                 <div class="pnl-tx-desc">${i.nome}</div>
-                <div class="pnl-tx-date">${formatDate(i.data_cadastro)}${i.total_comissao_indicado > 0 ? ` · Comissão: ${formatMoney(i.total_comissao_indicado)}` : ''}</div>
+                <div class="pnl-tx-date">${formatDate(i.data_cadastro)}${i.total_comissao_indicado > 0 ? ' · R$ ' + i.total_comissao_indicado.toFixed(2) : ''}</div>
               </div>
-              <span class="pnl-badge ${(i.has_deposited||i.bonus_pago)?'pnl-badge-green':'pnl-badge-orange'}">
-                ${(i.has_deposited||i.bonus_pago) ? '✅ Depositou' : '⏳ Aguardando'}
+              <span class="pnl-badge ${i.has_deposited ? 'pnl-badge-green' : 'pnl-badge-orange'}">
+                ${i.has_deposited ? 'Depositou' : 'Aguardando'}
               </span>
             </div>`).join('')}</div>`;
+      } else {
+        document.getElementById('ind-lista').innerHTML = '<div style="text-align:center;color:#9980aa;padding:16px;font-size:13px">Nenhum indicado ainda. Compartilhe seu link!</div>';
       }
     } catch {}
+  }
+
+  async function loadIndicacaoRede() {
+    try {
+      const data = await API.indicacaoRede();
+      _indTabLoaded.rede = true;
+      _indTabLoaded.historico = true;
+
+      // ── Aba Rede ──
+      const redeEl = document.getElementById('ind-rede-content');
+      const redeLoad = document.getElementById('ind-rede-loading');
+      if (redeLoad) redeLoad.style.display = 'none';
+
+      let redeHTML = '';
+
+      // Resumo da rede
+      redeHTML += `
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px">
+          <div style="background:rgba(168,85,247,.1);border:1px solid rgba(168,85,247,.2);border-radius:10px;padding:14px;text-align:center">
+            <div style="font-size:20px;font-weight:700;color:#c084fc">${formatMoney(data.total_nivel1)}</div>
+            <div style="font-size:11px;color:#9d74c5;margin-top:4px">Comissão Nível 1 (${data.config.nivel1_perc}%)</div>
+          </div>
+          <div style="background:rgba(168,85,247,.06);border:1px solid rgba(168,85,247,.15);border-radius:10px;padding:14px;text-align:center">
+            <div style="font-size:20px;font-weight:700;color:#a78bfa">${formatMoney(data.total_nivel2)}</div>
+            <div style="font-size:11px;color:#9d74c5;margin-top:4px">Comissão Nível 2 (${data.config.nivel2_perc}%)</div>
+          </div>
+        </div>`;
+
+      // Nível 1
+      if (data.nivel1.length) {
+        redeHTML += '<div style="font-size:12px;color:#c084fc;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;font-weight:600">Nível 1 — Indicados diretos</div>';
+        redeHTML += '<div class="pnl-tx-list" style="margin-bottom:16px">';
+        for (const u of data.nivel1) {
+          redeHTML += `
+            <div class="pnl-tx-item" style="padding:10px 0">
+              <div class="pnl-tx-ico" style="background:linear-gradient(135deg,#7c3aed,#a855f7);color:#fff;font-size:14px;width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center">1</div>
+              <div class="pnl-tx-body" style="flex:1">
+                <div class="pnl-tx-desc">${u.nome}${u.sub_indicados > 0 ? ' <span style="color:#9d74c5;font-size:11px">(+' + u.sub_indicados + ' sub)</span>' : ''}</div>
+                <div class="pnl-tx-date">${formatDate(u.data_cadastro)} · Comissão: R$ ${u.comissao_gerada.toFixed(2)}</div>
+              </div>
+              <span class="pnl-badge ${u.has_deposited ? 'pnl-badge-green' : 'pnl-badge-orange'}" style="font-size:11px">
+                ${u.has_deposited ? 'Ativo' : 'Pendente'}
+              </span>
+            </div>`;
+        }
+        redeHTML += '</div>';
+      }
+
+      // Nível 2
+      if (data.nivel2.length) {
+        redeHTML += '<div style="font-size:12px;color:#a78bfa;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;font-weight:600">Nível 2 — Sub-indicados</div>';
+        redeHTML += '<div class="pnl-tx-list" style="margin-bottom:16px">';
+        for (const u of data.nivel2) {
+          redeHTML += `
+            <div class="pnl-tx-item" style="padding:10px 0">
+              <div class="pnl-tx-ico" style="background:linear-gradient(135deg,#6d28d9,#8b5cf6);color:#fff;font-size:14px;width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center">2</div>
+              <div class="pnl-tx-body" style="flex:1">
+                <div class="pnl-tx-desc">${u.nome} <span style="color:#9d74c5;font-size:11px">via ${u.via_nome}</span></div>
+                <div class="pnl-tx-date">${formatDate(u.data_cadastro)} · Comissão: R$ ${u.comissao_gerada.toFixed(2)}</div>
+              </div>
+              <span class="pnl-badge ${u.has_deposited ? 'pnl-badge-green' : 'pnl-badge-orange'}" style="font-size:11px">
+                ${u.has_deposited ? 'Ativo' : 'Pendente'}
+              </span>
+            </div>`;
+        }
+        redeHTML += '</div>';
+      }
+
+      if (!data.nivel1.length && !data.nivel2.length) {
+        redeHTML += '<div style="text-align:center;color:#9980aa;padding:32px 16px;font-size:13px">Sua rede ainda está vazia.<br>Compartilhe seu link para começar a ganhar!</div>';
+      }
+
+      if (redeEl) redeEl.innerHTML = redeHTML;
+
+      // ── Aba Histórico ──
+      const histEl = document.getElementById('ind-hist-content');
+      const histLoad = document.getElementById('ind-hist-loading');
+      if (histLoad) histLoad.style.display = 'none';
+
+      if (data.historico?.length) {
+        let histHTML = '<div class="pnl-tx-list">';
+        for (const h of data.historico) {
+          histHTML += `
+            <div class="pnl-tx-item" style="padding:10px 0">
+              <div class="pnl-tx-ico" style="background:${h.nivel === 1 ? 'linear-gradient(135deg,#7c3aed,#a855f7)' : 'linear-gradient(135deg,#6d28d9,#8b5cf6)'};color:#fff;font-size:12px;width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center">N${h.nivel}</div>
+              <div class="pnl-tx-body" style="flex:1">
+                <div class="pnl-tx-desc" style="font-size:13px">${h.descricao}</div>
+                <div class="pnl-tx-date">${formatDate(h.data)}</div>
+              </div>
+              <div style="color:#4ade80;font-weight:700;font-size:14px">+R$ ${h.valor.toFixed(2)}</div>
+            </div>`;
+        }
+        histHTML += '</div>';
+        if (histEl) histEl.innerHTML = histHTML;
+      } else {
+        if (histEl) histEl.innerHTML = '<div style="text-align:center;color:#9980aa;padding:32px 16px;font-size:13px">Nenhuma comissão recebida ainda.</div>';
+      }
+    } catch {
+      const redeLoad = document.getElementById('ind-rede-loading');
+      const histLoad = document.getElementById('ind-hist-loading');
+      if (redeLoad) redeLoad.textContent = 'Erro ao carregar rede.';
+      if (histLoad) histLoad.textContent = 'Erro ao carregar histórico.';
+    }
   }
 
   // ── Dicas rotativas ──────────────────────────────────────────────────────
