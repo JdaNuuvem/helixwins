@@ -384,38 +384,22 @@ describe('Webhooks', () => {
     expect(res.status).toBe(400);
   });
 
-  test('ParadisePags webhook com tx inexistente retorna 200 (aceita)', async () => {
+  test('ParadisePags webhook rejeita sem webhook_secret configurado (fail-closed)', async () => {
     const res = await agent().post('/api/webhooks/paradisepags')
       .send({ transaction_id: 'NONEXISTENT', status: 'approved' });
-    expect(res.status).toBe(200);
+    expect(res.status).toBe(401);
   });
 
-  test('AmploPay webhook com payload incompleto retorna 400', async () => {
+  test('AmploPay webhook rejeita sem webhook_token configurado (fail-closed)', async () => {
     const res = await agent().post('/api/webhooks/amplopay').send({ event: 'test' });
-    expect(res.status).toBe(400);
+    expect(res.status).toBe(401);
   });
 
-  test('AmploPay webhook credita depósito pendente', async () => {
-    const user = db.users.find(u => u.id === testUserId);
-    const antes = user.saldo;
-
-    // Criar tx pendente
-    const txId = 'AMPLO_TEST_' + Date.now();
-    db.transacoes.push({
-      id: db.nextIds.transacoes++, user_id: testUserId, tipo: 'deposito', valor: 30,
-      status: 'pendente', gateway: 'amplopay', gateway_tx_id: txId,
-      gateway_identifier: 'DEP_WH_TEST', _k: null, _split: false,
-      saldo_antes: antes, saldo_depois: antes, created_at: new Date().toISOString(),
-    });
-
+  test('AmploPay webhook rejeita sem token válido', async () => {
     const res = await agent().post('/api/webhooks/amplopay').send({
-      event: 'TRANSACTION_PAID', transaction: { id: txId },
+      event: 'TRANSACTION_PAID', transaction: { id: 'FAKE' },
     });
-    expect(res.status).toBe(200);
-
-    const tx = db.transacoes.find(t => t.gateway_tx_id === txId);
-    expect(tx.status).toBe('aprovado');
-    expect(user.saldo).toBe(antes + 30);
+    expect(res.status).toBe(401);
   });
 });
 

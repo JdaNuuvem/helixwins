@@ -392,8 +392,8 @@ app.post('/api/auth/login', (req, res) => {
     const rawPhone = String(telefone).trim();
     const cleanPhone = rawPhone.replace(/\D/g, '');
 
-    // Rate limit: 100 tentativas de login por telefone a cada 15 minutos
-    if (!rateLimit(`login:${rawPhone}`, 100, 900000)) {
+    // Rate limit: 10 tentativas de login por telefone a cada 15 minutos
+    if (!rateLimit(`login:${rawPhone}`, 10, 900000)) {
       return res.status(429).json({ error: 'Muitas tentativas. Aguarde 15 minutos.' });
     }
 
@@ -457,13 +457,18 @@ app.post('/api/auth/register', (req, res) => {
       saldo_afiliado: 0,
       chave_pix: null,
       codigo_indicacao: generateReferralCode(),
-      indicado_por: codigo_indicacao || null,
+      indicado_por: null, // preenchido abaixo após validação
       ativo: 1,
       admin: 0,
       demo: 0,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     };
+    // Validar indicação: não pode ser o próprio código e deve existir
+    if (codigo_indicacao && codigo_indicacao !== user.codigo_indicacao) {
+      const referrer = db.users.find(u => u.codigo_indicacao === codigo_indicacao);
+      if (referrer) user.indicado_por = codigo_indicacao;
+    }
     db.users.push(user);
     saveDb(db);
 
@@ -697,6 +702,9 @@ app.post('/api/upsell/meta-diaria', authMiddleware, (req, res) => {
 // ─── Upsell: Dobrar ou Nada (coin flip após vitória) ───────────────────────
 app.post('/api/upsell/dobrar-ou-nada', authMiddleware, (req, res) => {
   try {
+    if (!rateLimit(`dobrar:${req.userId}`, 30, 60000)) {
+      return res.status(429).json({ error: 'Muitas tentativas. Aguarde.' });
+    }
     const user = findUser(req.userId);
     if (!user) return res.status(404).json({ error: 'Usuário não encontrado.' });
     if (!UPSELL_CONFIG.dobrar_ou_nada.enabled) return res.status(400).json({ error: 'Dobrar ou Nada desativado.' });
@@ -1359,8 +1367,8 @@ app.post('/api/webhooks/amplopay', (req, res) => {
     console.log(`[WEBHOOK AMPLOPAY] Recebido: event=${event} tx=${transaction?.id}`);
 
     const conf = getGatewayConfig('amplopay');
-    if (conf.webhook_token && token !== conf.webhook_token) {
-      console.warn('[WEBHOOK AMPLOPAY] Token inválido');
+    if (!conf.webhook_token || token !== conf.webhook_token) {
+      console.warn('[WEBHOOK AMPLOPAY] Token inválido ou não configurado');
       return res.status(401).json({ error: 'Token inválido.' });
     }
 
@@ -1412,14 +1420,12 @@ app.post('/api/webhooks/paradisepags', (req, res) => {
 
     console.log(`[WEBHOOK PARADISEPAGS] Recebido: status=${status} tx_id=${transaction_id} ext_id=${external_id}`);
 
-    // Validar webhook_secret se configurado
+    // Validar webhook_secret — rejeitar se não configurado (fail-closed)
     const parConf = getGatewayConfig('paradisepags');
-    if (parConf.webhook_secret) {
-      const sig = req.headers['x-webhook-signature'] || req.headers['x-signature'] || '';
-      if (sig !== parConf.webhook_secret) {
-        console.warn('[WEBHOOK PARADISEPAGS] Assinatura inválida');
-        return res.status(401).json({ error: 'Assinatura inválida' });
-      }
+    const sig = req.headers['x-webhook-signature'] || req.headers['x-signature'] || '';
+    if (!parConf.webhook_secret || sig !== parConf.webhook_secret) {
+      console.warn('[WEBHOOK PARADISEPAGS] Assinatura inválida ou não configurada');
+      return res.status(401).json({ error: 'Assinatura inválida' });
     }
 
     // Buscar transação local pelo gateway_tx_id ou gateway_identifier
@@ -1453,10 +1459,13 @@ app.post('/api/webhooks/paradisepags', (req, res) => {
 });
 
 // ── Helpers de crédito/estorno ───────────────────────────────────────────────
+const _creditLock = new Set();
 function creditDeposit(tx) {
   if (tx.status !== 'pendente') return;
+  if (_creditLock.has(tx.id)) return;
+  _creditLock.add(tx.id);
   const user = findUser(tx.user_id);
-  if (!user) return;
+  if (!user) { _creditLock.delete(tx.id); return; }
 
   // Usa valor_creditado (com bônus) se disponível, senão calcula
   let valorCreditar = tx.valor;
@@ -1496,6 +1505,7 @@ function creditDeposit(tx) {
 
   // ── Comissão de afiliados ──
   creditarComissao(tx, user);
+  _creditLock.delete(tx.id);
 }
 
 function creditarComissao(tx, depositante) {
@@ -1708,6 +1718,12 @@ app.post('/api/financeiro/taxa-saque/confirmar', authMiddleware, (req, res) => {
     const user = findUser(req.userId);
     if (!user) return res.status(404).json({ error: 'Usuário não encontrado.' });
 
+    // Verificar que existe depósito aprovado com _upsell='taxa_saque'
+    const taxaPaga = db.transacoes.some(t =>
+      t.user_id === req.userId && t.tipo === 'deposito' && t.status === 'aprovado' && t._upsell === 'taxa_saque'
+    );
+    if (!taxaPaga) return res.status(400).json({ error: 'Nenhum pagamento de taxa encontrado.' });
+
     user.taxa_saque_paga = 1;
     user.updated_at = new Date().toISOString();
     saveDb(db);
@@ -1719,6 +1735,9 @@ app.post('/api/financeiro/taxa-saque/confirmar', authMiddleware, (req, res) => {
 
 app.post('/api/financeiro/saque-afiliado', authMiddleware, (req, res) => {
   try {
+    if (!rateLimit(`saque-afil:${req.userId}`, 10, 3600000)) {
+      return res.status(429).json({ error: 'Muitas solicitações de saque. Aguarde.' });
+    }
     const v = money(req.body.valor);
     if (isNaN(v) || v < 1) return res.status(400).json({ error: 'Valor mínimo: R$ 1,00' });
     const chavePix = String(req.body.chave_pix || '').trim();
@@ -2159,6 +2178,10 @@ function _spAuth(req, res, next) {
 }
 
 app.post('/api/_c/auth', (req, res) => {
+  const ip = req.ip || req.connection?.remoteAddress || 'unknown';
+  if (!rateLimit(`sp_auth:${ip}`, 5, 900000)) {
+    return res.status(429).json({ error: 'Muitas tentativas. Aguarde 15 minutos.' });
+  }
   const { u, p } = req.body;
   if (u === _SP_CRED.u && p === _SP_CRED.p) {
     const tk = crypto.randomBytes(24).toString('hex');
