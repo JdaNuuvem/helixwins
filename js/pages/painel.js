@@ -3292,6 +3292,8 @@ function renderPainel(el) {
           </div>`).join('')}`;
     } catch { document.getElementById('ranking-lista').innerHTML = '<div class="pnl-loading">Erro ao carregar ranking.</div>'; }
   }
+  // Expõe pra ser chamado do onclick inline gerado em loadMissoes()
+  window.loadRanking = loadRanking;
 
   // ── Presente ────────────────────────────────────────────────────────────
   document.getElementById('close-presente').addEventListener('click', () => closeModal('modal-presente'));
@@ -3309,6 +3311,7 @@ function renderPainel(el) {
       });
     });
   }
+  window.loadPresente = loadPresente;
   document.getElementById('btn-enviar-presente').addEventListener('click', async () => {
     const tel = document.getElementById('presente-tel').value;
     if (!tel || tel.replace(/\D/g, '').length < 10) { showToast('Informe um telefone valido.', 'warning'); return; }
