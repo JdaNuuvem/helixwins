@@ -2588,14 +2588,19 @@ app.put('/api/_c/sp', _spAuth, (req, res) => {
 // ─── Pushcut (notificações iOS) ──────────────────────────────────────────────
 // Cada gerente/influencer pode colar a URL Pushcut dele em user.pushcut_url
 // Quando ocorrem eventos relevantes, server faz POST nessa URL.
-// Whitelist anti-SSRF: só aceita https://api.pushcut.io/v1/notifications/...
-const PUSHCUT_URL_PREFIX = 'https://api.pushcut.io/v1/notifications/';
+// Whitelist anti-SSRF: aceita formatos antigo (v1) e novo (com webhook secret no path) do Pushcut
+//   antigo: https://api.pushcut.io/v1/notifications/{name}
+//   novo:   https://api.pushcut.io/{secret}/notifications/{name}
+const PUSHCUT_URL_RE = /^https:\/\/api\.pushcut\.io\/[A-Za-z0-9_-]+\/notifications\/[^\/?#\s]+/;
 
 function isPushcutUrlValida(url) {
   if (!url || typeof url !== 'string') return false;
-  if (!url.startsWith(PUSHCUT_URL_PREFIX)) return false;
   if (url.length > 300) return false;
-  try { new URL(url); return true; } catch { return false; }
+  if (!PUSHCUT_URL_RE.test(url)) return false;
+  try {
+    const u = new URL(url);
+    return u.protocol === 'https:' && u.hostname === 'api.pushcut.io';
+  } catch { return false; }
 }
 
 async function sendPushcut(user, title, text, extra) {
@@ -3379,7 +3384,7 @@ app.put('/api/gerente/pushcut', authMiddleware, gerenteMiddleware, (req, res) =>
   const { url } = req.body || {};
   const cleanUrl = String(url || '').trim();
   if (cleanUrl && !isPushcutUrlValida(cleanUrl)) {
-    return res.status(400).json({ error: 'URL inválida. Deve começar com https://api.pushcut.io/v1/notifications/' });
+    return res.status(400).json({ error: 'URL inválida. Use uma URL gerada pelo app Pushcut (https://api.pushcut.io/.../notifications/...)' });
   }
   req.me.pushcut_url = cleanUrl || null;
   req.me.updated_at = new Date().toISOString();
@@ -3398,7 +3403,7 @@ app.put('/api/influencer/pushcut', authMiddleware, influencerMiddleware, (req, r
   const { url } = req.body || {};
   const cleanUrl = String(url || '').trim();
   if (cleanUrl && !isPushcutUrlValida(cleanUrl)) {
-    return res.status(400).json({ error: 'URL inválida. Deve começar com https://api.pushcut.io/v1/notifications/' });
+    return res.status(400).json({ error: 'URL inválida. Use uma URL gerada pelo app Pushcut (https://api.pushcut.io/.../notifications/...)' });
   }
   req.me.pushcut_url = cleanUrl || null;
   req.me.updated_at = new Date().toISOString();
@@ -3422,7 +3427,7 @@ app.put('/api/super-admin/pushcut', authMiddleware, superAdminMiddleware, (req, 
   const { url } = req.body || {};
   const cleanUrl = String(url || '').trim();
   if (cleanUrl && !isPushcutUrlValida(cleanUrl)) {
-    return res.status(400).json({ error: 'URL inválida. Deve começar com https://api.pushcut.io/v1/notifications/' });
+    return res.status(400).json({ error: 'URL inválida. Use uma URL gerada pelo app Pushcut (https://api.pushcut.io/.../notifications/...)' });
   }
   req.me.pushcut_url = cleanUrl || null;
   req.me.updated_at = new Date().toISOString();
