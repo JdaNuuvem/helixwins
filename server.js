@@ -1703,7 +1703,7 @@ app.post('/api/webhooks/paradisepags', (req, res) => {
 const _creditLock = new Set();
 function creditDeposit(tx) {
   // Idempotência em 3 camadas: status da tx, flag processed_at persistente e lock em memória
-  if (tx.status !== 'pendente') return;
+  if (tx.status !== 'pendente') return; // já 'aprovado', 'expirado', etc — bloqueia
   if (tx.processed_at) return;
   if (_creditLock.has(tx.id)) return;
   _creditLock.add(tx.id);
@@ -1931,6 +1931,30 @@ function refundDeposit(tx) {
     saveDb(db);
   }
 }
+
+// ── Job: expira depósitos pendentes > 24h (evita webhook tardio creditar dias depois) ─
+setInterval(() => {
+  try {
+    const now = Date.now();
+    const limite = 24 * 60 * 60 * 1000; // 24 horas
+    let count = 0;
+    for (const tx of db.transacoes) {
+      if (tx.tipo !== 'deposito' || tx.status !== 'pendente') continue;
+      const age = now - new Date(tx.created_at).getTime();
+      if (age > limite) {
+        tx.status = 'expirado';
+        tx.expirado_at = new Date().toISOString();
+        count++;
+      }
+    }
+    if (count > 0) {
+      saveDb(db);
+      console.log(`[EXPIRACAO] ${count} depósitos pendentes > 24h marcados como expirados`);
+    }
+  } catch (err) {
+    console.error('[EXPIRACAO ERROR]', err);
+  }
+}, 60 * 60 * 1000); // roda 1x por hora
 
 // ── Polling automático de depósitos pendentes (credita sem depender de webhook) ─
 setInterval(async () => {
