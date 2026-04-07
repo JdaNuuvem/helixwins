@@ -405,6 +405,10 @@ function renderJogo(container) {
   let _reviveAtivo            = false;
   let _plataformasOffset      = 0;   // plataformas acumuladas antes do revive
   let _valorAcumuladoOffset   = 0;   // valor acumulado antes do revive
+  let _dificuldadeAtual       = null; // sobrescreve a dificuldade da partida após revive
+
+  // Escalada de dificuldade ao reviver: cada vida usada = +1 nível
+  const _ESCALADA_DIF = { super_facil: 'facil', facil: 'normal', normal: 'dificil', dificil: 'dificil' };
 
   // ── Carregar dados da partida do sessionStorage ───────────────────────────
   try {
@@ -965,13 +969,18 @@ function renderJogo(container) {
       _plataformasOffset    = plataformasPassadas;
       _valorAcumuladoOffset = valorAcumulado;
 
+      // Escalar dificuldade — vida não é grátis, fica mais difícil a cada uso
+      const _difBase = _dificuldadeAtual || dificuladadeAtiva;
+      _dificuldadeAtual = _ESCALADA_DIF[_difBase] || 'dificil';
+
       // Mostrar loading enquanto recarrega
       document.getElementById('tela-loading').style.display = 'flex';
       partidaFinalizada = false;
 
-      // Recarregar iframe — ativarPartida() vai detectar _reviveAtivo e manter o HUD
+      // Recarregar iframe com a nova dificuldade
       const gIframe = document.getElementById('game-iframe');
-      gIframe.src = gIframe.src;
+      const _novaUrl = '/jogo?dif=' + encodeURIComponent(_dificuldadeAtual) + '&t=' + Date.now();
+      gIframe.src = _novaUrl;
     } catch (err) {
       btn.innerHTML = '❌ ' + (err.message || 'Erro');
       setTimeout(() => {
