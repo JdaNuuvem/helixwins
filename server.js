@@ -2284,7 +2284,7 @@ app.get('/api/admin/usuarios', authMiddleware, adminMiddleware, (_req, res) => {
   const lista = db.users.map(u => ({
     id: u.id, nome: u.nome, telefone: u.telefone, saldo: u.saldo,
     admin: !!u.admin, demo: !!u.demo, isento_taxa_saque: !!u.isento_taxa_saque,
-    demo_dificuldade: u.demo_dificuldade || 'demo', demo_multiplicador: u.demo_multiplicador || 1.5,
+    demo_dificuldade: u.demo_dificuldade || 'super_facil', demo_multiplicador: u.demo_multiplicador || 1.5,
     normal_dificuldade: u.normal_dificuldade || null, normal_multiplicador: u.normal_multiplicador || null,
   }));
   res.json(lista);
@@ -2373,13 +2373,13 @@ app.post('/api/admin/game-config', authMiddleware, adminMiddleware, (req, res) =
   const user = findUser(parseInt(user_id));
   if (!user) return res.status(404).json({ error: 'Usuário não encontrado.' });
 
-  const difsValidas = ['demo', 'super_facil', 'facil', 'normal'];
+  const difsValidas = ['super_facil', 'facil', 'normal', 'dificil'];
   const multsValidos = [1.2, 1.5, 2, 3, 4];
   const dif = difsValidas.includes(dificuldade) ? dificuldade : null;
   const mult = multsValidos.includes(parseFloat(multiplicador)) ? parseFloat(multiplicador) : null;
 
   if (modo === 'demo') {
-    user.demo_dificuldade = dif || 'demo';
+    user.demo_dificuldade = dif || 'super_facil';
     user.demo_multiplicador = mult || 1.5;
   } else {
     // Config normal: null = usar padrão do sistema
