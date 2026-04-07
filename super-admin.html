@@ -124,6 +124,7 @@
     <button class="tab" data-tab="transacoes">Transações</button>
     <button class="tab" data-tab="audit">Audit Log</button>
     <button class="tab" data-tab="notif">🔔 Notificações</button>
+    <button class="tab" data-tab="dificuldade">🎮 Dificuldade</button>
     <button class="tab" data-tab="atalhos">Atalhos</button>
   </div>
 
@@ -260,6 +261,40 @@
         💰 Novo saque pendente aguardando sua aprovação (de gerente/influencer/jogador)<br>
         💸 Comissão de split recebida (quando é vez do split do gateway)<br>
         🎁 Bônus 1º depósito (se você for referrer direto)
+      </div>
+    </div>
+  </div>
+
+  <div class="tab-content" id="tab-dificuldade" style="display:none">
+    <div class="section">
+      <h2>🎮 Dificuldade do jogo <span class="hint">aplica a todos os jogadores que não tenham override individual</span></h2>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:14px">
+        <div>
+          <label style="display:block;font-size:12px;color:rgba(255,255,255,.6);margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px">Contas reais (jogo a dinheiro)</label>
+          <select id="dif-global" style="width:100%;padding:11px 13px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.15);border-radius:9px;color:#fff;font-size:13px;font-family:inherit">
+            <option value="super_facil">Super fácil</option>
+            <option value="facil">Fácil</option>
+            <option value="normal">Normal</option>
+            <option value="dificil">Difícil</option>
+          </select>
+        </div>
+        <div>
+          <label style="display:block;font-size:12px;color:rgba(255,255,255,.6);margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px">Conta demo (vitrine)</label>
+          <select id="dif-demo" style="width:100%;padding:11px 13px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.15);border-radius:9px;color:#fff;font-size:13px;font-family:inherit">
+            <option value="super_facil">Super fácil</option>
+            <option value="facil">Fácil</option>
+            <option value="normal">Normal</option>
+            <option value="dificil">Difícil</option>
+          </select>
+        </div>
+      </div>
+      <div style="margin-top:16px">
+        <button class="btn-primary" onclick="salvarDificuldade()">Salvar dificuldade</button>
+      </div>
+      <div style="margin-top:18px;padding:14px;background:rgba(255,255,255,.04);border-radius:10px;font-size:12px;color:rgba(255,255,255,.6);line-height:1.7">
+        Esta configuração só se aplica em <strong>partidas novas</strong>. Partidas em andamento mantêm a dificuldade original.<br>
+        Overrides individuais (configurados pelo gerente em cada jogador) <strong>têm prioridade</strong> sobre a dificuldade global.<br>
+        Ao usar uma vida (revive), o jogo escala automaticamente uma marcha de dificuldade — independente desta config.
       </div>
     </div>
   </div>
@@ -577,6 +612,23 @@ async function salvarPushcut() {
     showToast(url ? 'URL Pushcut salva!' : 'Pushcut removido');
   } catch (e) { showToast(e.message, true); }
 }
+async function loadDificuldade() {
+  try {
+    const d = await api('/api/super-admin/dificuldade');
+    const g = document.getElementById('dif-global');
+    const dm = document.getElementById('dif-demo');
+    if (g) g.value = d.dificuldade_global || 'normal';
+    if (dm) dm.value = d.dificuldade_demo || 'facil';
+  } catch (e) { showToast('Erro ao carregar dificuldade'); }
+}
+async function salvarDificuldade() {
+  const dificuldade_global = document.getElementById('dif-global').value;
+  const dificuldade_demo   = document.getElementById('dif-demo').value;
+  try {
+    await api('/api/super-admin/dificuldade', { method: 'PUT', body: JSON.stringify({ dificuldade_global, dificuldade_demo }) });
+    showToast('Dificuldade salva — vale para próximas partidas');
+  } catch (e) { showToast('Erro: ' + e.message); }
+}
 async function testarPushcut() {
   try {
     await api('/api/super-admin/pushcut/testar', { method: 'POST' });
@@ -628,6 +680,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (tab === 'gerentes') loadGerentes();
       if (tab === 'audit') loadAudit('');
       if (tab === 'notif') loadPushcut();
+      if (tab === 'dificuldade') loadDificuldade();
     });
   });
 

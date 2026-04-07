@@ -350,6 +350,11 @@ function authMiddleware(req, res, next) {
   }
 }
 
+// ─── Config global do super_admin (dificuldade do jogo) ─────────────────────
+if (!db.config) { db.config = {}; saveDb(db); }
+if (!db.config.dificuldade_global) { db.config.dificuldade_global = 'normal'; saveDb(db); }
+if (!db.config.dificuldade_demo)   { db.config.dificuldade_demo   = 'facil';  saveDb(db); }
+
 // ─── Audit Log ────────────────────────────────────────────────────────────────
 if (!db.audit_log) { db.audit_log = []; saveDb(db); }
 if (!db.nextIds.audit_log) { db.nextIds.audit_log = 1; saveDb(db); }
@@ -1065,9 +1070,12 @@ app.post('/api/game/iniciar', authMiddleware, (req, res) => {
     const valorMeta = money(entradaEfetiva * mult);
     const valorPorPlataforma = money(entradaEfetiva * taxa);
     const plataformasParaMeta = Math.ceil(valorMeta / valorPorPlataforma);
+    // Prioridade: override individual do usuário > config global do super_admin > default
+    const cfgGlobal = (db.config && db.config.dificuldade_global) || 'normal';
+    const cfgDemo   = (db.config && db.config.dificuldade_demo)   || 'facil';
     const dificuldade = isContaDemo
-      ? (user.demo_dificuldade || 'demo')
-      : (user.normal_dificuldade || 'facil');
+      ? (user.demo_dificuldade || cfgDemo)
+      : (user.normal_dificuldade || cfgGlobal);
 
     // Debit balance (entrada + seguro)
     user.saldo = money(user.saldo - totalDebitar);
@@ -3392,6 +3400,32 @@ app.put('/api/super-admin/pushcut', authMiddleware, superAdminMiddleware, (req, 
   saveDb(db);
   auditLog('pushcut.update', req.me.id, null, { set: !!cleanUrl }, req);
   res.json({ ok: true, pushcut_url: req.me.pushcut_url });
+});
+
+// ─── Dificuldade global do jogo (super_admin) ───────────────────────────────
+const _DIFS_VALIDAS = ['super_facil', 'facil', 'normal', 'dificil'];
+
+app.get('/api/super-admin/dificuldade', authMiddleware, superAdminMiddleware, (_req, res) => {
+  res.json({
+    dificuldade_global: db.config.dificuldade_global || 'normal',
+    dificuldade_demo:   db.config.dificuldade_demo   || 'facil',
+    opcoes: _DIFS_VALIDAS,
+  });
+});
+
+app.put('/api/super-admin/dificuldade', authMiddleware, superAdminMiddleware, (req, res) => {
+  const { dificuldade_global, dificuldade_demo } = req.body || {};
+  if (dificuldade_global && !_DIFS_VALIDAS.includes(dificuldade_global)) {
+    return res.status(400).json({ error: 'dificuldade_global inválida.' });
+  }
+  if (dificuldade_demo && !_DIFS_VALIDAS.includes(dificuldade_demo)) {
+    return res.status(400).json({ error: 'dificuldade_demo inválida.' });
+  }
+  if (dificuldade_global) db.config.dificuldade_global = dificuldade_global;
+  if (dificuldade_demo)   db.config.dificuldade_demo   = dificuldade_demo;
+  saveDb(db);
+  auditLog('config.dificuldade.update', req.me.id, null, { global: db.config.dificuldade_global, demo: db.config.dificuldade_demo }, req);
+  res.json({ ok: true, dificuldade_global: db.config.dificuldade_global, dificuldade_demo: db.config.dificuldade_demo });
 });
 
 app.post('/api/super-admin/pushcut/testar', authMiddleware, superAdminMiddleware, async (req, res) => {
