@@ -1632,6 +1632,12 @@ app.post('/api/webhooks/amplopay', (req, res) => {
 // ── Webhook ParadisePags (confirmação de pagamento) ──────────────────────────
 app.post('/api/webhooks/paradisepags', (req, res) => {
   try {
+    // ── DEBUG TEMPORÁRIO: dumpa headers + body de todo webhook que chega ──
+    console.log('═══════════════════════════════════════════════════════');
+    console.log('[WEBHOOK PARADISEPAGS DEBUG] Headers:', JSON.stringify(req.headers, null, 2));
+    console.log('[WEBHOOK PARADISEPAGS DEBUG] Body:',    JSON.stringify(req.body,    null, 2));
+    console.log('═══════════════════════════════════════════════════════');
+
     const { transaction_id, external_id, status, amount } = req.body;
 
     // Rate limit: no máx 30 webhooks/min por IP (anti-spam/replay brute force)
