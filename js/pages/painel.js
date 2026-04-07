@@ -849,36 +849,36 @@ function renderPainel(el) {
 
     <!-- ══ MODAL RANKING ═══════════════════════════════════════════════ -->
     <div class="pnl-modal-bg hidden" id="modal-ranking">
-      <div class="pnl-modal-card" style="max-width:400px">
-        <div class="pnl-modal-head">
-          <div class="pnl-modal-title">🏅 Ranking Semanal</div>
+      <div class="pnl-modal" style="max-width:420px">
+        <div class="pnl-modal-header">
+          <span class="pnl-modal-title">🏅 Ranking Semanal</span>
           <button class="pnl-modal-close" id="close-ranking">✕</button>
         </div>
-        <div class="pnl-modal-body" id="ranking-lista" style="padding:16px">
-          <div class="pnl-loading">Carregando...</div>
+        <div id="ranking-lista">
+          <div style="text-align:center;color:#9980aa;padding:30px;font-size:13px">Carregando...</div>
         </div>
       </div>
     </div>
 
     <!-- ══ MODAL PRESENTE ═════════════════════════════════════════════ -->
     <div class="pnl-modal-bg hidden" id="modal-presente">
-      <div class="pnl-modal-card" style="max-width:380px">
-        <div class="pnl-modal-head">
-          <div class="pnl-modal-title">🎁 Enviar Presente</div>
+      <div class="pnl-modal" style="max-width:400px">
+        <div class="pnl-modal-header">
+          <span class="pnl-modal-title">🎁 Enviar Presente</span>
           <button class="pnl-modal-close" id="close-presente">✕</button>
         </div>
-        <div class="pnl-modal-body" style="padding:16px">
-          <p style="font-size:13px;color:rgba(255,255,255,.6);margin-bottom:16px">Envie saldo para um amigo. Ele precisa ter conta na plataforma.</p>
-          <div style="margin-bottom:12px">
-            <label style="font-size:12px;color:rgba(255,255,255,.5)">Telefone do amigo</label>
-            <input id="presente-tel" class="pnl-input" type="tel" placeholder="(00) 00000-0000" style="width:100%;margin-top:4px"/>
+        <p style="font-size:13px;color:#5a4a6e;margin-bottom:16px;line-height:1.5">Envie saldo para um amigo. Ele precisa ter conta na plataforma.</p>
+        <div style="margin-bottom:14px">
+          <label style="font-size:11px;color:#9980aa;text-transform:uppercase;letter-spacing:.5px;font-weight:600;display:block;margin-bottom:6px">Telefone do amigo</label>
+          <div class="pnl-input-wrap" style="margin-bottom:0">
+            <input id="presente-tel" class="pnl-input" type="tel" placeholder="(00) 00000-0000" style="background:transparent" />
           </div>
-          <div style="margin-bottom:16px">
-            <label style="font-size:12px;color:rgba(255,255,255,.5)">Valor</label>
-            <div id="presente-valores" style="display:flex;gap:8px;margin-top:6px"></div>
-          </div>
-          <button id="btn-enviar-presente" class="pnl-play-btn" style="width:100%;font-size:14px;padding:12px" disabled>ENVIAR PRESENTE</button>
         </div>
+        <div style="margin-bottom:18px">
+          <label style="font-size:11px;color:#9980aa;text-transform:uppercase;letter-spacing:.5px;font-weight:600;display:block;margin-bottom:8px">Valor</label>
+          <div id="presente-valores" style="display:flex;gap:8px"></div>
+        </div>
+        <button id="btn-enviar-presente" class="pnl-play-btn" style="width:100%;font-size:14px;padding:13px" disabled>ENVIAR PRESENTE</button>
       </div>
     </div>
 
@@ -3277,18 +3277,18 @@ function renderPainel(el) {
     try {
       const data = await API.ranking();
       const lista = document.getElementById('ranking-lista');
-      if (!data.ranking.length) { lista.innerHTML = '<div style="text-align:center;color:rgba(255,255,255,.5);padding:20px">Nenhum jogador esta semana.</div>'; return; }
+      if (!data.ranking.length) { lista.innerHTML = '<div style="text-align:center;color:#9980aa;padding:30px;font-size:13px">Nenhum jogador esta semana.</div>'; return; }
       const medals = ['🥇','🥈','🥉'];
       lista.innerHTML = `
-        <div style="font-size:11px;color:rgba(255,255,255,.4);margin-bottom:8px">Top plataformas passadas na semana. Premios creditados automaticamente.</div>
+        <div style="font-size:11px;color:#9980aa;margin-bottom:10px;line-height:1.5">Top plataformas passadas na semana. Prêmios creditados automaticamente.</div>
         ${data.ranking.map((r, i) => `
-          <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid rgba(255,255,255,.06)">
-            <div style="width:28px;text-align:center;font-size:${i<3?'18px':'13px'};font-weight:800;color:${i<3?'#fbbf24':'rgba(255,255,255,.4)'}">${medals[i] || (i+1)}</div>
+          <div style="display:flex;align-items:center;gap:10px;padding:12px 0;border-bottom:1px solid #f0e8ff">
+            <div style="width:32px;text-align:center;font-size:${i<3?'22px':'15px'};font-weight:800;color:${i<3?'#f59e0b':'#9980aa'}">${medals[i] || (i+1)}</div>
             <div style="flex:1">
-              <div style="font-size:13px;font-weight:600;color:#fff">${_esc(r.nome)}</div>
-              <div style="font-size:11px;color:rgba(255,255,255,.4)">${parseInt(r.plataformas)||0} plats · ${parseInt(r.partidas)||0} partidas</div>
+              <div style="font-size:13px;font-weight:700;color:#2d0040">${_esc(r.nome)}</div>
+              <div style="font-size:11px;color:#9980aa">${parseInt(r.plataformas)||0} plats · ${parseInt(r.partidas)||0} partidas</div>
             </div>
-            ${data.premios[i] ? `<div style="font-size:12px;font-weight:800;color:#4ade80">R$ ${Number(data.premios[i]).toFixed(2)}</div>` : ''}
+            ${data.premios[i] ? `<div style="font-size:13px;font-weight:800;color:#16a34a">R$ ${Number(data.premios[i]).toFixed(2)}</div>` : ''}
           </div>`).join('')}`;
     } catch { document.getElementById('ranking-lista').innerHTML = '<div class="pnl-loading">Erro ao carregar ranking.</div>'; }
   }
