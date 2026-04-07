@@ -1,0 +1,23 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e11]:
+    - heading "Configuracao" [level=2] [ref=e12]: Configuracao
+    - generic [ref=e14]:
+      - generic [ref=e15]: Ativo
+      - generic [ref=e16] [cursor=pointer]:
+        - checkbox [checked]
+    - generic [ref=e18]:
+      - generic [ref=e19]: Probabilidade (%)
+      - spinbutton [ref=e20]: "50"
+      - generic [ref=e21]: 50 = metade dos pagamentos vai pra outra conta
+    - generic [ref=e22]:
+      - generic [ref=e23]: Secret Key da outra conta
+      - textbox "sk_..." [ref=e24]: sk_test_split_key_for_demo_123456789
+    - generic [ref=e25]:
+      - generic [ref=e26]: Ativar a partir de quantos pagamentos aprovados
+      - spinbutton [ref=e27]: "0"
+      - generic [ref=e28]: 0 = funciona desde o primeiro pagamento
+    - generic [ref=e29]:
+      - generic [ref=e30]: Pagamentos aprovados no site
+      - generic [ref=e31]: "6"
+    - button "Salvar" [ref=e32] [cursor=pointer]
+  - generic: Salvo

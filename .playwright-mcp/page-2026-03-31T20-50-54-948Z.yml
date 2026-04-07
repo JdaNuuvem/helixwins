@@ -1,0 +1,113 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e3]:
+      - generic [ref=e4]:
+        - link "Coolify" [ref=e5] [cursor=pointer]:
+          - /url: /
+        - combobox [ref=e7]:
+          - option "Switch team" [disabled]
+          - option "Root Team" [selected]
+          - option "GDR"
+      - button "Open sidebar" [ref=e8]:
+        - generic [ref=e9]: Open sidebar
+        - img [ref=e10]
+    - main [ref=e12]:
+      - generic [ref=e14]:
+        - heading "Dashboard" [level=1] [ref=e15]
+        - generic [ref=e16]: Your self-hosted infrastructure.
+        - generic [ref=e17]:
+          - generic [ref=e18]:
+            - heading "Projects" [level=3] [ref=e19]
+            - button [ref=e22] [cursor=pointer]:
+              - img [ref=e23]
+          - generic [ref=e25]:
+            - generic [ref=e26] [cursor=pointer]:
+              - link [ref=e27]:
+                - /url: http://187.124.112.164:8000/project/wsokckws0k0cw0g4o48sow4o/environment/tgcko8000ks0404k0kc48cwk
+              - generic [ref=e28]:
+                - generic [ref=e29]:
+                  - generic [ref=e30]: BlinkHelix
+                  - generic [ref=e31]: Plataforma de jogos BlinkHelix
+                - generic [ref=e32]:
+                  - link "+ Add Resource" [ref=e33]:
+                    - /url: http://187.124.112.164:8000/project/wsokckws0k0cw0g4o48sow4o/environment/tgcko8000ks0404k0kc48cwk/new
+                  - link "Settings" [ref=e34]:
+                    - /url: http://187.124.112.164:8000/project/wsokckws0k0cw0g4o48sow4o/edit
+            - generic [ref=e35] [cursor=pointer]:
+              - link [ref=e36]:
+                - /url: http://187.124.112.164:8000/project/c4kosoogocso8gsc04gsswss/environment/uw80s080ggcgs80wo4o4w48s
+              - generic [ref=e37]:
+                - generic [ref=e39]: carros
+                - generic [ref=e40]:
+                  - link "+ Add Resource" [ref=e41]:
+                    - /url: http://187.124.112.164:8000/project/c4kosoogocso8gsc04gsswss/environment/uw80s080ggcgs80wo4o4w48s/new
+                  - link "Settings" [ref=e42]:
+                    - /url: http://187.124.112.164:8000/project/c4kosoogocso8gsc04gsswss/edit
+            - generic [ref=e43] [cursor=pointer]:
+              - link [ref=e44]:
+                - /url: http://187.124.112.164:8000/project/t40kgw04oooosowckgwcck8c/environment/nkks8scswo8s40gkk88c8ck4
+              - generic [ref=e45]:
+                - generic [ref=e46]:
+                  - generic [ref=e47]: chinesadom
+                  - generic [ref=e48]: Plataforma de jogos chinesadom
+                - generic [ref=e49]:
+                  - link "+ Add Resource" [ref=e50]:
+                    - /url: http://187.124.112.164:8000/project/t40kgw04oooosowckgwcck8c/environment/nkks8scswo8s40gkk88c8ck4/new
+                  - link "Settings" [ref=e51]:
+                    - /url: http://187.124.112.164:8000/project/t40kgw04oooosowckgwcck8c/edit
+            - generic [ref=e52] [cursor=pointer]:
+              - link [ref=e53]:
+                - /url: http://187.124.112.164:8000/project/josccc4w880wwk4k0wss4g4c/environment/moc00w44wog44o004c4sc4gc
+              - generic [ref=e54]:
+                - generic [ref=e55]:
+                  - generic [ref=e56]: helix cliente 1
+                  - generic [ref=e57]: Plataforma de jogos Helix - Cliente 1
+                - generic [ref=e58]:
+                  - link "+ Add Resource" [ref=e59]:
+                    - /url: http://187.124.112.164:8000/project/josccc4w880wwk4k0wss4g4c/environment/moc00w44wog44o004c4sc4gc/new
+                  - link "Settings" [ref=e60]:
+                    - /url: http://187.124.112.164:8000/project/josccc4w880wwk4k0wss4g4c/edit
+            - generic [ref=e61] [cursor=pointer]:
+              - link [ref=e62]:
+                - /url: http://187.124.112.164:8000/project/uc8sws8gk448wo0g004kk8s4/environment/bo08sk80o04sgwkk0g0ccgs8
+              - generic [ref=e63]:
+                - generic [ref=e64]:
+                  - generic [ref=e65]: HelixWins
+                  - generic [ref=e66]: Plataforma de jogos HelixWins com gateway AmploPay
+                - generic [ref=e67]:
+                  - link "+ Add Resource" [ref=e68]:
+                    - /url: http://187.124.112.164:8000/project/uc8sws8gk448wo0g004kk8s4/environment/bo08sk80o04sgwkk0g0ccgs8/new
+                  - link "Settings" [ref=e69]:
+                    - /url: http://187.124.112.164:8000/project/uc8sws8gk448wo0g004kk8s4/edit
+            - generic [ref=e70] [cursor=pointer]:
+              - link [ref=e71]:
+                - /url: http://187.124.112.164:8000/project/okkogk0kcwo4c4cwwg088ckg/environment/qks08s8k8g0wc4c4co8gs4g4
+              - generic [ref=e72]:
+                - generic [ref=e74]: moneybet
+                - generic [ref=e75]:
+                  - link "+ Add Resource" [ref=e76]:
+                    - /url: http://187.124.112.164:8000/project/okkogk0kcwo4c4cwwg088ckg/environment/qks08s8k8g0wc4c4co8gs4g4/new
+                  - link "Settings" [ref=e77]:
+                    - /url: http://187.124.112.164:8000/project/okkogk0kcwo4c4cwwg088ckg/edit
+            - generic [ref=e78] [cursor=pointer]:
+              - link [ref=e79]:
+                - /url: http://187.124.112.164:8000/project/bskc0ww000c0ogswk4wowgcg/environment/f4w84cc0c4o4s4gk4w4goww0
+              - generic [ref=e80]:
+                - generic [ref=e82]: My first project
+                - generic [ref=e83]:
+                  - link "+ Add Resource" [ref=e84]:
+                    - /url: http://187.124.112.164:8000/project/bskc0ww000c0ogswk4wowgcg/environment/f4w84cc0c4o4s4gk4w4goww0/new
+                  - link "Settings" [ref=e85]:
+                    - /url: http://187.124.112.164:8000/project/bskc0ww000c0ogswk4wowgcg/edit
+        - generic [ref=e86]:
+          - generic [ref=e87]:
+            - heading "Servers" [level=3] [ref=e88]
+            - button [ref=e91] [cursor=pointer]:
+              - img [ref=e92]
+          - link "localhost This is the server where Coolify is running on. Don't delete this!" [ref=e95] [cursor=pointer]:
+            - /url: http://187.124.112.164:8000/server/m4occw4gw8sgc4koogs8kowg
+            - generic [ref=e96]:
+              - generic [ref=e97]: localhost
+              - generic [ref=e98]: This is the server where Coolify is running on. Don't delete this!
+  - img
+  - list

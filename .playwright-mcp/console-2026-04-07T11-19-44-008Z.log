@@ -1,0 +1,259 @@
+[   36431ms] [WARNING] Alpine Expression Error: projectOpen is not defined
+
+Expression: "{ 'rotate-down': projectOpen }"
+
+ JSHandle@node @ http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:0
+[   36431ms] [WARNING] Alpine Expression Error: projectOpen is not defined
+
+Expression: "projectOpen"
+
+ JSHandle@node @ http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:0
+[   36431ms] [WARNING] Alpine Expression Error: envOpen is not defined
+
+Expression: "{ 'rotate-down': envOpen }"
+
+ JSHandle@node @ http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:0
+[   36431ms] [WARNING] Alpine Expression Error: envOpen is not defined
+
+Expression: "envOpen"
+
+ JSHandle@node @ http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:0
+[   36431ms] [WARNING] Alpine Expression Error: envPositions is not defined
+
+Expression: "'position: absolute; left: 100%; top: ' + (envPositions['bo08sk80o04sgwkk0g0ccgs8'] || 0) + 'px; z-index: 30;'"
+
+ JSHandle@node @ http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:0
+[   36431ms] [WARNING] Alpine Expression Error: activeEnv is not defined
+
+Expression: "activeEnv === 'bo08sk80o04sgwkk0g0ccgs8'"
+
+ JSHandle@node @ http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:0
+[   36432ms] [WARNING] Alpine Expression Error: resPositions is not defined
+
+Expression: "'position: absolute; left: 100%; top: ' + (resPositions['bo08sk80o04sgwkk0g0ccgs8-ogg000oo4g8s4kkw4wggw4w0'] || 0) + 'px; z-index: 40;'"
+
+ JSHandle@node @ http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:0
+[   36432ms] [WARNING] Alpine Expression Error: activeRes is not defined
+
+Expression: "activeRes === 'bo08sk80o04sgwkk0g0ccgs8-ogg000oo4g8s4kkw4wggw4w0'"
+
+ JSHandle@node @ http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:0
+[   36432ms] [WARNING] Alpine Expression Error: menuPositions is not defined
+
+Expression: "'position: absolute; left: 100%; top: ' + (menuPositions['bo08sk80o04sgwkk0g0ccgs8-ogg000oo4g8s4kkw4wggw4w0-config'] || 0) + 'px; z-index: 50;'"
+
+ JSHandle@node @ http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:0
+[   36432ms] [WARNING] Alpine Expression Error: activeMenuEnv is not defined
+
+Expression: "activeMenuEnv === 'bo08sk80o04sgwkk0g0ccgs8-ogg000oo4g8s4kkw4wggw4w0-config'"
+
+ JSHandle@node @ http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:0
+[   36432ms] [WARNING] Alpine Expression Error: resourceOpen is not defined
+
+Expression: "{ 'rotate-down': resourceOpen }"
+
+ JSHandle@node @ http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:0
+[   36432ms] [WARNING] Alpine Expression Error: resourceOpen is not defined
+
+Expression: "resourceOpen"
+
+ JSHandle@node @ http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:0
+[   36433ms] [WARNING] Alpine Expression Error: menuPosition is not defined
+
+Expression: "'position: absolute; left: 100%; top: ' + menuPosition + 'px; z-index: 50;'"
+
+ JSHandle@node @ http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:0
+[   36433ms] [WARNING] Alpine Expression Error: activeMenu is not defined
+
+Expression: "activeMenu === 'config'"
+
+ JSHandle@node @ http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:0
+[   36433ms] [WARNING] Alpine Expression Error: dropdownOpen is not defined
+
+Expression: "dropdownOpen"
+
+ JSHandle@node @ http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:0
+[   36433ms] [WARNING] Alpine Expression Error: dropdownOpen is not defined
+
+Expression: "dropdownOpen"
+
+ JSHandle@node @ http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:0
+[   36444ms] ReferenceError: projectOpen is not defined
+    at [Alpine] { 'rotate-down': projectOpen } (eval at <anonymous> (http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:5:743), <anonymous>:3:49)
+    at http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:5:1159
+    at Rl (http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:1:17106)
+    at http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:5:34778
+    at r (http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:5:19562)
+    at Object.ju [as effect] (http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:5:19350)
+    at ke (http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:1:12529)
+    at http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:5:12962
+    at http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:1:12643
+    at Jo (http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:5:34772)
+[   36444ms] ReferenceError: projectOpen is not defined
+    at [Alpine] projectOpen (eval at <anonymous> (http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:5:743), <anonymous>:3:32)
+    at http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:5:1159
+    at Rl (http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:1:17106)
+    at http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:5:36220
+    at r (http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:5:19562)
+    at Object.ju [as effect] (http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:5:19350)
+    at ke (http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:1:12529)
+    at http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:5:12962
+    at http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:1:12643
+    at Function.<anonymous> (http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:5:36214)
+[   36445ms] ReferenceError: envOpen is not defined
+    at [Alpine] { 'rotate-down': envOpen } (eval at <anonymous> (http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:5:743), <anonymous>:3:49)
+    at http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:5:1159
+    at Rl (http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:1:17106)
+    at http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:5:34778
+    at r (http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:5:19562)
+    at Object.ju [as effect] (http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:5:19350)
+    at ke (http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:1:12529)
+    at http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:5:12962
+    at http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:1:12643
+    at Jo (http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:5:34772)
+[   36445ms] ReferenceError: envOpen is not defined
+    at [Alpine] envOpen (eval at <anonymous> (http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:5:743), <anonymous>:3:32)
+    at http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:5:1159
+    at Rl (http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:1:17106)
+    at http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:5:36220
+    at r (http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:5:19562)
+    at Object.ju [as effect] (http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:5:19350)
+    at ke (http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:1:12529)
+    at http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:5:12962
+    at http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:1:12643
+    at Function.<anonymous> (http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:5:36214)
+[   36446ms] ReferenceError: envPositions is not defined
+    at [Alpine] 'position: absolute; left: 100%; top: ' + (envPositions['bo08sk80o04sgwkk0g0ccgs8'] || 0) + 'px; z-index: 30;' (eval at <anonymous> (http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:5:743), <anonymous>:3:75)
+    at http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:5:1159
+    at Rl (http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:1:17106)
+    at http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:5:34778
+    at r (http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:5:19562)
+    at Object.ju [as effect] (http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:5:19350)
+    at ke (http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:1:12529)
+    at http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:5:12962
+    at http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:1:12643
+    at Jo (http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:5:34772)
+[   36446ms] ReferenceError: activeEnv is not defined
+    at [Alpine] activeEnv === 'bo08sk80o04sgwkk0g0ccgs8' (eval at <anonymous> (http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:5:743), <anonymous>:3:32)
+    at http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:5:1159
+    at Rl (http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:1:17106)
+    at http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:5:36220
+    at r (http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:5:19562)
+    at Object.ju [as effect] (http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:5:19350)
+    at ke (http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:1:12529)
+    at http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:5:12962
+    at http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:1:12643
+    at Function.<anonymous> (http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:5:36214)
+[   36446ms] ReferenceError: resPositions is not defined
+    at [Alpine] 'position: absolute; left: 100%; top: ' + (resPositions['bo08sk80o04sgwkk0g0ccgs8-ogg000oo4g8s4kkw4wggw4w0'] || 0) + 'px; z-index: 40;' (eval at <anonymous> (http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:5:743), <anonymous>:3:75)
+    at http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:5:1159
+    at Rl (http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:1:17106)
+    at http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:5:34778
+    at r (http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:5:19562)
+    at Object.ju [as effect] (http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:5:19350)
+    at ke (http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:1:12529)
+    at http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:5:12962
+    at http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:1:12643
+    at Jo (http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:5:34772)
+[   36447ms] ReferenceError: activeRes is not defined
+    at [Alpine] activeRes === 'bo08sk80o04sgwkk0g0ccgs8-ogg000oo4g8s4kkw4wggw4w0' (eval at <anonymous> (http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:5:743), <anonymous>:3:32)
+    at http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:5:1159
+    at Rl (http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:1:17106)
+    at http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:5:36220
+    at r (http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:5:19562)
+    at Object.ju [as effect] (http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:5:19350)
+    at ke (http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:1:12529)
+    at http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:5:12962
+    at http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:1:12643
+    at Function.<anonymous> (http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:5:36214)
+[   36447ms] ReferenceError: menuPositions is not defined
+    at [Alpine] 'position: absolute; left: 100%; top: ' + (menuPositions['bo08sk80o04sgwkk0g0ccgs8-ogg000oo4g8s4kkw4wggw4w0-config'] || 0) + 'px; z-index: 50;' (eval at <anonymous> (http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:5:743), <anonymous>:3:75)
+    at http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:5:1159
+    at Rl (http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:1:17106)
+    at http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:5:34778
+    at r (http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:5:19562)
+    at Object.ju [as effect] (http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:5:19350)
+    at ke (http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:1:12529)
+    at http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:5:12962
+    at http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:1:12643
+    at Jo (http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:5:34772)
+[   36447ms] ReferenceError: activeMenuEnv is not defined
+    at [Alpine] activeMenuEnv === 'bo08sk80o04sgwkk0g0ccgs8-ogg000oo4g8s4kkw4wggw4w0-config' (eval at <anonymous> (http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:5:743), <anonymous>:3:32)
+    at http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:5:1159
+    at Rl (http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:1:17106)
+    at http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:5:36220
+    at r (http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:5:19562)
+    at Object.ju [as effect] (http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:5:19350)
+    at ke (http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:1:12529)
+    at http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:5:12962
+    at http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:1:12643
+    at Function.<anonymous> (http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:5:36214)
+[   36447ms] ReferenceError: resourceOpen is not defined
+    at [Alpine] { 'rotate-down': resourceOpen } (eval at <anonymous> (http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:5:743), <anonymous>:3:49)
+    at http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:5:1159
+    at Rl (http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:1:17106)
+    at http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:5:34778
+    at r (http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:5:19562)
+    at Object.ju [as effect] (http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:5:19350)
+    at ke (http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:1:12529)
+    at http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:5:12962
+    at http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:1:12643
+    at Jo (http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:5:34772)
+[   36448ms] ReferenceError: resourceOpen is not defined
+    at [Alpine] resourceOpen (eval at <anonymous> (http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:5:743), <anonymous>:3:32)
+    at http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:5:1159
+    at Rl (http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:1:17106)
+    at http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:5:36220
+    at r (http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:5:19562)
+    at Object.ju [as effect] (http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:5:19350)
+    at ke (http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:1:12529)
+    at http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:5:12962
+    at http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:1:12643
+    at Function.<anonymous> (http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:5:36214)
+[   36448ms] ReferenceError: menuPosition is not defined
+    at [Alpine] 'position: absolute; left: 100%; top: ' + menuPosition + 'px; z-index: 50;' (eval at <anonymous> (http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:5:743), <anonymous>:3:74)
+    at http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:5:1159
+    at Rl (http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:1:17106)
+    at http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:5:34778
+    at r (http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:5:19562)
+    at Object.ju [as effect] (http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:5:19350)
+    at ke (http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:1:12529)
+    at http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:5:12962
+    at http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:1:12643
+    at Jo (http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:5:34772)
+[   36448ms] ReferenceError: activeMenu is not defined
+    at [Alpine] activeMenu === 'config' (eval at <anonymous> (http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:5:743), <anonymous>:3:32)
+    at http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:5:1159
+    at Rl (http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:1:17106)
+    at http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:5:36220
+    at r (http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:5:19562)
+    at Object.ju [as effect] (http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:5:19350)
+    at ke (http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:1:12529)
+    at http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:5:12962
+    at http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:1:12643
+    at Function.<anonymous> (http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:5:36214)
+[   36448ms] ReferenceError: dropdownOpen is not defined
+    at [Alpine] dropdownOpen (eval at <anonymous> (http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:5:743), <anonymous>:3:32)
+    at http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:5:1159
+    at Rl (http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:1:17106)
+    at http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:5:36220
+    at r (http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:5:19562)
+    at Object.ju [as effect] (http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:5:19350)
+    at ke (http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:1:12529)
+    at http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:5:12962
+    at http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:1:12643
+    at Function.<anonymous> (http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:5:36214)
+[   36448ms] ReferenceError: dropdownOpen is not defined
+    at [Alpine] dropdownOpen (eval at <anonymous> (http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:5:743), <anonymous>:3:32)
+    at http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:5:1159
+    at Rl (http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:1:17106)
+    at http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:5:36220
+    at r (http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:5:19562)
+    at Object.ju [as effect] (http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:5:19350)
+    at ke (http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:1:12529)
+    at http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:5:12962
+    at http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:1:12643
+    at Function.<anonymous> (http://187.124.112.164:8000/livewire/livewire.min.js?id=61e33937:5:36214)
+[  117769ms] [WARNING] [Terminal] WebSocket not ready, message not sent: {checkActive: force} @ http://187.124.112.164:8000/build/assets/app-BNvJoPaw.js:8
+[  117866ms] [LOG] [Terminal] Attempting connection to: ws://187.124.112.164:6002/terminal/ws @ http://187.124.112.164:8000/build/assets/app-BNvJoPaw.js:8
+[  118746ms] [LOG] [Terminal] WebSocket connection established. Cool cool cool cool cool cool. @ http://187.124.112.164:8000/build/assets/app-BNvJoPaw.js:8

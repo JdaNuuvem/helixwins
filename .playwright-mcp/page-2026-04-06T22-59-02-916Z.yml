@@ -1,0 +1,48 @@
+- generic [ref=e2]:
+  - generic [ref=e3]:
+    - heading "Painel do Gerente GERENTE" [level=1] [ref=e4]
+    - generic [ref=e5]:
+      - text: QA Gerente
+      - button "Sair" [ref=e6] [cursor=pointer]
+  - generic [ref=e7]:
+    - button "Dashboard" [ref=e8] [cursor=pointer]
+    - button "Influencers" [ref=e9] [cursor=pointer]
+    - button "Comissões" [ref=e10] [cursor=pointer]
+    - button "Saque" [ref=e11] [cursor=pointer]
+    - button "Contas Demo" [ref=e12] [cursor=pointer]
+    - button "Transações" [ref=e13] [cursor=pointer]
+  - generic [ref=e14]:
+    - generic [ref=e15]:
+      - generic [ref=e16]:
+        - generic [ref=e17]: Saldo de Comissão
+        - generic [ref=e18]: R$ 0,00
+        - generic [ref=e19]: disponível
+      - generic [ref=e20]:
+        - generic [ref=e21]: Total Recebido
+        - generic [ref=e22]: R$ 0,00
+        - generic [ref=e23]: acumulado
+      - generic [ref=e24]:
+        - generic [ref=e25]: Override 60%
+        - generic [ref=e26]: R$ 0,00
+        - generic [ref=e27]: dos influencers
+      - generic [ref=e28]:
+        - generic [ref=e29]: Volume da Rede
+        - generic [ref=e30]: R$ 0,00
+        - generic [ref=e31]: depósitos aprovados
+      - generic [ref=e32]:
+        - generic [ref=e33]: Influencers
+        - generic [ref=e34]: "1"
+        - generic [ref=e35]: na sua rede
+      - generic [ref=e36]:
+        - generic [ref=e37]: Jogadores
+        - generic [ref=e38]: "0"
+        - generic [ref=e39]: indicados
+    - generic [ref=e40]:
+      - heading "Seu link de afiliado envie para influencers que você quer cadastrar" [level=2] [ref=e41]:
+        - text: Seu link de afiliado
+        - generic [ref=e42]: envie para influencers que você quer cadastrar
+      - generic [ref=e43]:
+        - generic [ref=e44]:
+          - generic [ref=e45]: Link do Gerente
+          - generic [ref=e46]: http://localhost:8899/?ref=QAGE01
+        - button "Copiar" [ref=e47] [cursor=pointer]

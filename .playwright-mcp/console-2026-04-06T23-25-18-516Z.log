@@ -1,0 +1,2 @@
+[    1064ms] Unexpected token '}'
+[   15854ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://localhost:8899/api/auth/login:0

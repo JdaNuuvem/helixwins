@@ -1,0 +1,251 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - navigation [ref=e5]:
+      - generic [ref=e6]:
+        - generic [ref=e7]:
+          - link "Coolify" [ref=e8] [cursor=pointer]:
+            - /url: /
+          - link "v4.0.0-beta.463" [ref=e9] [cursor=pointer]:
+            - /url: https://github.com/coollabsio/coolify/releases/tag/v4.0.0-beta.463
+        - button / [ref=e11]:
+          - img [ref=e12]
+          - generic [ref=e14]: /
+        - button "Preferences 9+" [ref=e17] [cursor=pointer]:
+          - img "Preferences" [ref=e18]
+          - generic [ref=e20]: 9+
+      - combobox [ref=e23]:
+        - option "Switch team" [disabled]
+        - option "Root Team" [selected]
+        - option "GDR"
+      - list [ref=e24]:
+        - listitem [ref=e25]:
+          - list [ref=e26]:
+            - listitem [ref=e27]:
+              - link "Dashboard" [ref=e28] [cursor=pointer]:
+                - /url: /
+                - img [ref=e29]
+                - generic [ref=e31]: Dashboard
+            - listitem [ref=e32]:
+              - link "Projects" [ref=e33] [cursor=pointer]:
+                - /url: /projects
+                - img [ref=e34]
+                - generic [ref=e39]: Projects
+            - listitem [ref=e40]:
+              - link "Servers" [ref=e41] [cursor=pointer]:
+                - /url: /servers
+                - img [ref=e42]
+                - generic [ref=e47]: Servers
+            - listitem [ref=e48]:
+              - link "Sources" [ref=e49] [cursor=pointer]:
+                - /url: http://187.124.112.164:8000/sources
+                - img [ref=e50]
+                - generic [ref=e52]: Sources
+            - listitem [ref=e53]:
+              - link "Destinations" [ref=e54] [cursor=pointer]:
+                - /url: http://187.124.112.164:8000/destinations
+                - img [ref=e55]
+                - generic [ref=e57]: Destinations
+            - listitem [ref=e58]:
+              - link "S3 Storages" [ref=e59] [cursor=pointer]:
+                - /url: http://187.124.112.164:8000/storages
+                - img [ref=e60]
+                - generic [ref=e65]: S3 Storages
+            - listitem [ref=e66]:
+              - link "Shared Variables" [ref=e67] [cursor=pointer]:
+                - /url: http://187.124.112.164:8000/shared-variables
+                - img [ref=e68]
+                - generic [ref=e72]: Shared Variables
+            - listitem [ref=e73]:
+              - link "Notifications" [ref=e74] [cursor=pointer]:
+                - /url: http://187.124.112.164:8000/notifications/email
+                - img [ref=e75]
+                - generic [ref=e77]: Notifications
+            - listitem [ref=e78]:
+              - link "Keys & Tokens" [ref=e79] [cursor=pointer]:
+                - /url: http://187.124.112.164:8000/security/private-key
+                - img [ref=e80]
+                - generic [ref=e82]: Keys & Tokens
+            - listitem [ref=e83]:
+              - link "Tags" [ref=e84] [cursor=pointer]:
+                - /url: http://187.124.112.164:8000/tags
+                - img [ref=e85]
+                - generic [ref=e89]: Tags
+            - listitem [ref=e90]:
+              - link "Terminal" [ref=e91] [cursor=pointer]:
+                - /url: http://187.124.112.164:8000/terminal
+                - img [ref=e92]
+                - generic [ref=e95]: Terminal
+            - listitem [ref=e96]:
+              - link "Profile" [ref=e97] [cursor=pointer]:
+                - /url: http://187.124.112.164:8000/profile
+                - img [ref=e98]
+                - generic [ref=e103]: Profile
+            - listitem [ref=e104]:
+              - link "Teams" [ref=e105] [cursor=pointer]:
+                - /url: http://187.124.112.164:8000/team
+                - img [ref=e106]
+                - generic [ref=e114]: Teams
+            - listitem [ref=e115]:
+              - link "Settings" [ref=e116] [cursor=pointer]:
+                - /url: /settings
+                - img [ref=e117]
+                - generic [ref=e121]: Settings
+            - generic:
+              - listitem:
+                - generic "No upgrade available"
+            - listitem [ref=e122]:
+              - link "Sponsor us" [ref=e123] [cursor=pointer]:
+                - /url: https://coolify.io/sponsorships
+                - img [ref=e124]
+                - generic [ref=e128]: Sponsor us
+            - listitem [ref=e129]:
+              - generic "Send us feedback or get help!" [ref=e132] [cursor=pointer]:
+                - img [ref=e133]
+                - generic [ref=e135]: Feedback
+            - listitem [ref=e136]:
+              - button "Logout" [ref=e138]:
+                - img [ref=e139]
+                - generic [ref=e141]: Logout
+    - main [ref=e142]:
+      - generic [ref=e144]:
+        - heading "Configuration" [level=1] [ref=e145]
+        - navigation [ref=e146]:
+          - navigation [ref=e147]:
+            - list [ref=e148]:
+              - listitem [ref=e149]:
+                - generic [ref=e150]:
+                  - link "helix cliente 1" [ref=e151] [cursor=pointer]:
+                    - /url: http://187.124.112.164:8000/project/josccc4w880wwk4k0wss4g4c
+                  - button [ref=e152]:
+                    - img [ref=e153]
+              - listitem [ref=e155]:
+                - generic [ref=e156]:
+                  - link "production" [ref=e157] [cursor=pointer]:
+                    - /url: http://187.124.112.164:8000/project/josccc4w880wwk4k0wss4g4c/environment/moc00w44wog44o004c4sc4gc
+                  - button [ref=e158]:
+                    - img [ref=e159]
+              - listitem [ref=e161]:
+                - generic [ref=e162]:
+                  - link "jda-nuuvem/helixwins:clientes-igs88gkk04g0wc0sccs40400 (localhost)" [ref=e163] [cursor=pointer]:
+                    - /url: http://187.124.112.164:8000/project/josccc4w880wwk4k0wss4g4c/environment/moc00w44wog44o004c4sc4gc/application/tgookco48s8wk0os0c84o4wc
+                  - button [ref=e164]:
+                    - img [ref=e165]
+              - generic [ref=e167]:
+                - link "Running" [ref=e170] [cursor=pointer]:
+                  - /url: https://github.com/JdaNuuvem/helixwins/commit/9b3dd3ddbe56ce414c305e0173a11e8be6477434
+                - generic [ref=e171]: (unknown)
+                - img [ref=e175] [cursor=pointer]
+              - button "Refresh Status" [ref=e176]:
+                - img [ref=e177]
+          - generic [ref=e179]:
+            - navigation [ref=e180]:
+              - link "Configuration" [ref=e181] [cursor=pointer]:
+                - /url: http://187.124.112.164:8000/project/josccc4w880wwk4k0wss4g4c/environment/moc00w44wog44o004c4sc4gc/application/tgookco48s8wk0os0c84o4wc
+              - link "Deployments" [ref=e182] [cursor=pointer]:
+                - /url: http://187.124.112.164:8000/project/josccc4w880wwk4k0wss4g4c/environment/moc00w44wog44o004c4sc4gc/application/tgookco48s8wk0os0c84o4wc/deployment
+              - link "Logs" [ref=e183] [cursor=pointer]:
+                - /url: http://187.124.112.164:8000/project/josccc4w880wwk4k0wss4g4c/environment/moc00w44wog44o004c4sc4gc/application/tgookco48s8wk0os0c84o4wc/logs
+                - generic [ref=e184]: Logs
+              - link "Terminal" [ref=e185] [cursor=pointer]:
+                - /url: http://187.124.112.164:8000/project/josccc4w880wwk4k0wss4g4c/environment/moc00w44wog44o004c4sc4gc/application/tgookco48s8wk0os0c84o4wc/terminal
+              - button "Links" [ref=e187]:
+                - generic [ref=e188]: Links
+                - img [ref=e189]
+            - generic [ref=e191]:
+              - button "Advanced" [ref=e194]:
+                - generic [ref=e195]: Advanced
+                - img [ref=e196]
+              - generic [ref=e198]:
+                - button "Redeploy" [ref=e199] [cursor=pointer]:
+                  - img [ref=e200]
+                  - text: Redeploy
+                - button "Restart" [ref=e202] [cursor=pointer]:
+                  - img [ref=e203]
+                  - text: Restart
+                - button "Stop" [ref=e208] [cursor=pointer]:
+                  - img [ref=e209]
+                  - text: Stop
+        - generic [ref=e211]:
+          - generic [ref=e212]:
+            - link "General" [ref=e213] [cursor=pointer]:
+              - /url: http://187.124.112.164:8000/project/josccc4w880wwk4k0wss4g4c/environment/moc00w44wog44o004c4sc4gc/application/tgookco48s8wk0os0c84o4wc
+              - generic [ref=e214]: General
+            - link "Advanced" [ref=e215] [cursor=pointer]:
+              - /url: http://187.124.112.164:8000/project/josccc4w880wwk4k0wss4g4c/environment/moc00w44wog44o004c4sc4gc/application/tgookco48s8wk0os0c84o4wc/advanced
+              - generic [ref=e216]: Advanced
+            - link "Environment Variables" [ref=e217] [cursor=pointer]:
+              - /url: http://187.124.112.164:8000/project/josccc4w880wwk4k0wss4g4c/environment/moc00w44wog44o004c4sc4gc/application/tgookco48s8wk0os0c84o4wc/environment-variables
+              - generic [ref=e218]: Environment Variables
+            - link "Persistent Storage" [ref=e219] [cursor=pointer]:
+              - /url: http://187.124.112.164:8000/project/josccc4w880wwk4k0wss4g4c/environment/moc00w44wog44o004c4sc4gc/application/tgookco48s8wk0os0c84o4wc/persistent-storage
+              - generic [ref=e220]: Persistent Storage
+            - link "Git Source" [ref=e221] [cursor=pointer]:
+              - /url: http://187.124.112.164:8000/project/josccc4w880wwk4k0wss4g4c/environment/moc00w44wog44o004c4sc4gc/application/tgookco48s8wk0os0c84o4wc/source
+              - generic [ref=e222]: Git Source
+            - link "Servers" [ref=e223] [cursor=pointer]:
+              - /url: http://187.124.112.164:8000/project/josccc4w880wwk4k0wss4g4c/environment/moc00w44wog44o004c4sc4gc/application/tgookco48s8wk0os0c84o4wc/servers
+              - generic [ref=e224]: Servers
+            - link "Scheduled Tasks" [ref=e225] [cursor=pointer]:
+              - /url: http://187.124.112.164:8000/project/josccc4w880wwk4k0wss4g4c/environment/moc00w44wog44o004c4sc4gc/application/tgookco48s8wk0os0c84o4wc/scheduled-tasks
+              - generic [ref=e226]: Scheduled Tasks
+            - link "Webhooks" [ref=e227] [cursor=pointer]:
+              - /url: http://187.124.112.164:8000/project/josccc4w880wwk4k0wss4g4c/environment/moc00w44wog44o004c4sc4gc/application/tgookco48s8wk0os0c84o4wc/webhooks
+              - generic [ref=e228]: Webhooks
+            - link "Preview Deployments" [ref=e229] [cursor=pointer]:
+              - /url: http://187.124.112.164:8000/project/josccc4w880wwk4k0wss4g4c/environment/moc00w44wog44o004c4sc4gc/application/tgookco48s8wk0os0c84o4wc/preview-deployments
+              - generic [ref=e230]: Preview Deployments
+            - link "Healthcheck" [ref=e231] [cursor=pointer]:
+              - /url: http://187.124.112.164:8000/project/josccc4w880wwk4k0wss4g4c/environment/moc00w44wog44o004c4sc4gc/application/tgookco48s8wk0os0c84o4wc/healthcheck
+              - generic [ref=e232]: Healthcheck
+            - link "Rollback" [ref=e233] [cursor=pointer]:
+              - /url: http://187.124.112.164:8000/project/josccc4w880wwk4k0wss4g4c/environment/moc00w44wog44o004c4sc4gc/application/tgookco48s8wk0os0c84o4wc/rollback
+              - generic [ref=e234]: Rollback
+            - link "Resource Limits" [ref=e235] [cursor=pointer]:
+              - /url: http://187.124.112.164:8000/project/josccc4w880wwk4k0wss4g4c/environment/moc00w44wog44o004c4sc4gc/application/tgookco48s8wk0os0c84o4wc/resource-limits
+              - generic [ref=e236]: Resource Limits
+            - link "Resource Operations" [ref=e237] [cursor=pointer]:
+              - /url: http://187.124.112.164:8000/project/josccc4w880wwk4k0wss4g4c/environment/moc00w44wog44o004c4sc4gc/application/tgookco48s8wk0os0c84o4wc/resource-operations
+              - generic [ref=e238]: Resource Operations
+            - link "Metrics" [ref=e239] [cursor=pointer]:
+              - /url: http://187.124.112.164:8000/project/josccc4w880wwk4k0wss4g4c/environment/moc00w44wog44o004c4sc4gc/application/tgookco48s8wk0os0c84o4wc/metrics
+              - generic [ref=e240]: Metrics
+            - link "Tags" [ref=e241] [cursor=pointer]:
+              - /url: http://187.124.112.164:8000/project/josccc4w880wwk4k0wss4g4c/environment/moc00w44wog44o004c4sc4gc/application/tgookco48s8wk0os0c84o4wc/tags
+              - generic [ref=e242]: Tags
+            - link "Danger Zone" [ref=e243] [cursor=pointer]:
+              - /url: http://187.124.112.164:8000/project/josccc4w880wwk4k0wss4g4c/environment/moc00w44wog44o004c4sc4gc/application/tgookco48s8wk0os0c84o4wc/danger
+              - generic [ref=e244]: Danger Zone
+          - generic [ref=e247]:
+            - generic [ref=e248]:
+              - heading "Source" [level=2] [ref=e249]
+              - button "Save" [ref=e250] [cursor=pointer]
+              - generic [ref=e251]:
+                - link "Open Repository" [ref=e252] [cursor=pointer]:
+                  - /url: https://github.com/JdaNuuvem/helixwins/tree/clientes/
+                  - text: Open Repository
+                  - img [ref=e253]
+                - link "Open Commits on Git" [ref=e255] [cursor=pointer]:
+                  - /url: https://github.com/JdaNuuvem/helixwins/commits/clientes
+                  - text: Open Commits on Git
+                  - img [ref=e256]
+            - generic [ref=e258]: Code source of your application.
+            - generic [ref=e259]:
+              - generic [ref=e260]: "Currently connected source: Public GitHub"
+              - generic [ref=e261]:
+                - generic [ref=e262]:
+                  - generic [ref=e263]: Repository
+                  - textbox "coollabsio/coolify-example" [ref=e264]: JdaNuuvem/helixwins
+                - generic [ref=e265]:
+                  - generic [ref=e266]: Branch
+                  - textbox "main" [ref=e267]: clientes
+              - generic [ref=e269]:
+                - generic [ref=e270]: Commit SHA
+                - textbox "HEAD" [ref=e271]
+            - generic [ref=e272]:
+              - heading "Change Git Source" [level=3] [ref=e273]
+              - button "api-jogos JdaNuuvem" [ref=e277] [cursor=pointer]:
+                - generic [ref=e278]:
+                  - generic [ref=e279]: api-jogos
+                  - generic [ref=e280]: JdaNuuvem
+  - img
+  - list

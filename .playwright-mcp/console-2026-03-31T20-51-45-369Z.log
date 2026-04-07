@@ -1,0 +1,10 @@
+[    1048ms] Unexpected token '}'
+[   13973ms] [VERBOSE] [DOM] Password field is not contained in a form: (More info: https://goo.gl/9p2vKq) %o @ https://hellixjump.site/#painel:0
+[   13974ms] [VERBOSE] [DOM] Password field is not contained in a form: (More info: https://goo.gl/9p2vKq) %o @ https://hellixjump.site/#painel:0
+[   13974ms] [VERBOSE] [DOM] Password field is not contained in a form: (More info: https://goo.gl/9p2vKq) %o @ https://hellixjump.site/#painel:0
+[   14097ms] [ERROR] Failed to load resource: the server responded with a status of 401 () @ https://hellixjump.site/api/game/abandonar:0
+[   14106ms] [ERROR] Failed to load resource: the server responded with a status of 401 () @ https://hellixjump.site/api/game/configs:0
+[   14302ms] [ERROR] Failed to load resource: the server responded with a status of 401 () @ https://hellixjump.site/api/user/dashboard:0
+[   48686ms] [ERROR] Failed to load resource: the server responded with a status of 400 () @ https://hellixjump.site/api/auth/register:0
+[   72700ms] [ERROR] Failed to load resource: the server responded with a status of 400 () @ https://hellixjump.site/api/auth/register:0
+[   86390ms] [ERROR] Failed to load resource: the server responded with a status of 400 () @ https://hellixjump.site/api/auth/register:0

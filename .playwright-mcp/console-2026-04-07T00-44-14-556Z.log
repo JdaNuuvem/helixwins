@@ -1,0 +1,8 @@
+[     390ms] Unexpected token '}'
+[   65991ms] TypeError: Cannot read properties of null (reading 'addEventListener')
+    at renderPainel (http://localhost:8899/js/pages/painel.js?v=20260406c:3267:43)
+    at route (http://localhost:8899/js/app.js?v=20260406c:125:23)
+    at http://localhost:8899/js/app.js?v=20260406c:148:45
+[   66102ms] [VERBOSE] [DOM] Password field is not contained in a form: (More info: https://goo.gl/9p2vKq) %o @ http://localhost:8899/?v=4#painel:0
+[   66102ms] [VERBOSE] [DOM] Password field is not contained in a form: (More info: https://goo.gl/9p2vKq) %o @ http://localhost:8899/?v=4#painel:0
+[   66102ms] [VERBOSE] [DOM] Password field is not contained in a form: (More info: https://goo.gl/9p2vKq) %o @ http://localhost:8899/?v=4#painel:0

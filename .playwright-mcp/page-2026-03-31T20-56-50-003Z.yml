@@ -1,0 +1,114 @@
+- generic [ref=e1]:
+  - generic [ref=e231]:
+    - generic [ref=e232]:
+      - generic [ref=e234]:
+        - generic [ref=e235]:
+          - generic [ref=e236]: 🌀
+          - generic [ref=e237]: HelixWins
+        - generic [ref=e238]:
+          - generic [ref=e240] [cursor=pointer]:
+            - generic [ref=e241]:
+              - generic [ref=e242]: Saldo
+              - generic [ref=e243]: R$ 0,00
+            - img [ref=e244]
+          - generic "Usuario Teste Normal" [ref=e247] [cursor=pointer]: U
+      - generic [ref=e248]:
+        - generic [ref=e249]:
+          - generic [ref=e250]: Seu saldo disponível
+          - generic [ref=e251]: R$ 0,00
+          - generic [ref=e252]:
+            - button "Depositar" [ref=e253] [cursor=pointer]:
+              - img [ref=e254]
+              - text: Depositar
+            - button "Sacar" [ref=e256] [cursor=pointer]:
+              - img [ref=e257]
+              - text: Sacar
+            - button "Indicar" [ref=e259] [cursor=pointer]:
+              - img [ref=e260]
+              - text: Indicar
+        - generic [ref=e264]:
+          - img [ref=e266]
+          - generic [ref=e268]: "Plataformas infinitas: jogue quantas rodadas quiser sem parar."
+        - generic [ref=e269]:
+          - generic [ref=e270]:
+            - generic [ref=e271]:
+              - generic [ref=e272]: INICIAR PARTIDA
+              - generic [ref=e273]: Passe plataformas, acumule dinheiro e escolha quando resgatar!
+            - generic [ref=e274]:
+              - img [ref=e277]
+              - generic [ref=e281]: "358"
+              - generic [ref=e282]: online
+          - generic [ref=e283]:
+            - generic [ref=e284]:
+              - generic [ref=e285]: 🎯
+              - generic [ref=e286]:
+                - text: Meta =
+                - strong [ref=e287]: 4×
+            - generic [ref=e288]:
+              - generic [ref=e289]: ∞
+              - generic [ref=e290]: Plataformas
+          - generic [ref=e291]:
+            - generic [ref=e292]: Valor de entrada
+            - generic [ref=e293]:
+              - button "R$5" [ref=e294] [cursor=pointer]
+              - button "R$10" [ref=e295] [cursor=pointer]
+              - button "R$20" [ref=e296] [cursor=pointer]
+              - button "R$50" [ref=e297] [cursor=pointer]
+              - button "R$100" [ref=e298] [cursor=pointer]
+              - button "R$200" [ref=e299] [cursor=pointer]
+            - generic [ref=e300]:
+              - generic [ref=e301]: R$
+              - spinbutton [ref=e302]
+            - generic [ref=e303]:
+              - generic [ref=e304]:
+                - generic [ref=e305]: Meta de ganho
+                - generic [ref=e306]: R$ 0,00
+              - generic [ref=e307]:
+                - generic [ref=e308]: Por plataforma
+                - generic [ref=e309]: —
+              - generic [ref=e310]:
+                - generic [ref=e311]: Plat. p/ meta
+                - generic [ref=e312]: —
+          - button "JOGAR AGORA" [disabled] [ref=e313]:
+            - img [ref=e314]
+            - text: JOGAR AGORA
+      - navigation [ref=e317]:
+        - button "Jogar" [ref=e318] [cursor=pointer]:
+          - img [ref=e319]
+          - generic [ref=e322]: Jogar
+        - button "Depositar" [ref=e323] [cursor=pointer]:
+          - img [ref=e324]
+          - generic [ref=e326]: Depositar
+        - button "Sacar" [active] [ref=e327] [cursor=pointer]:
+          - img [ref=e328]
+          - generic [ref=e330]: Sacar
+        - button "Indicar" [ref=e331] [cursor=pointer]:
+          - img [ref=e332]
+          - generic [ref=e336]: Indicar
+        - button "Sair" [ref=e337] [cursor=pointer]:
+          - img [ref=e338]
+          - generic [ref=e340]: Sair
+    - generic [ref=e376]:
+      - generic [ref=e377]:
+        - generic [ref=e378]: Solicitar Saque
+        - button "✕" [ref=e379] [cursor=pointer]
+      - generic [ref=e380]:
+        - text: "Saldo disponível:"
+        - strong [ref=e381]: R$ 0,00
+      - generic [ref=e382]:
+        - generic [ref=e383]: R$
+        - spinbutton [ref=e384]
+      - generic [ref=e385]:
+        - generic [ref=e386]: PIX
+        - textbox "Chave PIX (e-mail, telefone ou chave aleatória)" [ref=e387]
+      - generic [ref=e388]:
+        - generic [ref=e389]: CPF
+        - textbox "CPF do titular (somente números)" [ref=e390]
+      - generic [ref=e391]: ⏱ Saques processados em até 24h úteis.
+      - button "Solicitar Saque" [ref=e392] [cursor=pointer]
+  - generic [ref=e393]:
+    - img [ref=e395]
+    - generic [ref=e397]:
+      - generic [ref=e398]: Leonardo
+      - generic [ref=e399]: acabou de sacar
+    - generic [ref=e400]: R$ 80,00

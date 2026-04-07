@@ -1,0 +1,199 @@
+- generic [ref=e3]:
+  - navigation [ref=e4]:
+    - generic [ref=e5] [cursor=pointer]:
+      - img [ref=e6]
+      - generic [ref=e9]: HelixWins
+    - generic [ref=e10]:
+      - button "Entrar" [ref=e11] [cursor=pointer]
+      - button "Cadastrar" [ref=e12] [cursor=pointer]
+  - generic [ref=e14]:
+    - generic [ref=e15]:
+      - generic [ref=e16]: 2.847 jogadores online agora
+      - heading "GIRE E GANHE" [level=1] [ref=e18]:
+        - text: GIRE E
+        - emphasis [ref=e19]: GANHE
+      - paragraph [ref=e20]: Jogue Helix Jump e transforme suas habilidades em dinheiro real. Passe plataformas para ganhar dinheiro real!
+      - generic [ref=e21]:
+        - button "JOGAR GRÁTIS" [ref=e22] [cursor=pointer]:
+          - img [ref=e23]
+          - generic [ref=e25]: JOGAR GRÁTIS
+        - button "Já tenho conta →" [ref=e26] [cursor=pointer]
+      - generic [ref=e27]:
+        - generic [ref=e28]:
+          - img [ref=e29]
+          - text: Saque via PIX
+        - generic [ref=e31]:
+          - img [ref=e32]
+          - text: Depósito mín.
+          - generic [ref=e34]: R$20
+        - generic [ref=e35]:
+          - img [ref=e36]
+          - text: Resultado na hora
+    - generic [ref=e38]:
+      - generic [ref=e39]:
+        - generic [ref=e40]: C
+        - generic [ref=e41]:
+          - generic [ref=e42]: Carlos ganhou
+          - generic [ref=e43]: +R$ 70,00
+          - generic [ref=e44]: há 2 minutos
+        - img [ref=e45]
+      - generic [ref=e47]:
+        - generic [ref=e48]: A
+        - generic [ref=e49]:
+          - generic [ref=e50]: Ana ganhou
+          - generic [ref=e51]: +R$ 45,00
+          - generic [ref=e52]: há 5 minutos
+        - img [ref=e53]
+      - generic [ref=e55]:
+        - generic [ref=e56]: L
+        - generic [ref=e57]:
+          - generic [ref=e58]: Lucas ganhou
+          - generic [ref=e59]: +R$ 14,00
+          - generic [ref=e60]: há 8 minutos
+        - img [ref=e61]
+  - generic [ref=e64]:
+    - generic [ref=e65]:
+      - generic [ref=e66]: Jackpot do Dia
+      - generic [ref=e67]: R$ 41.683,99
+      - generic [ref=e68]: Reseta em 03:34:40
+      - generic [ref=e69]: O 1o lugar do ranking leva o jackpot!
+    - generic [ref=e70]:
+      - generic [ref=e71]:
+        - generic [ref=e72]:
+          - img [ref=e73]
+          - text: Ranking do Dia
+        - generic [ref=e79]: Top 10
+      - generic [ref=e80]:
+        - generic [ref=e81]:
+          - generic [ref=e82]: 🥇
+          - generic [ref=e83]: C
+          - generic [ref=e85]: Camila R.
+          - generic [ref=e86]:
+            - generic [ref=e87]: R$ 291,63
+            - text: JACKPOT
+        - generic [ref=e88]:
+          - generic [ref=e89]: 🥈
+          - generic [ref=e90]: T
+          - generic [ref=e92]: Thiago F.
+          - generic [ref=e93]:
+            - generic [ref=e94]: R$ 273,76
+            - text: +R$1.000
+        - generic [ref=e95]:
+          - generic [ref=e96]: 🥉
+          - generic [ref=e97]: F
+          - generic [ref=e99]: Fernanda A.
+          - generic [ref=e100]:
+            - generic [ref=e101]: R$ 202,81
+            - text: +R$500
+  - generic [ref=e102]:
+    - generic [ref=e103]:
+      - generic [ref=e104]: "0"
+      - generic [ref=e105]: Jogadores online
+    - generic [ref=e106]:
+      - generic [ref=e107]: R$ 0
+      - generic [ref=e108]: Total pago hoje
+    - generic [ref=e109]:
+      - generic [ref=e110]: R$ 0
+      - generic [ref=e111]: Maior ganho do dia
+  - generic [ref=e113]:
+    - generic [ref=e114]:
+      - heading "Como funciona?" [level=2] [ref=e115]
+      - paragraph [ref=e116]: Simples, rápido e transparente
+    - generic [ref=e117]:
+      - generic [ref=e118]:
+        - generic [ref=e119]: "01"
+        - img [ref=e121]
+        - heading "Defina sua aposta" [level=3] [ref=e123]
+        - paragraph [ref=e124]: Escolha de R$1,00 a R$100,00 e decida o quanto quer arriscar por partida.
+      - generic [ref=e125]:
+        - generic [ref=e126]: "02"
+        - img [ref=e128]
+        - heading "Jogue Helix Jump" [level=3] [ref=e131]
+        - paragraph [ref=e132]: Gire a hélice e guie a bolinha. Evite as peças pretas e alcance 14 plataformas.
+      - generic [ref=e133]:
+        - generic [ref=e134]: "03"
+        - img [ref=e136]
+        - heading "Ganhe 7x" [level=3] [ref=e139]
+        - paragraph [ref=e140]: Alcance a meta e receba 7x o valor apostado no seu saldo. Saque via PIX na hora.
+  - generic [ref=e142]:
+    - generic [ref=e143]:
+      - heading "O que dizem nossos jogadores" [level=2] [ref=e144]
+      - paragraph [ref=e145]: Resultados reais de jogadores reais
+    - generic [ref=e146]:
+      - generic [ref=e147]:
+        - generic [ref=e148]: ★★★★★
+        - paragraph [ref=e149]: "\"Comecei com R$10 e em 3 partidas já tinha R$70. O jogo é justo e o PIX cai na hora. Recomendo muito!\""
+        - generic [ref=e150]:
+          - generic [ref=e151]: A
+          - generic [ref=e152]:
+            - generic [ref=e153]: Ana Paula S.
+            - generic [ref=e154]: Jogadora desde janeiro
+      - generic [ref=e155]:
+        - generic [ref=e156]: ★★★★★
+        - paragraph [ref=e157]: "\"Sou viciado em Helix Jump de qualquer forma, agora ainda ganho dinheiro jogando. Já saquei mais de R$300 esse mês!\""
+        - generic [ref=e158]:
+          - generic [ref=e159]: C
+          - generic [ref=e160]:
+            - generic [ref=e161]: Carlos M.
+            - generic [ref=e162]: Jogador profissional
+      - generic [ref=e163]:
+        - generic [ref=e164]: ★★★★★
+        - paragraph [ref=e165]: "\"Sistema de indicação é incrível. Já ganhei R$20 só indicando amigos e nem precisei jogar. Transparente e confiável.\""
+        - generic [ref=e166]:
+          - generic [ref=e167]: L
+          - generic [ref=e168]:
+            - generic [ref=e169]: Lucas R.
+            - generic [ref=e170]: 4 amigos indicados
+  - generic [ref=e172]:
+    - generic [ref=e173]:
+      - heading "Programa de Afiliados" [level=2] [ref=e174]
+      - paragraph [ref=e175]: Indique amigos e ganhe comissao sobre cada partida deles
+    - generic [ref=e176]:
+      - generic [ref=e177]: 💰
+      - heading "Ganhe dinheiro indicando amigos" [level=3] [ref=e178]
+      - generic [ref=e179]:
+        - generic [ref=e180]:
+          - generic [ref=e181]: 40%
+          - generic [ref=e182]:
+            - text: de comissao em cima da
+            - strong [ref=e183]: perda
+            - text: de cada indicado
+        - generic [ref=e184]:
+          - generic [ref=e185]: 10%
+          - generic [ref=e186]:
+            - text: de comissao em cima do
+            - strong [ref=e187]: ganho
+            - text: de cada indicado
+      - paragraph [ref=e188]:
+        - text: Cadastre-se e faca um deposito minimo de
+        - strong [ref=e189]: R$ 20,00
+        - text: para ativar seu programa de afiliados. Depois disso, compartilhe seu link e ganhe comissao automatica sobre cada partida dos seus indicados. Saque via PIX a qualquer momento.
+      - button "QUERO SER AFILIADO" [ref=e190] [cursor=pointer]:
+        - img [ref=e191]
+        - text: QUERO SER AFILIADO
+  - generic [ref=e194]:
+    - heading "Pronto para girar e ganhar?" [level=2] [ref=e195]
+    - paragraph [ref=e196]: Crie sua conta grátis, deposite a partir de R$10 e comece a ganhar agora.
+    - button "CRIAR CONTA GRÁTIS" [ref=e197] [cursor=pointer]:
+      - img [ref=e198]
+      - text: CRIAR CONTA GRÁTIS
+  - generic [ref=e201]:
+    - generic [ref=e202]:
+      - img [ref=e203]
+      - generic [ref=e206]: HelixWins
+    - generic [ref=e207]:
+      - link "Início" [ref=e208] [cursor=pointer]:
+        - /url: "#"
+      - link "Cadastrar" [ref=e209] [cursor=pointer]:
+        - /url: "#"
+      - link "Entrar" [ref=e210] [cursor=pointer]:
+        - /url: "#"
+      - link "Termos de uso" [ref=e211] [cursor=pointer]:
+        - /url: "#"
+    - generic [ref=e212]:
+      - text: ⚠️ Jogo de entretenimento com apostas. Jogue com responsabilidade. Proibido para menores de 18 anos. Se sentir que o jogo está afetando sua vida, procure ajuda em
+      - strong [ref=e213]: jrc.org.br
+      - text: .
+    - paragraph [ref=e214]:
+      - text: © 2026 HelixWins. Todos os direitos reservados. — Sistema desenvolvido por
+      - strong [ref=e215]: BDSDEV + SLOTSCOMPANY

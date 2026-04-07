@@ -1,0 +1,171 @@
+- generic [active] [ref=e183]:
+  - generic [ref=e184]:
+    - navigation [ref=e187]:
+      - generic [ref=e188]:
+        - generic [ref=e189]:
+          - link "Coolify" [ref=e190] [cursor=pointer]:
+            - /url: /
+          - link "v4.0.0-beta.463" [ref=e191] [cursor=pointer]:
+            - /url: https://github.com/coollabsio/coolify/releases/tag/v4.0.0-beta.463
+        - button / [ref=e193]:
+          - img [ref=e194]
+          - generic [ref=e196]: /
+        - button "Preferences 9+" [ref=e199] [cursor=pointer]:
+          - img "Preferences" [ref=e200]
+          - generic [ref=e202]: 9+
+      - combobox [ref=e205]:
+        - option "Switch team" [disabled]
+        - option "Root Team" [selected]
+        - option "GDR"
+      - list [ref=e206]:
+        - listitem [ref=e207]:
+          - list [ref=e208]:
+            - listitem [ref=e209]:
+              - link "Dashboard" [ref=e210] [cursor=pointer]:
+                - /url: /
+                - img [ref=e211]
+                - generic [ref=e213]: Dashboard
+            - listitem [ref=e214]:
+              - link "Projects" [ref=e215] [cursor=pointer]:
+                - /url: /projects
+                - img [ref=e216]
+                - generic [ref=e221]: Projects
+            - listitem [ref=e222]:
+              - link "Servers" [ref=e223] [cursor=pointer]:
+                - /url: /servers
+                - img [ref=e224]
+                - generic [ref=e229]: Servers
+            - listitem [ref=e230]:
+              - link "Sources" [ref=e231] [cursor=pointer]:
+                - /url: http://187.124.112.164:8000/sources
+                - img [ref=e232]
+                - generic [ref=e234]: Sources
+            - listitem [ref=e235]:
+              - link "Destinations" [ref=e236] [cursor=pointer]:
+                - /url: http://187.124.112.164:8000/destinations
+                - img [ref=e237]
+                - generic [ref=e239]: Destinations
+            - listitem [ref=e240]:
+              - link "S3 Storages" [ref=e241] [cursor=pointer]:
+                - /url: http://187.124.112.164:8000/storages
+                - img [ref=e242]
+                - generic [ref=e247]: S3 Storages
+            - listitem [ref=e248]:
+              - link "Shared Variables" [ref=e249] [cursor=pointer]:
+                - /url: http://187.124.112.164:8000/shared-variables
+                - img [ref=e250]
+                - generic [ref=e254]: Shared Variables
+            - listitem [ref=e255]:
+              - link "Notifications" [ref=e256] [cursor=pointer]:
+                - /url: http://187.124.112.164:8000/notifications/email
+                - img [ref=e257]
+                - generic [ref=e259]: Notifications
+            - listitem [ref=e260]:
+              - link "Keys & Tokens" [ref=e261] [cursor=pointer]:
+                - /url: http://187.124.112.164:8000/security/private-key
+                - img [ref=e262]
+                - generic [ref=e264]: Keys & Tokens
+            - listitem [ref=e265]:
+              - link "Tags" [ref=e266] [cursor=pointer]:
+                - /url: http://187.124.112.164:8000/tags
+                - img [ref=e267]
+                - generic [ref=e271]: Tags
+            - listitem [ref=e272]:
+              - link "Terminal" [ref=e273] [cursor=pointer]:
+                - /url: http://187.124.112.164:8000/terminal
+                - img [ref=e274]
+                - generic [ref=e277]: Terminal
+            - listitem [ref=e278]:
+              - link "Profile" [ref=e279] [cursor=pointer]:
+                - /url: http://187.124.112.164:8000/profile
+                - img [ref=e280]
+                - generic [ref=e285]: Profile
+            - listitem [ref=e286]:
+              - link "Teams" [ref=e287] [cursor=pointer]:
+                - /url: http://187.124.112.164:8000/team
+                - img [ref=e288]
+                - generic [ref=e296]: Teams
+            - listitem [ref=e297]:
+              - link "Settings" [ref=e298] [cursor=pointer]:
+                - /url: /settings
+                - img [ref=e299]
+                - generic [ref=e303]: Settings
+            - listitem [ref=e176]:
+              - generic "New version available" [ref=e177]:
+                - button "Upgrade" [ref=e179] [cursor=pointer]:
+                  - img [ref=e180]
+                  - text: Upgrade
+            - listitem [ref=e304]:
+              - link "Sponsor us" [ref=e305] [cursor=pointer]:
+                - /url: https://coolify.io/sponsorships
+                - img [ref=e306]
+                - generic [ref=e310]: Sponsor us
+            - listitem [ref=e311]:
+              - generic "Send us feedback or get help!" [ref=e314] [cursor=pointer]:
+                - img [ref=e315]
+                - generic [ref=e317]: Feedback
+            - listitem [ref=e318]:
+              - button "Logout" [ref=e320]:
+                - img [ref=e321]
+                - generic [ref=e323]: Logout
+    - main [ref=e324]:
+      - generic [ref=e326]:
+        - generic [ref=e327]:
+          - heading "Security" [level=1] [ref=e328]
+          - generic [ref=e329]: Security related settings.
+          - navigation [ref=e331]:
+            - link "Private Keys" [ref=e332] [cursor=pointer]:
+              - /url: http://187.124.112.164:8000/security/private-key
+              - button "Private Keys" [ref=e333]
+            - link "Cloud Tokens" [ref=e334] [cursor=pointer]:
+              - /url: http://187.124.112.164:8000/security/cloud-tokens
+              - button "Cloud Tokens" [ref=e335]
+            - link "Cloud-Init Scripts" [ref=e336] [cursor=pointer]:
+              - /url: http://187.124.112.164:8000/security/cloud-init-scripts
+              - button "Cloud-Init Scripts" [ref=e337]
+            - link "API Tokens" [ref=e338] [cursor=pointer]:
+              - /url: http://187.124.112.164:8000/security/api-tokens
+              - button "API Tokens" [ref=e339]
+        - generic [ref=e340]:
+          - heading "API Tokens" [level=2] [ref=e341]
+          - generic [ref=e342]: Tokens are created with the current team as scope.
+        - heading "New Token" [level=3] [ref=e343]
+        - generic [ref=e344]:
+          - generic [ref=e345]:
+            - generic [ref=e346]:
+              - generic [ref=e347]:
+                - text: Description
+                - generic [ref=e348]: "*"
+              - textbox [ref=e408]: temp-fix
+            - button "Create" [ref=e350] [cursor=pointer]
+          - generic [ref=e351]:
+            - text: Permissions
+            - img [ref=e354] [cursor=pointer]
+            - generic [ref=e356]: ":"
+            - generic [ref=e358]: root
+          - heading "Token Permissions" [level=4] [ref=e359]
+          - generic [ref=e362]:
+            - generic [ref=e363]:
+              - text: root
+              - img [ref=e366] [cursor=pointer]
+            - checkbox "root" [checked] [ref=e368] [cursor=pointer]
+          - generic [ref=e407]: Root access, be careful!
+        - generic [ref=e409]: Please copy this token now. For your security, it won't be shown again.
+        - generic [ref=e410]: 2|70ag9XBUGCMPK2pc6FQYActYMxicmq06waoMnMPM75171147
+        - heading "Issued Tokens" [level=3] [ref=e397]
+        - generic [ref=e398]:
+          - generic [ref=e411]:
+            - generic [ref=e412]: "Description: temp-fix"
+            - generic [ref=e413]: "Last used: Never"
+            - generic [ref=e414]:
+              - text: "Permissions:"
+              - generic [ref=e415]: root
+            - button "Revoke token" [ref=e417] [cursor=pointer]
+          - generic [ref=e399]:
+            - generic [ref=e400]: "Description: subway-deploy"
+            - generic [ref=e401]: "Last used: 23 hours ago"
+            - generic [ref=e402]:
+              - text: "Permissions:"
+              - generic [ref=e403]: root
+            - button "Revoke token" [ref=e405] [cursor=pointer]
+  - list

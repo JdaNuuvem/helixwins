@@ -1,0 +1,2 @@
+[   11764ms] [ERROR] Access to fetch at 'http://localhost:8899/js/api.js?v=newcheck1775517042930' from origin 'null' has been blocked by CORS policy: The request client is not a secure context and the resource is in more-private address space `loopback`. @ about:blank:0
+[   11765ms] [ERROR] Failed to load resource: net::ERR_FAILED @ http://localhost:8899/js/api.js?v=newcheck1775517042930:0

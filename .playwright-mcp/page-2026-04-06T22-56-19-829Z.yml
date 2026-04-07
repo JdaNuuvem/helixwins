@@ -1,0 +1,5 @@
+- generic [ref=e3]:
+  - heading "Painel do Gerente" [level=2] [ref=e4]
+  - textbox "Telefone" [ref=e5]
+  - textbox "Senha" [ref=e6]
+  - button "Entrar" [ref=e7] [cursor=pointer]

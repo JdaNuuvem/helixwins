@@ -1,0 +1,46 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e497]:
+    - generic [ref=e498]:
+      - img [ref=e499]
+      - generic [ref=e502]: HelixWins
+    - heading "Criar conta grátis" [level=2] [ref=e503]
+    - paragraph [ref=e504]: Preencha os dados e comece a ganhar agora
+    - generic [ref=e505]:
+      - generic [ref=e506]:
+        - generic [ref=e507]: Nome completo
+        - textbox "Seu nome completo" [ref=e508]
+      - generic [ref=e509]:
+        - generic [ref=e510]: Telefone (WhatsApp)
+        - textbox "(11) 99999-0000" [ref=e511]
+      - generic [ref=e512]:
+        - generic [ref=e513]: E-mail (opcional)
+        - textbox "seu@email.com" [ref=e514]
+      - generic [ref=e515]:
+        - generic [ref=e516]: Senha
+        - generic [ref=e517]:
+          - textbox "Mínimo 6 caracteres" [ref=e518]
+          - generic "Mostrar/ocultar senha" [ref=e519] [cursor=pointer]:
+            - img [ref=e520]
+      - generic [ref=e523]:
+        - generic [ref=e524]: Confirmar senha
+        - generic [ref=e525]:
+          - textbox "Repita a senha" [ref=e526]
+          - generic "Mostrar/ocultar senha" [ref=e527] [cursor=pointer]:
+            - img [ref=e528]
+      - generic [ref=e531]:
+        - text: Ao criar conta você concorda com os
+        - strong [ref=e532]: Termos de Uso
+        - text: e confirma ter mais de 18 anos.
+      - button "CRIAR CONTA GRÁTIS" [ref=e533] [cursor=pointer]:
+        - img [ref=e534]
+        - text: CRIAR CONTA GRÁTIS
+    - generic [ref=e537]: Já tem conta? Fazer login
+    - button "Voltar ao início" [ref=e539] [cursor=pointer]:
+      - img [ref=e540]
+      - text: Voltar ao início
+  - generic [ref=e542]:
+    - img [ref=e544]
+    - generic [ref=e546]:
+      - generic [ref=e547]: Carlos
+      - generic [ref=e548]: acabou de sacar
+    - generic [ref=e549]: R$ 50,00

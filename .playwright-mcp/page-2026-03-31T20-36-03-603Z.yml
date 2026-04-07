@@ -1,0 +1,131 @@
+- generic [ref=e1]:
+  - generic [ref=e338]:
+    - generic [ref=e339]: ⚠️
+    - generic [ref=e340]: Informe um CPF válido (11 dígitos).
+  - generic [ref=e189]:
+    - generic [ref=e190]:
+      - generic [ref=e192]:
+        - generic [ref=e193]:
+          - generic [ref=e194]: 🌀
+          - generic [ref=e195]: HelixWins
+        - generic [ref=e196]:
+          - generic [ref=e198] [cursor=pointer]:
+            - generic [ref=e199]:
+              - generic [ref=e200]: Saldo
+              - generic [ref=e201]: R$ 1.000,00
+            - img [ref=e202]
+          - generic "Leonardo dom" [ref=e205] [cursor=pointer]: L
+      - generic [ref=e206]:
+        - generic [ref=e207]:
+          - generic [ref=e208]: Seu saldo disponível
+          - generic [ref=e209]: R$ 1.000,00
+          - generic [ref=e210]:
+            - button "Depositar" [ref=e211] [cursor=pointer]:
+              - img [ref=e212]
+              - text: Depositar
+            - button "Sacar" [ref=e214] [cursor=pointer]:
+              - img [ref=e215]
+              - text: Sacar
+            - button "Indicar" [ref=e217] [cursor=pointer]:
+              - img [ref=e218]
+              - text: Indicar
+        - generic [ref=e222]:
+          - img [ref=e224]
+          - generic [ref=e226]: Acompanhe seu saldo em tempo real no topo da tela.
+        - generic [ref=e227]:
+          - generic [ref=e228]:
+            - generic [ref=e229]:
+              - generic [ref=e230]: INICIAR PARTIDA
+              - generic [ref=e231]: Passe plataformas, acumule dinheiro e escolha quando resgatar!
+            - generic [ref=e232]:
+              - img [ref=e235]
+              - generic [ref=e239]: "227"
+              - generic [ref=e240]: online
+          - generic [ref=e241]:
+            - generic [ref=e242]:
+              - generic [ref=e243]: 🎯
+              - generic [ref=e244]:
+                - text: Meta =
+                - strong [ref=e245]: 4×
+            - generic [ref=e246]:
+              - generic [ref=e247]: ∞
+              - generic [ref=e248]: Plataformas
+          - generic [ref=e249]:
+            - generic [ref=e250]: Valor de entrada
+            - generic [ref=e251]:
+              - button "R$5" [ref=e252] [cursor=pointer]
+              - button "R$10" [ref=e253] [cursor=pointer]
+              - button "R$20" [ref=e254] [cursor=pointer]
+              - button "R$50" [ref=e255] [cursor=pointer]
+              - button "R$100" [ref=e256] [cursor=pointer]
+              - button "R$200" [ref=e257] [cursor=pointer]
+            - generic [ref=e258]:
+              - generic [ref=e259]: R$
+              - spinbutton [ref=e260]
+            - generic [ref=e261]:
+              - generic [ref=e262]:
+                - generic [ref=e263]: Meta de ganho
+                - generic [ref=e264]: R$ 0,00
+              - generic [ref=e265]:
+                - generic [ref=e266]: Por plataforma
+                - generic [ref=e267]: —
+              - generic [ref=e268]:
+                - generic [ref=e269]: Plat. p/ meta
+                - generic [ref=e270]: —
+          - button "JOGAR AGORA" [disabled] [ref=e271]:
+            - img [ref=e272]
+            - text: JOGAR AGORA
+      - navigation [ref=e275]:
+        - button "Jogar" [ref=e276] [cursor=pointer]:
+          - img [ref=e277]
+          - generic [ref=e280]: Jogar
+        - button "Depositar" [ref=e281] [cursor=pointer]:
+          - img [ref=e282]
+          - generic [ref=e284]: Depositar
+        - button "Sacar" [ref=e285] [cursor=pointer]:
+          - img [ref=e286]
+          - generic [ref=e288]: Sacar
+        - button "Indicar" [ref=e289] [cursor=pointer]:
+          - img [ref=e290]
+          - generic [ref=e294]: Indicar
+        - button "Sair" [ref=e295] [cursor=pointer]:
+          - img [ref=e296]
+          - generic [ref=e298]: Sair
+    - generic [ref=e300]:
+      - generic [ref=e301]:
+        - generic [ref=e302]: Depositar via PIX
+        - button "✕" [ref=e303] [cursor=pointer]
+      - generic [ref=e304]:
+        - generic [ref=e305]:
+          - button "R$20" [ref=e306] [cursor=pointer]
+          - button "R$50 2x" [ref=e307] [cursor=pointer]:
+            - text: R$50
+            - generic [ref=e308]: 2x
+          - button "R$100 2x" [ref=e309] [cursor=pointer]:
+            - text: R$100
+            - generic [ref=e310]: 2x
+          - button "R$200" [ref=e311] [cursor=pointer]
+          - button "R$300" [ref=e312] [cursor=pointer]
+          - button "R$500" [ref=e313] [cursor=pointer]
+        - generic [ref=e314]:
+          - generic [ref=e315]: R$
+          - spinbutton [ref=e316]: "50"
+        - generic [ref=e317]:
+          - generic [ref=e318]: CPF
+          - textbox "000.000.000-00" [ref=e319]
+        - generic [ref=e333]:
+          - generic [ref=e334]: BÔNUS 2x
+          - generic [ref=e335]: + R$ 50,00
+          - generic [ref=e336]:
+            - text: "💰 Total na conta:"
+            - strong [ref=e337]: R$ 100,00
+        - generic [ref=e321] [cursor=pointer]:
+          - img [ref=e322]
+          - text: Tenho um cupom
+        - button "Gerar QR Code PIX" [active] [ref=e324] [cursor=pointer]
+  - generic [ref=e341]:
+    - img [ref=e343]
+    - generic [ref=e345]:
+      - generic [ref=e346]: Fernanda
+      - generic [ref=e347]: acabou de sacar
+    - generic [ref=e348]: R$ 100,00

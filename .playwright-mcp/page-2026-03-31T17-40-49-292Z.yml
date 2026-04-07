@@ -1,0 +1,9 @@
+- generic [ref=e2]:
+  - heading "Acesso" [level=2] [ref=e3]
+  - generic [ref=e4]:
+    - generic [ref=e5]: Usuario
+    - textbox [ref=e6]
+  - generic [ref=e7]:
+    - generic [ref=e8]: Senha
+    - textbox [ref=e9]
+  - button "Entrar" [ref=e10] [cursor=pointer]

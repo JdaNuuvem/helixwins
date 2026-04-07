@@ -408,7 +408,15 @@ function renderJogo(container) {
   let _dificuldadeAtual       = null; // sobrescreve a dificuldade da partida após revive
 
   // Escalada de dificuldade ao reviver: cada vida usada = +1 nível
-  const _ESCALADA_DIF = { super_facil: 'facil', facil: 'normal', normal: 'dificil', dificil: 'dificil' };
+  // Qualquer dificuldade abaixo de normal vira normal no primeiro revive
+  const _ESCALADA_DIF = {
+    super_facil:   'normal',
+    facil:         'normal',
+    normal:        'dificil',
+    dificil:       'muito_dificil',
+    muito_dificil: 'impossivel',
+    impossivel:    'impossivel',
+  };
 
   // ── Carregar dados da partida do sessionStorage ───────────────────────────
   try {

@@ -1,0 +1,409 @@
+- generic [active] [ref=e453]:
+  - generic [ref=e454]:
+    - navigation [ref=e457]:
+      - generic [ref=e458]:
+        - generic [ref=e459]:
+          - link "Coolify" [ref=e460] [cursor=pointer]:
+            - /url: /
+          - link "v4.0.0-beta.463" [ref=e461] [cursor=pointer]:
+            - /url: https://github.com/coollabsio/coolify/releases/tag/v4.0.0-beta.463
+        - button / [ref=e463]:
+          - img [ref=e464]
+          - generic [ref=e466]: /
+        - button "Preferences 9+" [ref=e469] [cursor=pointer]:
+          - img "Preferences" [ref=e470]
+          - generic [ref=e472]: 9+
+      - combobox [ref=e475]:
+        - option "Switch team" [disabled]
+        - option "Root Team" [selected]
+        - option "GDR"
+      - list [ref=e476]:
+        - listitem [ref=e477]:
+          - list [ref=e478]:
+            - listitem [ref=e479]:
+              - link "Dashboard" [ref=e480] [cursor=pointer]:
+                - /url: /
+                - img [ref=e481]
+                - generic [ref=e483]: Dashboard
+            - listitem [ref=e484]:
+              - link "Projects" [ref=e485] [cursor=pointer]:
+                - /url: /projects
+                - img [ref=e486]
+                - generic [ref=e491]: Projects
+            - listitem [ref=e492]:
+              - link "Servers" [ref=e493] [cursor=pointer]:
+                - /url: /servers
+                - img [ref=e494]
+                - generic [ref=e499]: Servers
+            - listitem [ref=e500]:
+              - link "Sources" [ref=e501] [cursor=pointer]:
+                - /url: http://187.124.112.164:8000/sources
+                - img [ref=e502]
+                - generic [ref=e504]: Sources
+            - listitem [ref=e505]:
+              - link "Destinations" [ref=e506] [cursor=pointer]:
+                - /url: http://187.124.112.164:8000/destinations
+                - img [ref=e507]
+                - generic [ref=e509]: Destinations
+            - listitem [ref=e510]:
+              - link "S3 Storages" [ref=e511] [cursor=pointer]:
+                - /url: http://187.124.112.164:8000/storages
+                - img [ref=e512]
+                - generic [ref=e517]: S3 Storages
+            - listitem [ref=e518]:
+              - link "Shared Variables" [ref=e519] [cursor=pointer]:
+                - /url: http://187.124.112.164:8000/shared-variables
+                - img [ref=e520]
+                - generic [ref=e524]: Shared Variables
+            - listitem [ref=e525]:
+              - link "Notifications" [ref=e526] [cursor=pointer]:
+                - /url: http://187.124.112.164:8000/notifications/email
+                - img [ref=e527]
+                - generic [ref=e529]: Notifications
+            - listitem [ref=e530]:
+              - link "Keys & Tokens" [ref=e531] [cursor=pointer]:
+                - /url: http://187.124.112.164:8000/security/private-key
+                - img [ref=e532]
+                - generic [ref=e534]: Keys & Tokens
+            - listitem [ref=e535]:
+              - link "Tags" [ref=e536] [cursor=pointer]:
+                - /url: http://187.124.112.164:8000/tags
+                - img [ref=e537]
+                - generic [ref=e541]: Tags
+            - listitem [ref=e542]:
+              - link "Terminal" [ref=e543] [cursor=pointer]:
+                - /url: http://187.124.112.164:8000/terminal
+                - img [ref=e544]
+                - generic [ref=e547]: Terminal
+            - listitem [ref=e548]:
+              - link "Profile" [ref=e549] [cursor=pointer]:
+                - /url: http://187.124.112.164:8000/profile
+                - img [ref=e550]
+                - generic [ref=e555]: Profile
+            - listitem [ref=e556]:
+              - link "Teams" [ref=e557] [cursor=pointer]:
+                - /url: http://187.124.112.164:8000/team
+                - img [ref=e558]
+                - generic [ref=e566]: Teams
+            - listitem [ref=e567]:
+              - link "Settings" [ref=e568] [cursor=pointer]:
+                - /url: /settings
+                - img [ref=e569]
+                - generic [ref=e573]: Settings
+            - listitem [ref=e150]:
+              - generic "New version available" [ref=e151]:
+                - button "Upgrade" [ref=e153] [cursor=pointer]:
+                  - img [ref=e154]
+                  - text: Upgrade
+            - listitem [ref=e574]:
+              - link "Sponsor us" [ref=e575] [cursor=pointer]:
+                - /url: https://coolify.io/sponsorships
+                - img [ref=e576]
+                - generic [ref=e580]: Sponsor us
+            - listitem [ref=e581]:
+              - generic "Send us feedback or get help!" [ref=e584] [cursor=pointer]:
+                - img [ref=e585]
+                - generic [ref=e587]: Feedback
+            - listitem [ref=e588]:
+              - button "Logout" [ref=e590]:
+                - img [ref=e591]
+                - generic [ref=e593]: Logout
+    - main [ref=e594]:
+      - generic [ref=e596]:
+        - heading "Configuration" [level=1] [ref=e597]
+        - navigation [ref=e598]:
+          - navigation [ref=e599]:
+            - list [ref=e600]:
+              - listitem [ref=e601]:
+                - generic [ref=e602]:
+                  - link "HelixWins" [ref=e603] [cursor=pointer]:
+                    - /url: http://187.124.112.164:8000/project/uc8sws8gk448wo0g004kk8s4
+                  - button [ref=e604]:
+                    - img [ref=e605]
+              - listitem [ref=e607]:
+                - generic [ref=e608]:
+                  - link "production" [ref=e609] [cursor=pointer]:
+                    - /url: http://187.124.112.164:8000/project/uc8sws8gk448wo0g004kk8s4/environment/bo08sk80o04sgwkk0g0ccgs8
+                  - button [ref=e610]:
+                    - img [ref=e611]
+              - listitem [ref=e613]:
+                - generic [ref=e614]:
+                  - link "HelixWins (localhost)" [ref=e615] [cursor=pointer]:
+                    - /url: http://187.124.112.164:8000/project/uc8sws8gk448wo0g004kk8s4/environment/bo08sk80o04sgwkk0g0ccgs8/application/ogg000oo4g8s4kkw4wggw4w0
+                  - button [ref=e616]:
+                    - img [ref=e617]
+              - generic [ref=e619]:
+                - link "Running" [ref=e622] [cursor=pointer]:
+                  - /url: https://github.com/JdaNuuvem/helixwins/commit/8fe2953c89bc7560d482fab5d3d2b02ce4927fd6
+                - generic [ref=e623]: (unknown)
+                - img [ref=e627] [cursor=pointer]
+              - button "Refresh Status" [ref=e628]:
+                - img [ref=e629]
+          - generic [ref=e631]:
+            - navigation [ref=e632]:
+              - link "Configuration" [ref=e633] [cursor=pointer]:
+                - /url: http://187.124.112.164:8000/project/uc8sws8gk448wo0g004kk8s4/environment/bo08sk80o04sgwkk0g0ccgs8/application/ogg000oo4g8s4kkw4wggw4w0
+              - link "Deployments" [ref=e634] [cursor=pointer]:
+                - /url: http://187.124.112.164:8000/project/uc8sws8gk448wo0g004kk8s4/environment/bo08sk80o04sgwkk0g0ccgs8/application/ogg000oo4g8s4kkw4wggw4w0/deployment
+              - link "Logs" [ref=e635] [cursor=pointer]:
+                - /url: http://187.124.112.164:8000/project/uc8sws8gk448wo0g004kk8s4/environment/bo08sk80o04sgwkk0g0ccgs8/application/ogg000oo4g8s4kkw4wggw4w0/logs
+                - generic [ref=e636]: Logs
+              - link "Terminal" [ref=e637] [cursor=pointer]:
+                - /url: http://187.124.112.164:8000/project/uc8sws8gk448wo0g004kk8s4/environment/bo08sk80o04sgwkk0g0ccgs8/application/ogg000oo4g8s4kkw4wggw4w0/terminal
+              - button "Links" [ref=e639]:
+                - generic [ref=e640]: Links
+                - img [ref=e641]
+            - generic [ref=e643]:
+              - button "Advanced" [ref=e646]:
+                - generic [ref=e647]: Advanced
+                - img [ref=e648]
+              - generic [ref=e650]:
+                - button "Redeploy" [ref=e651] [cursor=pointer]:
+                  - img [ref=e652]
+                  - text: Redeploy
+                - button "Restart" [ref=e654] [cursor=pointer]:
+                  - img [ref=e655]
+                  - text: Restart
+                - button "Stop" [ref=e660] [cursor=pointer]:
+                  - img [ref=e661]
+                  - text: Stop
+        - generic [ref=e663]:
+          - generic [ref=e664]:
+            - link "General" [ref=e665] [cursor=pointer]:
+              - /url: http://187.124.112.164:8000/project/uc8sws8gk448wo0g004kk8s4/environment/bo08sk80o04sgwkk0g0ccgs8/application/ogg000oo4g8s4kkw4wggw4w0
+              - generic [ref=e666]: General
+            - link "Advanced" [ref=e667] [cursor=pointer]:
+              - /url: http://187.124.112.164:8000/project/uc8sws8gk448wo0g004kk8s4/environment/bo08sk80o04sgwkk0g0ccgs8/application/ogg000oo4g8s4kkw4wggw4w0/advanced
+              - generic [ref=e668]: Advanced
+            - link "Environment Variables" [ref=e669] [cursor=pointer]:
+              - /url: http://187.124.112.164:8000/project/uc8sws8gk448wo0g004kk8s4/environment/bo08sk80o04sgwkk0g0ccgs8/application/ogg000oo4g8s4kkw4wggw4w0/environment-variables
+              - generic [ref=e670]: Environment Variables
+            - link "Persistent Storage" [ref=e671] [cursor=pointer]:
+              - /url: http://187.124.112.164:8000/project/uc8sws8gk448wo0g004kk8s4/environment/bo08sk80o04sgwkk0g0ccgs8/application/ogg000oo4g8s4kkw4wggw4w0/persistent-storage
+              - generic [ref=e672]: Persistent Storage
+            - link "Git Source" [ref=e673] [cursor=pointer]:
+              - /url: http://187.124.112.164:8000/project/uc8sws8gk448wo0g004kk8s4/environment/bo08sk80o04sgwkk0g0ccgs8/application/ogg000oo4g8s4kkw4wggw4w0/source
+              - generic [ref=e674]: Git Source
+            - link "Servers" [ref=e675] [cursor=pointer]:
+              - /url: http://187.124.112.164:8000/project/uc8sws8gk448wo0g004kk8s4/environment/bo08sk80o04sgwkk0g0ccgs8/application/ogg000oo4g8s4kkw4wggw4w0/servers
+              - generic [ref=e676]: Servers
+            - link "Scheduled Tasks" [ref=e677] [cursor=pointer]:
+              - /url: http://187.124.112.164:8000/project/uc8sws8gk448wo0g004kk8s4/environment/bo08sk80o04sgwkk0g0ccgs8/application/ogg000oo4g8s4kkw4wggw4w0/scheduled-tasks
+              - generic [ref=e678]: Scheduled Tasks
+            - link "Webhooks" [ref=e679] [cursor=pointer]:
+              - /url: http://187.124.112.164:8000/project/uc8sws8gk448wo0g004kk8s4/environment/bo08sk80o04sgwkk0g0ccgs8/application/ogg000oo4g8s4kkw4wggw4w0/webhooks
+              - generic [ref=e680]: Webhooks
+            - link "Preview Deployments" [ref=e681] [cursor=pointer]:
+              - /url: http://187.124.112.164:8000/project/uc8sws8gk448wo0g004kk8s4/environment/bo08sk80o04sgwkk0g0ccgs8/application/ogg000oo4g8s4kkw4wggw4w0/preview-deployments
+              - generic [ref=e682]: Preview Deployments
+            - link "Healthcheck" [ref=e683] [cursor=pointer]:
+              - /url: http://187.124.112.164:8000/project/uc8sws8gk448wo0g004kk8s4/environment/bo08sk80o04sgwkk0g0ccgs8/application/ogg000oo4g8s4kkw4wggw4w0/healthcheck
+              - generic [ref=e684]: Healthcheck
+            - link "Rollback" [ref=e685] [cursor=pointer]:
+              - /url: http://187.124.112.164:8000/project/uc8sws8gk448wo0g004kk8s4/environment/bo08sk80o04sgwkk0g0ccgs8/application/ogg000oo4g8s4kkw4wggw4w0/rollback
+              - generic [ref=e686]: Rollback
+            - link "Resource Limits" [ref=e687] [cursor=pointer]:
+              - /url: http://187.124.112.164:8000/project/uc8sws8gk448wo0g004kk8s4/environment/bo08sk80o04sgwkk0g0ccgs8/application/ogg000oo4g8s4kkw4wggw4w0/resource-limits
+              - generic [ref=e688]: Resource Limits
+            - link "Resource Operations" [ref=e689] [cursor=pointer]:
+              - /url: http://187.124.112.164:8000/project/uc8sws8gk448wo0g004kk8s4/environment/bo08sk80o04sgwkk0g0ccgs8/application/ogg000oo4g8s4kkw4wggw4w0/resource-operations
+              - generic [ref=e690]: Resource Operations
+            - link "Metrics" [ref=e691] [cursor=pointer]:
+              - /url: http://187.124.112.164:8000/project/uc8sws8gk448wo0g004kk8s4/environment/bo08sk80o04sgwkk0g0ccgs8/application/ogg000oo4g8s4kkw4wggw4w0/metrics
+              - generic [ref=e692]: Metrics
+            - link "Tags" [ref=e693] [cursor=pointer]:
+              - /url: http://187.124.112.164:8000/project/uc8sws8gk448wo0g004kk8s4/environment/bo08sk80o04sgwkk0g0ccgs8/application/ogg000oo4g8s4kkw4wggw4w0/tags
+              - generic [ref=e694]: Tags
+            - link "Danger Zone" [ref=e695] [cursor=pointer]:
+              - /url: http://187.124.112.164:8000/project/uc8sws8gk448wo0g004kk8s4/environment/bo08sk80o04sgwkk0g0ccgs8/application/ogg000oo4g8s4kkw4wggw4w0/danger
+              - generic [ref=e696]: Danger Zone
+          - generic [ref=e699]:
+            - generic [ref=e700]:
+              - heading "General" [level=2] [ref=e701]
+              - button "Save" [ref=e702] [cursor=pointer]
+            - generic [ref=e703]: General configuration for your application.
+            - generic [ref=e704]:
+              - generic [ref=e705]:
+                - generic [ref=e706]:
+                  - generic [ref=e707]:
+                    - text: Name
+                    - generic [ref=e708]: "*"
+                  - textbox [ref=e709]: HelixWins
+                - generic [ref=e710]:
+                  - generic [ref=e711]: Description
+                  - textbox [ref=e712]
+              - generic [ref=e715]:
+                - generic [ref=e716]:
+                  - text: Build Pack
+                  - generic [ref=e717]: "*"
+                - combobox [ref=e718]:
+                  - option "Nixpacks"
+                  - option "Static"
+                  - option "Dockerfile" [selected]
+                  - option "Docker Compose"
+              - generic [ref=e720]:
+                - generic [ref=e721]:
+                  - generic [ref=e722]:
+                    - text: Domains
+                    - img [ref=e725] [cursor=pointer]
+                  - textbox "https://coolify.io" [ref=e727]: https://helixblinkowins.site
+                - button "Generate Domain" [ref=e728] [cursor=pointer]
+              - generic [ref=e729]:
+                - generic [ref=e730]:
+                  - generic [ref=e731]:
+                    - text: Direction
+                    - generic [ref=e732]: "*"
+                    - img [ref=e735] [cursor=pointer]
+                  - combobox [ref=e737]:
+                    - option "Allow www & non-www." [selected]
+                    - option "Redirect to www."
+                    - option "Redirect to non-www."
+                - button "Set Direction" [ref=e739] [cursor=pointer]:
+                  - generic [ref=e740]: Set Direction
+              - generic [ref=e741]:
+                - heading "Docker Registry" [level=3] [ref=e742]
+                - img [ref=e745] [cursor=pointer]
+              - generic [ref=e747]:
+                - generic [ref=e748]:
+                  - generic [ref=e749]:
+                    - text: Docker Image
+                    - img [ref=e752] [cursor=pointer]
+                  - textbox "Empty means it won't push the image to a docker registry." [ref=e754]
+                - generic [ref=e755]:
+                  - generic [ref=e756]:
+                    - text: Docker Image Tag
+                    - img [ref=e759] [cursor=pointer]
+                  - textbox "Empty means only push commit sha tag." [ref=e761]
+              - generic [ref=e762]:
+                - heading "Build" [level=3] [ref=e763]
+                - generic [ref=e764]:
+                  - generic [ref=e765]:
+                    - generic [ref=e766]:
+                      - generic [ref=e767]:
+                        - text: Base Directory
+                        - img [ref=e770] [cursor=pointer]
+                      - textbox / [ref=e772]
+                    - generic [ref=e773]:
+                      - generic [ref=e774]:
+                        - text: Dockerfile Location
+                        - img [ref=e777] [cursor=pointer]
+                      - textbox "/Dockerfile" [ref=e779]
+                    - generic [ref=e780]:
+                      - generic [ref=e781]:
+                        - text: Docker Build Stage Target
+                        - img [ref=e784] [cursor=pointer]
+                      - textbox [ref=e786]
+                  - generic [ref=e788]:
+                    - generic [ref=e789]:
+                      - text: Watch Paths
+                      - img [ref=e792] [cursor=pointer]
+                    - textbox "src/pages/**" [ref=e794]
+                  - generic [ref=e795]:
+                    - generic [ref=e796]:
+                      - text: Custom Docker Options
+                      - img [ref=e799] [cursor=pointer]
+                    - textbox "--cap-add SYS_ADMIN --device=/dev/fuse --security-opt apparmor:unconfined --ulimit nofile=1024:1024 --tmpfs /run:rw,noexec,nosuid,size=65536k --hostname=myapp" [ref=e801]
+                  - generic [ref=e804]:
+                    - generic [ref=e805]:
+                      - text: Use a Build Server?
+                      - img [ref=e808] [cursor=pointer]
+                    - checkbox "Use a Build Server?" [ref=e810] [cursor=pointer]
+              - heading "Network" [level=3] [ref=e811]
+              - generic [ref=e812]:
+                - img [ref=e813]
+                - generic [ref=e815]:
+                  - text: PORT environment variable configured
+                  - paragraph [ref=e816]: Your PORT environment variable (8888) matches your Ports Exposes configuration.
+              - generic [ref=e817]:
+                - generic [ref=e818]:
+                  - generic [ref=e819]:
+                    - text: Ports Exposes
+                    - generic [ref=e820]: "*"
+                    - img [ref=e823] [cursor=pointer]
+                  - textbox "3000,3001" [ref=e825]: "8888"
+                - generic [ref=e826]:
+                  - generic [ref=e827]:
+                    - text: Port Mappings
+                    - img [ref=e830] [cursor=pointer]
+                  - textbox "3000:3000" [ref=e832]
+                - generic [ref=e833]:
+                  - generic [ref=e834]:
+                    - text: Network Aliases
+                    - img [ref=e837] [cursor=pointer]
+                  - textbox [ref=e839]
+              - heading "HTTP Basic Authentication" [level=3] [ref=e840]
+              - generic [ref=e844]:
+                - generic [ref=e845]:
+                  - text: Enable
+                  - img [ref=e848] [cursor=pointer]
+                - checkbox "Enable" [ref=e850] [cursor=pointer]
+              - generic [ref=e851]:
+                - generic [ref=e852]: Container Labels
+                - code [ref=e857]:
+                  - generic [ref=e858]:
+                    - generic [ref=e860]:
+                      - generic [ref=e863]: "1"
+                      - generic [ref=e865]: "2"
+                      - generic [ref=e867]: "3"
+                      - generic [ref=e869]: "4"
+                      - generic [ref=e871]: "5"
+                      - generic [ref=e873]: "6"
+                      - generic [ref=e875]: "7"
+                      - generic [ref=e877]: "8"
+                      - generic [ref=e879]: "9"
+                      - generic [ref=e881]: "10"
+                      - generic [ref=e883]: "11"
+                      - generic [ref=e885]: "12"
+                      - generic [ref=e887]: "13"
+                      - generic [ref=e889]: "14"
+                      - generic [ref=e891]: "15"
+                      - generic [ref=e893]: "16"
+                      - generic [ref=e895]: "17"
+                      - generic [ref=e897]: "18"
+                    - generic [ref=e918]:
+                      - generic [ref=e920]: traefik.enable=true
+                      - generic [ref=e922]: traefik.http.middlewares.gzip.compress=true
+                      - generic [ref=e924]: traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https
+                      - generic [ref=e926]: traefik.http.routers.http-0-ogg000oo4g8s4kkw4wggw4w0.entryPoints=http
+                      - generic [ref=e928]: traefik.http.routers.http-0-ogg000oo4g8s4kkw4wggw4w0.middlewares=redirect-to-https
+                      - generic [ref=e930]: "traefik.http.routers.http-0-ogg000oo4g8s4kkw4wggw4w0.rule=Host(`helixblinkowins.site`) && PathPrefix(`/`)"
+                      - generic [ref=e932]: traefik.http.routers.http-0-ogg000oo4g8s4kkw4wggw4w0.service=http-0-ogg000oo4g8s4kkw4wggw4w0
+                      - generic [ref=e934]: traefik.http.routers.https-0-ogg000oo4g8s4kkw4wggw4w0.entryPoints=https
+                      - generic [ref=e936]: traefik.http.routers.https-0-ogg000oo4g8s4kkw4wggw4w0.middlewares=gzip
+                      - generic [ref=e938]: "traefik.http.routers.https-0-ogg000oo4g8s4kkw4wggw4w0.rule=Host(`helixblinkowins.site`) && PathPrefix(`/`)"
+                      - generic [ref=e940]: traefik.http.routers.https-0-ogg000oo4g8s4kkw4wggw4w0.service=https-0-ogg000oo4g8s4kkw4wggw4w0
+                      - generic [ref=e942]: traefik.http.routers.https-0-ogg000oo4g8s4kkw4wggw4w0.tls.certresolver=letsencrypt
+                      - generic [ref=e944]: traefik.http.routers.https-0-ogg000oo4g8s4kkw4wggw4w0.tls=true
+                      - generic [ref=e946]: traefik.http.services.http-0-ogg000oo4g8s4kkw4wggw4w0.loadbalancer.server.port=8888
+                      - generic [ref=e948]: traefik.http.services.https-0-ogg000oo4g8s4kkw4wggw4w0.loadbalancer.server.port=8888
+                      - generic [ref=e950]: caddy_0.encode=zstd gzip
+                      - generic [ref=e952]: "caddy_0.handle_path.0_reverse_proxy={{upstreams 8888}}"
+                      - generic [ref=e954]: caddy_0.handle_path=/*
+                    - textbox "Editor content" [ref=e958]
+              - generic [ref=e959]:
+                - generic [ref=e961]:
+                  - generic [ref=e962]:
+                    - text: Readonly labels
+                    - img [ref=e965] [cursor=pointer]
+                  - checkbox "Readonly labels" [checked] [ref=e967] [cursor=pointer]
+                - generic [ref=e969]:
+                  - generic [ref=e970]:
+                    - text: Escape special characters in labels?
+                    - img [ref=e973] [cursor=pointer]
+                  - checkbox "Escape special characters in labels?" [checked] [ref=e975] [cursor=pointer]
+              - button "Reset Labels to Defaults" [ref=e977] [cursor=pointer]
+              - heading "Pre/Post Deployment Commands" [level=3] [ref=e978]
+              - generic [ref=e980]:
+                - generic [ref=e981]:
+                  - text: Pre-deployment
+                  - img [ref=e984] [cursor=pointer]
+                - textbox "php artisan migrate" [ref=e986]
+              - generic [ref=e988]:
+                - generic [ref=e989]:
+                  - text: Post-deployment
+                  - img [ref=e992] [cursor=pointer]
+                - textbox "php artisan migrate" [ref=e994]
+  - list
+  - generic [ref=e995]:
+    - alert
+    - alert

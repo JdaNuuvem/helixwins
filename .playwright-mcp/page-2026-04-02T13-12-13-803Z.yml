@@ -1,0 +1,253 @@
+- generic [active] [ref=e1002]:
+  - generic [ref=e1003]:
+    - navigation [ref=e1006]:
+      - generic [ref=e1007]:
+        - generic [ref=e1008]:
+          - link "Coolify" [ref=e1009] [cursor=pointer]:
+            - /url: /
+          - link "v4.0.0-beta.463" [ref=e1010] [cursor=pointer]:
+            - /url: https://github.com/coollabsio/coolify/releases/tag/v4.0.0-beta.463
+        - button / [ref=e1012]:
+          - img [ref=e1013]
+          - generic [ref=e1015]: /
+        - button "Preferences 9+" [ref=e1018] [cursor=pointer]:
+          - img "Preferences" [ref=e1019]
+          - generic [ref=e1021]: 9+
+      - combobox [ref=e1024]:
+        - option "Switch team" [disabled]
+        - option "Root Team" [selected]
+        - option "GDR"
+      - list [ref=e1025]:
+        - listitem [ref=e1026]:
+          - list [ref=e1027]:
+            - listitem [ref=e1028]:
+              - link "Dashboard" [ref=e1029] [cursor=pointer]:
+                - /url: /
+                - img [ref=e1030]
+                - generic [ref=e1032]: Dashboard
+            - listitem [ref=e1033]:
+              - link "Projects" [ref=e1034] [cursor=pointer]:
+                - /url: /projects
+                - img [ref=e1035]
+                - generic [ref=e1040]: Projects
+            - listitem [ref=e1041]:
+              - link "Servers" [ref=e1042] [cursor=pointer]:
+                - /url: /servers
+                - img [ref=e1043]
+                - generic [ref=e1048]: Servers
+            - listitem [ref=e1049]:
+              - link "Sources" [ref=e1050] [cursor=pointer]:
+                - /url: http://187.124.112.164:8000/sources
+                - img [ref=e1051]
+                - generic [ref=e1053]: Sources
+            - listitem [ref=e1054]:
+              - link "Destinations" [ref=e1055] [cursor=pointer]:
+                - /url: http://187.124.112.164:8000/destinations
+                - img [ref=e1056]
+                - generic [ref=e1058]: Destinations
+            - listitem [ref=e1059]:
+              - link "S3 Storages" [ref=e1060] [cursor=pointer]:
+                - /url: http://187.124.112.164:8000/storages
+                - img [ref=e1061]
+                - generic [ref=e1066]: S3 Storages
+            - listitem [ref=e1067]:
+              - link "Shared Variables" [ref=e1068] [cursor=pointer]:
+                - /url: http://187.124.112.164:8000/shared-variables
+                - img [ref=e1069]
+                - generic [ref=e1073]: Shared Variables
+            - listitem [ref=e1074]:
+              - link "Notifications" [ref=e1075] [cursor=pointer]:
+                - /url: http://187.124.112.164:8000/notifications/email
+                - img [ref=e1076]
+                - generic [ref=e1078]: Notifications
+            - listitem [ref=e1079]:
+              - link "Keys & Tokens" [ref=e1080] [cursor=pointer]:
+                - /url: http://187.124.112.164:8000/security/private-key
+                - img [ref=e1081]
+                - generic [ref=e1083]: Keys & Tokens
+            - listitem [ref=e1084]:
+              - link "Tags" [ref=e1085] [cursor=pointer]:
+                - /url: http://187.124.112.164:8000/tags
+                - img [ref=e1086]
+                - generic [ref=e1090]: Tags
+            - listitem [ref=e1091]:
+              - link "Terminal" [ref=e1092] [cursor=pointer]:
+                - /url: http://187.124.112.164:8000/terminal
+                - img [ref=e1093]
+                - generic [ref=e1096]: Terminal
+            - listitem [ref=e1097]:
+              - link "Profile" [ref=e1098] [cursor=pointer]:
+                - /url: http://187.124.112.164:8000/profile
+                - img [ref=e1099]
+                - generic [ref=e1104]: Profile
+            - listitem [ref=e1105]:
+              - link "Teams" [ref=e1106] [cursor=pointer]:
+                - /url: http://187.124.112.164:8000/team
+                - img [ref=e1107]
+                - generic [ref=e1115]: Teams
+            - listitem [ref=e1116]:
+              - link "Settings" [ref=e1117] [cursor=pointer]:
+                - /url: /settings
+                - img [ref=e1118]
+                - generic [ref=e1122]: Settings
+            - listitem [ref=e150]:
+              - generic "New version available" [ref=e151]:
+                - button "Upgrade" [ref=e153] [cursor=pointer]:
+                  - img [ref=e154]
+                  - text: Upgrade
+            - listitem [ref=e1123]:
+              - link "Sponsor us" [ref=e1124] [cursor=pointer]:
+                - /url: https://coolify.io/sponsorships
+                - img [ref=e1125]
+                - generic [ref=e1129]: Sponsor us
+            - listitem [ref=e1130]:
+              - generic "Send us feedback or get help!" [ref=e1133] [cursor=pointer]:
+                - img [ref=e1134]
+                - generic [ref=e1136]: Feedback
+            - listitem [ref=e1137]:
+              - button "Logout" [ref=e1139]:
+                - img [ref=e1140]
+                - generic [ref=e1142]: Logout
+    - main [ref=e1143]:
+      - generic [ref=e1145]:
+        - heading "Configuration" [level=1] [ref=e1146]
+        - navigation [ref=e1147]:
+          - navigation [ref=e1148]:
+            - list [ref=e1149]:
+              - listitem [ref=e1150]:
+                - generic [ref=e1151]:
+                  - link "HelixWins" [ref=e1152] [cursor=pointer]:
+                    - /url: http://187.124.112.164:8000/project/uc8sws8gk448wo0g004kk8s4
+                  - button [ref=e1153]:
+                    - img [ref=e1154]
+              - listitem [ref=e1156]:
+                - generic [ref=e1157]:
+                  - link "production" [ref=e1158] [cursor=pointer]:
+                    - /url: http://187.124.112.164:8000/project/uc8sws8gk448wo0g004kk8s4/environment/bo08sk80o04sgwkk0g0ccgs8
+                  - button [ref=e1159]:
+                    - img [ref=e1160]
+              - listitem [ref=e1162]:
+                - generic [ref=e1163]:
+                  - link "HelixWins (localhost)" [ref=e1164] [cursor=pointer]:
+                    - /url: http://187.124.112.164:8000/project/uc8sws8gk448wo0g004kk8s4/environment/bo08sk80o04sgwkk0g0ccgs8/application/ogg000oo4g8s4kkw4wggw4w0
+                  - button [ref=e1165]:
+                    - img [ref=e1166]
+              - generic [ref=e1168]:
+                - link "Running" [ref=e1171] [cursor=pointer]:
+                  - /url: https://github.com/JdaNuuvem/helixwins/commit/8fe2953c89bc7560d482fab5d3d2b02ce4927fd6
+                - generic [ref=e1172]: (unknown)
+                - img [ref=e1176] [cursor=pointer]
+              - button "Refresh Status" [ref=e1177]:
+                - img [ref=e1178]
+          - generic [ref=e1180]:
+            - navigation [ref=e1181]:
+              - link "Configuration" [ref=e1182] [cursor=pointer]:
+                - /url: http://187.124.112.164:8000/project/uc8sws8gk448wo0g004kk8s4/environment/bo08sk80o04sgwkk0g0ccgs8/application/ogg000oo4g8s4kkw4wggw4w0
+              - link "Deployments" [ref=e1183] [cursor=pointer]:
+                - /url: http://187.124.112.164:8000/project/uc8sws8gk448wo0g004kk8s4/environment/bo08sk80o04sgwkk0g0ccgs8/application/ogg000oo4g8s4kkw4wggw4w0/deployment
+              - link "Logs" [ref=e1184] [cursor=pointer]:
+                - /url: http://187.124.112.164:8000/project/uc8sws8gk448wo0g004kk8s4/environment/bo08sk80o04sgwkk0g0ccgs8/application/ogg000oo4g8s4kkw4wggw4w0/logs
+                - generic [ref=e1185]: Logs
+              - link "Terminal" [ref=e1186] [cursor=pointer]:
+                - /url: http://187.124.112.164:8000/project/uc8sws8gk448wo0g004kk8s4/environment/bo08sk80o04sgwkk0g0ccgs8/application/ogg000oo4g8s4kkw4wggw4w0/terminal
+              - button "Links" [ref=e1188]:
+                - generic [ref=e1189]: Links
+                - img [ref=e1190]
+            - generic [ref=e1192]:
+              - button "Advanced" [ref=e1195]:
+                - generic [ref=e1196]: Advanced
+                - img [ref=e1197]
+              - generic [ref=e1199]:
+                - button "Redeploy" [ref=e1200] [cursor=pointer]:
+                  - img [ref=e1201]
+                  - text: Redeploy
+                - button "Restart" [ref=e1203] [cursor=pointer]:
+                  - img [ref=e1204]
+                  - text: Restart
+                - button "Stop" [ref=e1209] [cursor=pointer]:
+                  - img [ref=e1210]
+                  - text: Stop
+        - generic [ref=e1212]:
+          - generic [ref=e1213]:
+            - link "General" [ref=e1214] [cursor=pointer]:
+              - /url: http://187.124.112.164:8000/project/uc8sws8gk448wo0g004kk8s4/environment/bo08sk80o04sgwkk0g0ccgs8/application/ogg000oo4g8s4kkw4wggw4w0
+              - generic [ref=e1215]: General
+            - link "Advanced" [ref=e1216] [cursor=pointer]:
+              - /url: http://187.124.112.164:8000/project/uc8sws8gk448wo0g004kk8s4/environment/bo08sk80o04sgwkk0g0ccgs8/application/ogg000oo4g8s4kkw4wggw4w0/advanced
+              - generic [ref=e1217]: Advanced
+            - link "Environment Variables" [ref=e1218] [cursor=pointer]:
+              - /url: http://187.124.112.164:8000/project/uc8sws8gk448wo0g004kk8s4/environment/bo08sk80o04sgwkk0g0ccgs8/application/ogg000oo4g8s4kkw4wggw4w0/environment-variables
+              - generic [ref=e1219]: Environment Variables
+            - link "Persistent Storage" [ref=e1220] [cursor=pointer]:
+              - /url: http://187.124.112.164:8000/project/uc8sws8gk448wo0g004kk8s4/environment/bo08sk80o04sgwkk0g0ccgs8/application/ogg000oo4g8s4kkw4wggw4w0/persistent-storage
+              - generic [ref=e1221]: Persistent Storage
+            - link "Git Source" [ref=e1222] [cursor=pointer]:
+              - /url: http://187.124.112.164:8000/project/uc8sws8gk448wo0g004kk8s4/environment/bo08sk80o04sgwkk0g0ccgs8/application/ogg000oo4g8s4kkw4wggw4w0/source
+              - generic [ref=e1223]: Git Source
+            - link "Servers" [ref=e1224] [cursor=pointer]:
+              - /url: http://187.124.112.164:8000/project/uc8sws8gk448wo0g004kk8s4/environment/bo08sk80o04sgwkk0g0ccgs8/application/ogg000oo4g8s4kkw4wggw4w0/servers
+              - generic [ref=e1225]: Servers
+            - link "Scheduled Tasks" [ref=e1226] [cursor=pointer]:
+              - /url: http://187.124.112.164:8000/project/uc8sws8gk448wo0g004kk8s4/environment/bo08sk80o04sgwkk0g0ccgs8/application/ogg000oo4g8s4kkw4wggw4w0/scheduled-tasks
+              - generic [ref=e1227]: Scheduled Tasks
+            - link "Webhooks" [ref=e1228] [cursor=pointer]:
+              - /url: http://187.124.112.164:8000/project/uc8sws8gk448wo0g004kk8s4/environment/bo08sk80o04sgwkk0g0ccgs8/application/ogg000oo4g8s4kkw4wggw4w0/webhooks
+              - generic [ref=e1229]: Webhooks
+            - link "Preview Deployments" [ref=e1230] [cursor=pointer]:
+              - /url: http://187.124.112.164:8000/project/uc8sws8gk448wo0g004kk8s4/environment/bo08sk80o04sgwkk0g0ccgs8/application/ogg000oo4g8s4kkw4wggw4w0/preview-deployments
+              - generic [ref=e1231]: Preview Deployments
+            - link "Healthcheck" [ref=e1232] [cursor=pointer]:
+              - /url: http://187.124.112.164:8000/project/uc8sws8gk448wo0g004kk8s4/environment/bo08sk80o04sgwkk0g0ccgs8/application/ogg000oo4g8s4kkw4wggw4w0/healthcheck
+              - generic [ref=e1233]: Healthcheck
+            - link "Rollback" [ref=e1234] [cursor=pointer]:
+              - /url: http://187.124.112.164:8000/project/uc8sws8gk448wo0g004kk8s4/environment/bo08sk80o04sgwkk0g0ccgs8/application/ogg000oo4g8s4kkw4wggw4w0/rollback
+              - generic [ref=e1235]: Rollback
+            - link "Resource Limits" [ref=e1236] [cursor=pointer]:
+              - /url: http://187.124.112.164:8000/project/uc8sws8gk448wo0g004kk8s4/environment/bo08sk80o04sgwkk0g0ccgs8/application/ogg000oo4g8s4kkw4wggw4w0/resource-limits
+              - generic [ref=e1237]: Resource Limits
+            - link "Resource Operations" [ref=e1238] [cursor=pointer]:
+              - /url: http://187.124.112.164:8000/project/uc8sws8gk448wo0g004kk8s4/environment/bo08sk80o04sgwkk0g0ccgs8/application/ogg000oo4g8s4kkw4wggw4w0/resource-operations
+              - generic [ref=e1239]: Resource Operations
+            - link "Metrics" [ref=e1240] [cursor=pointer]:
+              - /url: http://187.124.112.164:8000/project/uc8sws8gk448wo0g004kk8s4/environment/bo08sk80o04sgwkk0g0ccgs8/application/ogg000oo4g8s4kkw4wggw4w0/metrics
+              - generic [ref=e1241]: Metrics
+            - link "Tags" [ref=e1242] [cursor=pointer]:
+              - /url: http://187.124.112.164:8000/project/uc8sws8gk448wo0g004kk8s4/environment/bo08sk80o04sgwkk0g0ccgs8/application/ogg000oo4g8s4kkw4wggw4w0/tags
+              - generic [ref=e1243]: Tags
+            - link "Danger Zone" [ref=e1244] [cursor=pointer]:
+              - /url: http://187.124.112.164:8000/project/uc8sws8gk448wo0g004kk8s4/environment/bo08sk80o04sgwkk0g0ccgs8/application/ogg000oo4g8s4kkw4wggw4w0/danger
+              - generic [ref=e1245]: Danger Zone
+          - generic [ref=e1248]:
+            - generic [ref=e1249]:
+              - heading "Source" [level=2] [ref=e1250]
+              - button "Save" [ref=e1251] [cursor=pointer]
+              - generic [ref=e1252]:
+                - link "Open Repository" [ref=e1253] [cursor=pointer]:
+                  - /url: https://github.com/JdaNuuvem/helixwins/tree/clientes/
+                  - text: Open Repository
+                  - img [ref=e1254]
+                - link "Open Git App" [ref=e1256] [cursor=pointer]:
+                  - /url: https://github.com/apps/api-jogos/installations/new
+                  - text: Open Git App
+                  - img [ref=e1257]
+                - link "Open Commits on Git" [ref=e1259] [cursor=pointer]:
+                  - /url: https://github.com/JdaNuuvem/helixwins/commits/clientes
+                  - text: Open Commits on Git
+                  - img [ref=e1260]
+            - generic [ref=e1262]: Code source of your application.
+            - generic [ref=e1263]:
+              - generic [ref=e1264]: "Currently connected source: api-jogos"
+              - generic [ref=e1265]:
+                - generic [ref=e1266]:
+                  - generic [ref=e1267]: Repository
+                  - textbox "coollabsio/coolify-example" [ref=e1280]: JdaNuuvem/helixwins
+                - generic [ref=e1269]:
+                  - generic [ref=e1270]: Branch
+                  - textbox "main" [ref=e1281]: clientes
+              - generic [ref=e1273]:
+                - generic [ref=e1274]: Commit SHA
+                - textbox "HEAD" [ref=e1282]
+            - generic [ref=e1276]:
+              - heading "Change Git Source" [level=3] [ref=e1277]
+              - generic [ref=e1279]: No other sources found
+  - list [ref=e1283]

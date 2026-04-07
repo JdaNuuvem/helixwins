@@ -1,0 +1,5 @@
+[ 2918250ms] [WARNING] [Terminal] WebSocket not ready, message not sent: {checkActive: force} @ http://187.124.112.164:8000/build/assets/app-BNvJoPaw.js:8
+[ 2919682ms] [WARNING] [Terminal] Invalid calculated dimensions: {rows: 0, cols: 95, height: 24, width: 865, charSize: Proxy(r.CharSizeService)} @ http://187.124.112.164:8000/build/assets/app-BNvJoPaw.js:8
+[ 2919687ms] [WARNING] [Terminal] Invalid calculated dimensions: {rows: 0, cols: 95, height: 24, width: 865, charSize: Proxy(r.CharSizeService)} @ http://187.124.112.164:8000/build/assets/app-BNvJoPaw.js:8
+[ 2927417ms] [WARNING] [Terminal] Invalid wrapper dimensions, retrying... {height: -8, width: -16} @ http://187.124.112.164:8000/build/assets/app-BNvJoPaw.js:8
+[ 2953898ms] [WARNING] [Terminal] Ping timeout - missed 1/3 @ http://187.124.112.164:8000/build/assets/app-BNvJoPaw.js:8

@@ -1,0 +1,23 @@
+- generic [ref=e155]:
+  - generic [ref=e156]:
+    - img [ref=e157]
+    - generic [ref=e160]: HelixWins
+  - heading "Entrar na conta" [level=2] [ref=e161]
+  - paragraph [ref=e162]: Bem-vindo de volta! Acesse para jogar.
+  - generic [ref=e163]:
+    - generic [ref=e164]:
+      - generic [ref=e165]: Telefone (WhatsApp)
+      - textbox "(11) 99999-0000" [ref=e166]
+    - generic [ref=e167]:
+      - generic [ref=e168]: Senha
+      - generic [ref=e169]:
+        - textbox "Sua senha" [ref=e170]
+        - img [ref=e172] [cursor=pointer]
+    - generic [ref=e175] [cursor=pointer]: Esqueci minha senha
+    - button "ENTRAR" [ref=e176] [cursor=pointer]:
+      - img [ref=e177]
+      - text: ENTRAR
+  - generic [ref=e180]: Não tem conta? Cadastre-se grátis
+  - button "Voltar ao início" [ref=e182] [cursor=pointer]:
+    - img [ref=e183]
+    - text: Voltar ao início

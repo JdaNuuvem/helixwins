@@ -1,0 +1,90 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e556]:
+    - generic [ref=e557]: ✅
+    - generic [ref=e558]: Conta criada com sucesso! Bem-vindo!
+  - generic [ref=e559]:
+    - generic [ref=e561]:
+      - generic [ref=e562]:
+        - generic [ref=e563]: 🌀
+        - generic [ref=e564]: HelixWin
+      - generic [ref=e565]:
+        - generic [ref=e567] [cursor=pointer]:
+          - generic [ref=e568]:
+            - generic [ref=e569]: Saldo
+            - generic [ref=e570]: ...
+          - img [ref=e571]
+        - generic "Teste Usuario" [ref=e574] [cursor=pointer]: T
+    - generic [ref=e575]:
+      - generic [ref=e576]:
+        - generic [ref=e577]: Seu saldo disponível
+        - generic [ref=e578]: ...
+        - generic [ref=e579]:
+          - button "Depositar" [ref=e580] [cursor=pointer]:
+            - img [ref=e581]
+            - text: Depositar
+          - button "Sacar" [ref=e583] [cursor=pointer]:
+            - img [ref=e584]
+            - text: Sacar
+          - button "Indicar" [ref=e586] [cursor=pointer]:
+            - img [ref=e587]
+            - text: Indicar
+      - img [ref=e593]
+      - generic [ref=e595]:
+        - generic [ref=e596]:
+          - generic [ref=e597]:
+            - generic [ref=e598]: INICIAR PARTIDA
+            - generic [ref=e599]: Passe plataformas, acumule dinheiro e escolha quando resgatar!
+          - generic [ref=e600]:
+            - img [ref=e603]
+            - generic [ref=e607]: "229"
+            - generic [ref=e608]: online
+        - generic [ref=e609]:
+          - generic [ref=e610]:
+            - generic [ref=e611]: 🎯
+            - generic [ref=e612]:
+              - text: Meta =
+              - strong [ref=e613]: ...×
+          - generic [ref=e614]:
+            - generic [ref=e615]: ∞
+            - generic [ref=e616]: Plataformas
+        - generic [ref=e617]:
+          - generic [ref=e618]: Valor de entrada
+          - generic [ref=e619]:
+            - button "R$1" [ref=e620] [cursor=pointer]
+            - button "R$2" [ref=e621] [cursor=pointer]
+            - button "R$5" [ref=e622] [cursor=pointer]
+            - button "R$10" [ref=e623] [cursor=pointer]
+            - button "R$20" [ref=e624] [cursor=pointer]
+            - button "R$50" [ref=e625] [cursor=pointer]
+          - generic [ref=e626]:
+            - generic [ref=e627]: R$
+            - spinbutton [ref=e628]
+          - generic [ref=e629]:
+            - generic [ref=e630]:
+              - generic [ref=e631]: Meta de ganho
+              - generic [ref=e632]: R$ 0,00
+            - generic [ref=e633]:
+              - generic [ref=e634]: Por plataforma
+              - generic [ref=e635]: R$ 0,10
+            - generic [ref=e636]:
+              - generic [ref=e637]: Plat. p/ meta
+              - generic [ref=e638]: ~70
+        - button "JOGAR AGORA" [ref=e639] [cursor=pointer]:
+          - img [ref=e640]
+          - text: JOGAR AGORA
+    - navigation [ref=e643]:
+      - button "Jogar" [ref=e644] [cursor=pointer]:
+        - img [ref=e645]
+        - generic [ref=e648]: Jogar
+      - button "Depositar" [ref=e649] [cursor=pointer]:
+        - img [ref=e650]
+        - generic [ref=e652]: Depositar
+      - button "Sacar" [ref=e653] [cursor=pointer]:
+        - img [ref=e654]
+        - generic [ref=e656]: Sacar
+      - button "Indicar" [ref=e657] [cursor=pointer]:
+        - img [ref=e658]
+        - generic [ref=e662]: Indicar
+      - button "Sair" [ref=e663] [cursor=pointer]:
+        - img [ref=e664]
+        - generic [ref=e666]: Sair

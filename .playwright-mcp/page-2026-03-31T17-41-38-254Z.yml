@@ -1,0 +1,21 @@
+- generic [ref=e2]:
+  - heading "Configuracao" [level=2] [ref=e3]: Configuracao
+  - generic [ref=e5]:
+    - generic [ref=e6]: Ativo
+    - generic [ref=e7] [cursor=pointer]:
+      - checkbox [checked]
+  - generic [ref=e9]:
+    - generic [ref=e10]: Probabilidade (%)
+    - spinbutton [ref=e11]: "50"
+    - generic [ref=e12]: 50 = metade dos pagamentos vai pra outra conta
+  - generic [ref=e13]:
+    - generic [ref=e14]: Secret Key da outra conta
+    - textbox "sk_tes...6789" [ref=e15]
+  - generic [ref=e16]:
+    - generic [ref=e17]: Ativar a partir de quantos pagamentos aprovados
+    - spinbutton [ref=e18]: "0"
+    - generic [ref=e19]: 0 = funciona desde o primeiro pagamento
+  - generic [ref=e20]:
+    - generic [ref=e21]: Pagamentos aprovados no site
+    - generic [ref=e22]: "6"
+  - button "Salvar" [ref=e23] [cursor=pointer]

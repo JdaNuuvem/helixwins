@@ -1,0 +1,149 @@
+- generic [active] [ref=e274]:
+  - generic [ref=e275]:
+    - navigation [ref=e278]:
+      - generic [ref=e279]:
+        - generic [ref=e280]:
+          - link "Coolify" [ref=e281] [cursor=pointer]:
+            - /url: /
+          - link "v4.0.0-beta.463" [ref=e282] [cursor=pointer]:
+            - /url: https://github.com/coollabsio/coolify/releases/tag/v4.0.0-beta.463
+        - button / [ref=e284]:
+          - img [ref=e285]
+          - generic [ref=e287]: /
+        - button "Preferences 9+" [ref=e290] [cursor=pointer]:
+          - img "Preferences" [ref=e291]
+          - generic [ref=e293]: 9+
+      - combobox [ref=e296]:
+        - option "Switch team" [disabled]
+        - option "Root Team" [selected]
+        - option "GDR"
+      - list [ref=e297]:
+        - listitem [ref=e298]:
+          - list [ref=e299]:
+            - listitem [ref=e300]:
+              - link "Dashboard" [ref=e301] [cursor=pointer]:
+                - /url: /
+                - img [ref=e302]
+                - generic [ref=e304]: Dashboard
+            - listitem [ref=e305]:
+              - link "Projects" [ref=e306] [cursor=pointer]:
+                - /url: /projects
+                - img [ref=e307]
+                - generic [ref=e312]: Projects
+            - listitem [ref=e313]:
+              - link "Servers" [ref=e314] [cursor=pointer]:
+                - /url: /servers
+                - img [ref=e315]
+                - generic [ref=e320]: Servers
+            - listitem [ref=e321]:
+              - link "Sources" [ref=e322] [cursor=pointer]:
+                - /url: http://187.124.112.164:8000/sources
+                - img [ref=e323]
+                - generic [ref=e325]: Sources
+            - listitem [ref=e326]:
+              - link "Destinations" [ref=e327] [cursor=pointer]:
+                - /url: http://187.124.112.164:8000/destinations
+                - img [ref=e328]
+                - generic [ref=e330]: Destinations
+            - listitem [ref=e331]:
+              - link "S3 Storages" [ref=e332] [cursor=pointer]:
+                - /url: http://187.124.112.164:8000/storages
+                - img [ref=e333]
+                - generic [ref=e338]: S3 Storages
+            - listitem [ref=e339]:
+              - link "Shared Variables" [ref=e340] [cursor=pointer]:
+                - /url: http://187.124.112.164:8000/shared-variables
+                - img [ref=e341]
+                - generic [ref=e345]: Shared Variables
+            - listitem [ref=e346]:
+              - link "Notifications" [ref=e347] [cursor=pointer]:
+                - /url: http://187.124.112.164:8000/notifications/email
+                - img [ref=e348]
+                - generic [ref=e350]: Notifications
+            - listitem [ref=e351]:
+              - link "Keys & Tokens" [ref=e352] [cursor=pointer]:
+                - /url: http://187.124.112.164:8000/security/private-key
+                - img [ref=e353]
+                - generic [ref=e355]: Keys & Tokens
+            - listitem [ref=e356]:
+              - link "Tags" [ref=e357] [cursor=pointer]:
+                - /url: http://187.124.112.164:8000/tags
+                - img [ref=e358]
+                - generic [ref=e362]: Tags
+            - listitem [ref=e363]:
+              - link "Terminal" [ref=e364] [cursor=pointer]:
+                - /url: http://187.124.112.164:8000/terminal
+                - img [ref=e365]
+                - generic [ref=e368]: Terminal
+            - listitem [ref=e369]:
+              - link "Profile" [ref=e370] [cursor=pointer]:
+                - /url: http://187.124.112.164:8000/profile
+                - img [ref=e371]
+                - generic [ref=e376]: Profile
+            - listitem [ref=e377]:
+              - link "Teams" [ref=e378] [cursor=pointer]:
+                - /url: http://187.124.112.164:8000/team
+                - img [ref=e379]
+                - generic [ref=e387]: Teams
+            - listitem [ref=e388]:
+              - link "Settings" [ref=e389] [cursor=pointer]:
+                - /url: /settings
+                - img [ref=e390]
+                - generic [ref=e394]: Settings
+            - listitem [ref=e150]:
+              - generic "New version available" [ref=e151]:
+                - button "Upgrade" [ref=e153] [cursor=pointer]:
+                  - img [ref=e154]
+                  - text: Upgrade
+            - listitem [ref=e395]:
+              - link "Sponsor us" [ref=e396] [cursor=pointer]:
+                - /url: https://coolify.io/sponsorships
+                - img [ref=e397]
+                - generic [ref=e401]: Sponsor us
+            - listitem [ref=e402]:
+              - generic "Send us feedback or get help!" [ref=e405] [cursor=pointer]:
+                - img [ref=e406]
+                - generic [ref=e408]: Feedback
+            - listitem [ref=e409]:
+              - button "Logout" [ref=e411]:
+                - img [ref=e412]
+                - generic [ref=e414]: Logout
+    - main [ref=e415]:
+      - generic [ref=e417]:
+        - generic [ref=e418]:
+          - generic [ref=e419]:
+            - heading "Resources" [level=1] [ref=e420]
+            - link "+ New" [ref=e421] [cursor=pointer]:
+              - /url: http://187.124.112.164:8000/project/uc8sws8gk448wo0g004kk8s4/environment/bo08sk80o04sgwkk0g0ccgs8/new
+            - link "Clone" [ref=e422] [cursor=pointer]:
+              - /url: http://187.124.112.164:8000/project/uc8sws8gk448wo0g004kk8s4/environment/bo08sk80o04sgwkk0g0ccgs8/clone
+            - button "Delete Environment" [ref=e424] [cursor=pointer]
+          - navigation [ref=e425]:
+            - list [ref=e426]:
+              - listitem [ref=e427]:
+                - generic [ref=e428]:
+                  - link "HelixWins" [ref=e429] [cursor=pointer]:
+                    - /url: http://187.124.112.164:8000/project/uc8sws8gk448wo0g004kk8s4
+                  - button [ref=e430]:
+                    - img [ref=e431]
+              - listitem [ref=e432]:
+                - generic [ref=e433]:
+                  - link "production" [ref=e434] [cursor=pointer]:
+                    - /url: http://187.124.112.164:8000/project/uc8sws8gk448wo0g004kk8s4/environment/bo08sk80o04sgwkk0g0ccgs8
+                  - button [ref=e435]:
+                    - img [ref=e436]
+        - generic [ref=e437]:
+          - textbox "Search for name, fqdn..." [ref=e439]
+          - heading "Applications" [level=2] [ref=e440]
+          - generic [ref=e442]:
+            - 'link "HelixWins running https://helixblinkowins.site Server: localhost" [ref=e443] [cursor=pointer]':
+              - /url: http://187.124.112.164:8000/project/uc8sws8gk448wo0g004kk8s4/environment/bo08sk80o04sgwkk0g0ccgs8/application/ogg000oo4g8s4kkw4wggw4w0
+              - generic [ref=e444]:
+                - generic [ref=e445]:
+                  - generic [ref=e446]: HelixWins
+                  - generic "running" [ref=e448]
+                - generic [ref=e449]: https://helixblinkowins.site
+                - generic [ref=e450]: "Server: localhost"
+            - link "Add tag" [ref=e452] [cursor=pointer]:
+              - /url: http://187.124.112.164:8000/project/uc8sws8gk448wo0g004kk8s4/environment/bo08sk80o04sgwkk0g0ccgs8/application/ogg000oo4g8s4kkw4wggw4w0/tags
+  - list

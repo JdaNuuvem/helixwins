@@ -1,0 +1,58 @@
+- generic [ref=e2]:
+  - generic [ref=e3]:
+    - heading "Super Admin DONO DA PLATAFORMA" [level=1] [ref=e4]
+    - generic [ref=e5]:
+      - text: QA Super
+      - button "Sair" [ref=e6] [cursor=pointer]
+  - generic [ref=e7]:
+    - button "Dashboard" [ref=e8] [cursor=pointer]
+    - button "Gerentes" [ref=e9] [cursor=pointer]
+    - button "Saques pendentes" [ref=e10] [cursor=pointer]
+    - button "Transações" [ref=e11] [cursor=pointer]
+    - button "Audit Log" [ref=e12] [cursor=pointer]
+    - button "Atalhos" [ref=e13] [cursor=pointer]
+  - generic [ref=e14]:
+    - generic [ref=e15]:
+      - generic [ref=e16]:
+        - generic [ref=e17]: Saldo Split
+        - generic [ref=e18]: R$ 0,00
+        - generic [ref=e19]: disponível
+      - generic [ref=e20]:
+        - generic [ref=e21]: Total Split Recebido
+        - generic [ref=e22]: R$ 0,00
+        - generic [ref=e23]: acumulado
+      - generic [ref=e24]:
+        - generic [ref=e25]: Volume da Plataforma
+        - generic [ref=e26]: R$ 10925,00
+        - generic [ref=e27]: 203 depósitos
+      - generic [ref=e28]:
+        - generic [ref=e29]: Saques Pendentes
+        - generic [ref=e30]: "42"
+        - generic [ref=e31]: aguardando aprovação
+      - generic [ref=e32]:
+        - generic [ref=e33]: Gerentes
+        - generic [ref=e34]: "0"
+        - generic [ref=e35]: ativos
+      - generic [ref=e36]:
+        - generic [ref=e37]: Influencers
+        - generic [ref=e38]: "0"
+        - generic [ref=e39]: ativos
+      - generic [ref=e40]:
+        - generic [ref=e41]: Jogadores
+        - generic [ref=e42]: "123"
+        - generic [ref=e43]: cadastrados
+      - generic [ref=e44]:
+        - generic [ref=e45]: Total de Usuários
+        - generic [ref=e46]: "131"
+        - generic [ref=e47]: na plataforma
+    - generic [ref=e48]:
+      - heading "Resumo da plataforma" [level=2] [ref=e49]
+      - generic [ref=e50]:
+        - text: Use a aba
+        - strong [ref=e51]: Saques pendentes
+        - text: para aprovar/rejeitar saques de gerentes, influencers e jogadores.
+      - generic [ref=e52]:
+        - text: Use a aba
+        - strong [ref=e53]: Gerentes
+        - text: para promover novos gerentes à plataforma.
+      - generic [ref=e54]: Configuração do gateway (PIX) fica no painel principal do app.

@@ -2373,7 +2373,7 @@ app.post('/api/admin/game-config', authMiddleware, adminMiddleware, (req, res) =
   const user = findUser(parseInt(user_id));
   if (!user) return res.status(404).json({ error: 'Usuário não encontrado.' });
 
-  const difsValidas = ['super_facil', 'facil', 'normal', 'dificil'];
+  const difsValidas = ['super_facil', 'facil', 'normal', 'dificil', 'muito_dificil', 'impossivel'];
   const multsValidos = [1.2, 1.5, 2, 3, 4];
   const dif = difsValidas.includes(dificuldade) ? dificuldade : null;
   const mult = multsValidos.includes(parseFloat(multiplicador)) ? parseFloat(multiplicador) : null;
@@ -3403,7 +3403,7 @@ app.put('/api/super-admin/pushcut', authMiddleware, superAdminMiddleware, (req, 
 });
 
 // ─── Dificuldade global do jogo (super_admin) ───────────────────────────────
-const _DIFS_VALIDAS = ['super_facil', 'facil', 'normal', 'dificil'];
+const _DIFS_VALIDAS = ['super_facil', 'facil', 'normal', 'dificil', 'muito_dificil', 'impossivel'];
 
 app.get('/api/super-admin/dificuldade', authMiddleware, superAdminMiddleware, (_req, res) => {
   res.json({
