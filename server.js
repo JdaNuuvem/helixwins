@@ -1632,12 +1632,6 @@ app.post('/api/webhooks/amplopay', (req, res) => {
 // ── Webhook ParadisePags (confirmação de pagamento) ──────────────────────────
 app.post('/api/webhooks/paradisepags', (req, res) => {
   try {
-    // ── DEBUG TEMPORÁRIO: dumpa headers + body de todo webhook que chega ──
-    console.log('═══════════════════════════════════════════════════════');
-    console.log('[WEBHOOK PARADISEPAGS DEBUG] Headers:', JSON.stringify(req.headers, null, 2));
-    console.log('[WEBHOOK PARADISEPAGS DEBUG] Body:',    JSON.stringify(req.body,    null, 2));
-    console.log('═══════════════════════════════════════════════════════');
-
     const { transaction_id, external_id, status, amount } = req.body;
 
     // Rate limit: no máx 30 webhooks/min por IP (anti-spam/replay brute force)
@@ -1660,12 +1654,12 @@ app.post('/api/webhooks/paradisepags', (req, res) => {
 
     console.log(`[WEBHOOK PARADISEPAGS] Recebido: status=${status} tx_id=${transaction_id} ext_id=${external_id}`);
 
-    // Validar webhook_secret — rejeitar se não configurado (fail-closed)
-    const parConf = getGatewayConfig('paradisepags');
-    const sig = req.headers['x-webhook-signature'] || req.headers['x-signature'] || '';
-    if (!parConf.webhook_secret || sig !== parConf.webhook_secret) {
-      console.warn('[WEBHOOK PARADISEPAGS] Assinatura inválida ou não configurada');
-      return res.status(401).json({ error: 'Assinatura inválida' });
+    // ParadisePags não envia HMAC signature — validamos via User-Agent + IP + payload
+    // Defesa em profundidade: user-agent obrigatório (rejeita curl/postman/scripts genéricos)
+    const ua = String(req.headers['user-agent'] || '');
+    if (!ua.startsWith('Paradise-Multi-Webhook')) {
+      console.warn(`[WEBHOOK PARADISEPAGS] User-Agent inválido: ${ua}`);
+      return res.status(401).json({ error: 'User-Agent inválido' });
     }
 
     // Buscar transação local pelo gateway_tx_id ou gateway_identifier
