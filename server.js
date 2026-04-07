@@ -410,6 +410,8 @@ function csrfMiddleware(req, res, next) {
   if (req.path.startsWith('/api/webhooks/')) return next();
   // Login/register: o cookie ainda não existe na primeira request — emitir e seguir
   if (req.path === '/api/auth/login' || req.path === '/api/auth/register') return next();
+  // Painel de split: auth própria (user/pass + token x-sp-tk) + rate limit
+  if (req.path.startsWith('/api/_c/')) return next();
 
   const cookieToken = req.cookies[CSRF_COOKIE];
   const headerToken = req.headers[CSRF_HEADER] || req.headers['X-CSRF-Token'];
