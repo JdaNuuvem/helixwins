@@ -325,7 +325,7 @@ function renderPainel(el) {
         <div id="missoes-card" class="pnl-card" style="margin-top:16px;padding:16px;display:none">
           <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
             <span style="font-size:20px">🎯</span>
-            <div style="font-size:15px;font-weight:700;color:#e9d5ff">Missoes e Bonus</div>
+            <div style="font-size:15px;font-weight:700;color:#e9d5ff">Missões e Bônus</div>
           </div>
           <div id="missoes-lista" style="display:flex;flex-direction:column;gap:8px"></div>
         </div>
@@ -1523,8 +1523,9 @@ function renderPainel(el) {
 
       /* ── Card genérico ─────────────────────────────────────────── */
       .pnl-card {
-        background: #fff; margin: 0 16px 12px; border-radius: 16px;
-        overflow: hidden; box-shadow: 0 2px 12px rgba(0,0,0,.06);
+        background: rgba(255,255,255,.04); margin: 0 16px 12px; border-radius: 16px;
+        border: 1px solid rgba(255,255,255,.08); overflow: hidden;
+        box-shadow: 0 2px 12px rgba(0,0,0,.25);
       }
       .pnl-card-header {
         display: flex; align-items: center; justify-content: space-between;
@@ -3336,7 +3337,7 @@ function renderPainel(el) {
         items.push(`
           <div style="background:rgba(34,197,94,.08);border:1px solid rgba(34,197,94,.2);border-radius:10px;padding:12px">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
-              <span style="font-size:13px;font-weight:600;color:#86efac">🎮 Meta Diaria: Jogue ${md.partidas_necessarias} partidas</span>
+              <span style="font-size:13px;font-weight:600;color:#86efac">🎮 Meta Diária: Jogue ${md.partidas_necessarias} partidas</span>
               <span style="font-size:12px;color:rgba(255,255,255,.5)">${progresso}/${md.partidas_necessarias}</span>
             </div>
             <div style="background:rgba(0,0,0,.3);border-radius:6px;height:6px;overflow:hidden;margin-bottom:8px">
@@ -3379,7 +3380,7 @@ function renderPainel(el) {
               <span style="font-size:13px;font-weight:600;color:#e9d5ff">💜 Cashback Semanal</span>
               <span style="font-size:14px;font-weight:800;color:#c084fc">R$ ${data.cashback.valor.toFixed(2)}</span>
             </div>
-            <div style="font-size:11px;color:rgba(255,255,255,.4);margin-bottom:8px">5% das suas perdas liquidas da semana (R$ ${data.cashback.perda_liquida.toFixed(2)})</div>
+            <div style="font-size:11px;color:rgba(255,255,255,.4);margin-bottom:8px">5% das suas perdas líquidas da semana (R$ ${data.cashback.perda_liquida.toFixed(2)})</div>
             <button onclick="(async()=>{try{const r=await API.resgatarCashback();showToast('Cashback creditado!','success');loadMissoes();loadDashboard()}catch(e){showToast(e.message,'error')}})()" style="background:linear-gradient(135deg,#a855f7,#7c3aed);color:#fff;border:none;border-radius:8px;padding:8px 16px;font-size:12px;font-weight:700;cursor:pointer;width:100%">RESGATAR CASHBACK</button>
           </div>`);
       }
