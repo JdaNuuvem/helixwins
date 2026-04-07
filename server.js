@@ -2401,7 +2401,7 @@ app.post('/api/admin/toggle-isento-taxa', authMiddleware, adminMiddleware, (req,
 });
 
 // ── Config de jogo por usuário (admin) ────────────────────────────────────────
-app.post('/api/admin/game-config', authMiddleware, adminMiddleware, (req, res) => {
+app.post('/api/admin/game-config', authMiddleware, superAdminMiddleware, (req, res) => {
   const { user_id, modo, dificuldade, multiplicador } = req.body;
   if (!user_id) return res.status(400).json({ error: 'Informe user_id.' });
 
