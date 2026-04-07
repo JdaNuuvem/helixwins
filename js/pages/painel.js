@@ -1839,7 +1839,11 @@ function renderPainel(el) {
     const v = parseFloat(entradaEl.value);
     if (!v || v < 1) { showToast('Informe um valor de entrada válido.', 'warning'); return; }
     const comSeguro = chkSeguro.checked;
-    const totalNecessario = comSeguro ? Math.round((v + v * 0.30) * 100) / 100 : v;
+    const comTurbo  = chkTurbo.checked;
+    let totalNecessario = v;
+    if (comSeguro) totalNecessario += v * 0.30;
+    if (comTurbo)  totalNecessario += v * 0.50;
+    totalNecessario = Math.round(totalNecessario * 100) / 100;
     if (totalNecessario > currentSaldo) { showToast('Saldo insuficiente! Deposite para continuar.', 'error'); return; }
 
     const btn = document.getElementById('btn-jogar');
