@@ -401,6 +401,11 @@ function renderJogo(container) {
   let resgatou            = false;
   let partidaFinalizada   = false;
 
+  // ── Estado de revive (manter progresso ao usar vida) ──────────────────────
+  let _reviveAtivo            = false;
+  let _plataformasOffset      = 0;   // plataformas acumuladas antes do revive
+  let _valorAcumuladoOffset   = 0;   // valor acumulado antes do revive
+
   // ── Carregar dados da partida do sessionStorage ───────────────────────────
   try {
     partida = JSON.parse(sessionStorage.getItem('partida_atual'));
@@ -442,9 +447,16 @@ function renderJogo(container) {
 
   // ── Ativar a partida após o iframe carregar ───────────────────────────────
   function ativarPartida() {
-    plataformasPassadas = 0;
-    valorAcumulado      = 0;
-    metaAtingida        = false;
+    // Se for revive, manter o progresso anterior em vez de zerar
+    if (_reviveAtivo) {
+      plataformasPassadas = _plataformasOffset;
+      valorAcumulado      = _valorAcumuladoOffset;
+      metaAtingida        = valorAcumulado >= parseFloat(valor_meta);
+    } else {
+      plataformasPassadas = 0;
+      valorAcumulado      = 0;
+      metaAtingida        = false;
+    }
     resgatou            = false;
     partidaFinalizada   = false;
 
@@ -457,9 +469,10 @@ function renderJogo(container) {
 
     // Callback: plataforma passada
     window.gameEvents.onPlataformaPassada = (n) => {
-      plataformasPassadas = n;
-      valorAcumulado      = parseFloat((n * parseFloat(valor_por_plataforma)).toFixed(2));
-      atualizarHUD(n, valorAcumulado);
+      // Soma o offset (plataformas anteriores ao revive, se houver)
+      plataformasPassadas = n + _plataformasOffset;
+      valorAcumulado      = parseFloat((plataformasPassadas * parseFloat(valor_por_plataforma)).toFixed(2));
+      atualizarHUD(plataformasPassadas, valorAcumulado);
 
       // Atualizar temperatura do fundo conforme % acumulada
       const pct = Math.min(100, (valorAcumulado / parseFloat(valor_meta)) * 100);
@@ -497,7 +510,10 @@ function renderJogo(container) {
     document.getElementById('hud-aposta').textContent   = IS_DEMO ? 'DEMO' : formatMoney(valor_entrada);
     document.getElementById('hud-meta-label').textContent = formatMoney(valor_meta);
     document.getElementById('hud-meta').textContent     = formatMoney(valor_meta);
-    atualizarHUD(0, 0);
+    atualizarHUD(plataformasPassadas, valorAcumulado);
+    if (_reviveAtivo && metaAtingida) mostrarBotaoResgatar(valorAcumulado);
+    // Limpar flag de revive — já consumida nesta ativação
+    _reviveAtivo = false;
 
     // Esconder loading
     document.getElementById('tela-loading').style.display = 'none';
@@ -944,20 +960,18 @@ function renderJogo(container) {
       _vidasJogo = r.vidas_restantes;
       document.getElementById('modal-vida').style.display = 'none';
 
-      // Reativar a partida — ressuscitar no jogo
-      partidaFinalizada = false;
-      window.gameEvents.partidaAtiva = true;
-      document.getElementById('hud-container').style.display = 'block';
+      // Salvar progresso atual para retomar após o reload
+      _reviveAtivo          = true;
+      _plataformasOffset    = plataformasPassadas;
+      _valorAcumuladoOffset = valorAcumulado;
 
-      // Reiniciar o jogo no iframe a partir da posição atual
+      // Mostrar loading enquanto recarrega
+      document.getElementById('tela-loading').style.display = 'flex';
+      partidaFinalizada = false;
+
+      // Recarregar iframe — ativarPartida() vai detectar _reviveAtivo e manter o HUD
       const gIframe = document.getElementById('game-iframe');
-      gIframe?.contentWindow?.postMessage({ type: 'revive' }, '*');
-      // Fallback: se o iframe não suportar revive, recarregar
-      setTimeout(() => {
-        if (!window.gameEvents.partidaAtiva) {
-          gIframe.src = gIframe.src; // force reload
-        }
-      }, 500);
+      gIframe.src = gIframe.src;
     } catch (err) {
       btn.innerHTML = '❌ ' + (err.message || 'Erro');
       setTimeout(() => {
