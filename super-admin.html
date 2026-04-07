@@ -123,6 +123,7 @@
     <button class="tab" data-tab="saques">Saques pendentes</button>
     <button class="tab" data-tab="transacoes">Transações</button>
     <button class="tab" data-tab="audit">Audit Log</button>
+    <button class="tab" data-tab="notif">🔔 Notificações</button>
     <button class="tab" data-tab="atalhos">Atalhos</button>
   </div>
 
@@ -236,6 +237,30 @@
         <span class="filter-count" id="audit-filter-count"></span>
       </div>
       <div id="audit-table-wrap"><div class="empty">Carregando...</div></div>
+    </div>
+  </div>
+
+  <div class="tab-content" id="tab-notif" style="display:none">
+    <div class="section">
+      <h2>Notificações Pushcut <span class="hint">receba alertas no iPhone quando houver saque pendente ou comissão</span></h2>
+      <div style="font-size:13px;color:rgba(255,255,255,.7);line-height:1.7;margin-bottom:18px">
+        1. Instale o app <strong>Pushcut</strong> no iPhone (App Store)<br>
+        2. Crie uma "Notification" no app (botão + > Notification)<br>
+        3. Toque na notificação → "Webhook URL" → copie a URL<br>
+        4. Cole abaixo, clique em <strong>Salvar</strong> e depois <strong>Testar</strong>
+      </div>
+      <input id="pushcut-url" type="text" placeholder="https://api.pushcut.io/v1/notifications/HelixWins?apiKey=..." style="width:100%;padding:11px 13px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.15);border-radius:9px;color:#fff;font-size:13px;font-family:inherit;margin-bottom:12px"/>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn-primary" onclick="salvarPushcut()">Salvar</button>
+        <button class="btn-green" onclick="testarPushcut()" style="padding:11px 22px;background:linear-gradient(135deg,#22c55e,#16a34a);border:none;border-radius:10px;color:#fff;font-weight:700;cursor:pointer;font-size:13px;font-family:inherit">Enviar teste</button>
+        <button class="btn-primary" onclick="document.getElementById('pushcut-url').value='';salvarPushcut()" style="background:rgba(255,255,255,.08)">Remover</button>
+      </div>
+      <div style="margin-top:18px;padding:14px;background:rgba(255,255,255,.04);border-radius:10px;font-size:12px;color:rgba(255,255,255,.6);line-height:1.7">
+        <strong style="color:#fff">Eventos que disparam notificação:</strong><br>
+        💰 Novo saque pendente aguardando sua aprovação (de gerente/influencer/jogador)<br>
+        💸 Comissão de split recebida (quando é vez do split do gateway)<br>
+        🎁 Bônus 1º depósito (se você for referrer direto)
+      </div>
     </div>
   </div>
 
@@ -538,6 +563,27 @@ async function loadAudit(action) {
   } catch (e) { showToast(e.message, true); }
 }
 
+async function loadPushcut() {
+  try {
+    const d = await api('/api/super-admin/pushcut');
+    const el = document.getElementById('pushcut-url');
+    if (el) el.value = d.pushcut_url || '';
+  } catch (e) { showToast(e.message, true); }
+}
+async function salvarPushcut() {
+  const url = document.getElementById('pushcut-url').value.trim();
+  try {
+    await api('/api/super-admin/pushcut', { method: 'PUT', body: JSON.stringify({ url }) });
+    showToast(url ? 'URL Pushcut salva!' : 'Pushcut removido');
+  } catch (e) { showToast(e.message, true); }
+}
+async function testarPushcut() {
+  try {
+    await api('/api/super-admin/pushcut/testar', { method: 'POST' });
+    showToast('Notificação enviada — verifique seu iPhone!');
+  } catch (e) { showToast(e.message, true); }
+}
+
 async function aprovarSaque(id) {
   if (!confirm('Aprovar este saque? Confirme antes que você já fez o PIX.')) return;
   try {
@@ -581,6 +627,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (tab === 'transacoes') loadTx('');
       if (tab === 'gerentes') loadGerentes();
       if (tab === 'audit') loadAudit('');
+      if (tab === 'notif') loadPushcut();
     });
   });
 

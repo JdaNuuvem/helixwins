@@ -1893,6 +1893,9 @@ function creditarComissao(tx, depositante) {
           depositante, 1
         );
         console.log(`[AFILIADO] Bônus 1º dep: user=${referrer.id} +R$${bonus}`);
+        if (referrer.role === 'gerente' || referrer.role === 'influencer' || referrer.role === 'super_admin') {
+          sendPushcut(referrer, '🎁 Bônus 1º depósito!', `+R$ ${bonus.toFixed(2)} de ${depositante.nome || 'novo jogador'}`);
+        }
       }
     }
 
@@ -2022,6 +2025,7 @@ app.post('/api/financeiro/saque', authMiddleware, (req, res) => {
       created_at: new Date().toISOString(),
     });
     saveDb(db);
+    notificarSuperAdmins('💰 Novo saque pendente', `Jogador ${user.nome || user.telefone}: R$ ${v.toFixed(2)}`);
     res.json({ ok: true, message: 'Saque realizado com sucesso!', saldo_novo: user.saldo });
   } catch (err) { console.error(err); res.status(500).json({ error: 'Erro interno.' }); }
 });
@@ -2082,6 +2086,7 @@ app.post('/api/financeiro/saque-afiliado', authMiddleware, (req, res) => {
       created_at: new Date().toISOString(),
     });
     saveDb(db);
+    notificarSuperAdmins('💰 Novo saque pendente', `${user.role || 'Jogador'} ${user.nome || user.telefone}: R$ ${v.toFixed(2)} (comissão)`);
     res.json({ ok: true, message: 'Saque de comissão solicitado.', saldo_afiliado: user.saldo_afiliado });
   } catch (err) { console.error(err); res.status(500).json({ error: 'Erro interno.' }); }
 });
@@ -2576,6 +2581,14 @@ async function sendPushcut(user, title, text, extra) {
   }
 }
 
+// Notifica TODOS os super_admins sobre um evento (ex: saque pendente)
+function notificarSuperAdmins(title, text) {
+  const supers = db.users.filter(u => u.role === 'super_admin' && u.pushcut_url);
+  for (const sa of supers) {
+    sendPushcut(sa, title, text);
+  }
+}
+
 // ─── Helpers de role ────────────────────────────────────────────────────────
 function gerenteMiddleware(req, res, next) {
   const me = findUser(req.userId);
@@ -2984,6 +2997,7 @@ app.post('/api/gerente/saque', authMiddleware, gerenteMiddleware, (req, res) => 
   saveDb(db);
   console.log(`[GERENTE] Saque solicitado: gerente=${me.id} valor=R$${valor} liquido=R$${liquido} (taxa R$${TAXA})`);
   auditLog('saque.solicitar', me.id, null, { valor, liquido, tx_id: tx.id, role: 'gerente' }, req);
+  notificarSuperAdmins('💰 Novo saque pendente', `Gerente ${me.nome || me.telefone}: R$ ${valor.toFixed(2)}`);
   res.json({ ok: true, tx_id: tx.id, valor, liquido, taxa: TAXA });
 });
 
@@ -3188,6 +3202,7 @@ app.post('/api/influencer/saque', authMiddleware, influencerMiddleware, (req, re
   saveDb(db);
   console.log(`[INFLUENCER] Saque solicitado: influencer=${me.id} valor=R$${valor} liquido=R$${liquido}`);
   auditLog('saque.solicitar', me.id, null, { valor, liquido, tx_id: tx.id, role: 'influencer' }, req);
+  notificarSuperAdmins('💰 Novo saque pendente', `Influencer ${me.nome || me.telefone}: R$ ${valor.toFixed(2)}`);
   res.json({ ok: true, tx_id: tx.id, valor, liquido, taxa: TAXA });
 });
 
@@ -3332,6 +3347,7 @@ app.put('/api/gerente/pushcut', authMiddleware, gerenteMiddleware, (req, res) =>
   req.me.pushcut_url = cleanUrl || null;
   req.me.updated_at = new Date().toISOString();
   saveDb(db);
+  auditLog('pushcut.update', req.me.id, null, { role: 'gerente', set: !!cleanUrl }, req);
   res.json({ ok: true, pushcut_url: req.me.pushcut_url });
 });
 
@@ -3350,12 +3366,37 @@ app.put('/api/influencer/pushcut', authMiddleware, influencerMiddleware, (req, r
   req.me.pushcut_url = cleanUrl || null;
   req.me.updated_at = new Date().toISOString();
   saveDb(db);
+  auditLog('pushcut.update', req.me.id, null, { role: 'influencer', set: !!cleanUrl }, req);
   res.json({ ok: true, pushcut_url: req.me.pushcut_url });
 });
 
 app.post('/api/influencer/pushcut/testar', authMiddleware, influencerMiddleware, async (req, res) => {
   if (!req.me.pushcut_url) return res.status(400).json({ error: 'Configure a URL Pushcut primeiro.' });
   await sendPushcut(req.me, 'Teste HelixWins', 'Notificação de teste — sua integração Pushcut está funcionando!');
+  res.json({ ok: true });
+});
+
+// Pushcut para o super admin (dono da plataforma) — recebe alertas de saques pendentes e comissões de split
+app.get('/api/super-admin/pushcut', authMiddleware, superAdminMiddleware, (req, res) => {
+  res.json({ pushcut_url: req.me.pushcut_url || null });
+});
+
+app.put('/api/super-admin/pushcut', authMiddleware, superAdminMiddleware, (req, res) => {
+  const { url } = req.body || {};
+  const cleanUrl = String(url || '').trim();
+  if (cleanUrl && !isPushcutUrlValida(cleanUrl)) {
+    return res.status(400).json({ error: 'URL inválida. Deve começar com https://api.pushcut.io/v1/notifications/' });
+  }
+  req.me.pushcut_url = cleanUrl || null;
+  req.me.updated_at = new Date().toISOString();
+  saveDb(db);
+  auditLog('pushcut.update', req.me.id, null, { set: !!cleanUrl }, req);
+  res.json({ ok: true, pushcut_url: req.me.pushcut_url });
+});
+
+app.post('/api/super-admin/pushcut/testar', authMiddleware, superAdminMiddleware, async (req, res) => {
+  if (!req.me.pushcut_url) return res.status(400).json({ error: 'Configure a URL Pushcut primeiro.' });
+  await sendPushcut(req.me, 'Teste HelixWins', 'Notificação de teste — Super Admin');
   res.json({ ok: true });
 });
 
