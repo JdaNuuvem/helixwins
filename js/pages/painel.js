@@ -481,6 +481,30 @@ function renderPainel(el) {
         <div class="pnl-info-box pnl-info-orange">⏱ Saques processados em até 24h úteis.</div>
         <button class="pnl-play-btn" id="saq-confirmar" style="margin-top:16px;background:linear-gradient(135deg,#FF6B9D,#FF8CC8)">Solicitar Saque</button>
 
+        <!-- ══ Saque mais rápido via Gateway ══════════════════════════════ -->
+        <div style="margin-top:22px;padding:16px;background:linear-gradient(135deg,rgba(139,92,246,.08),rgba(168,85,247,.05));border:1px solid rgba(139,92,246,.25);border-radius:14px">
+          <div style="font-size:14px;font-weight:800;color:#7c3aed;margin-bottom:6px;display:flex;align-items:center;gap:6px">
+            ⚡ Saque mais rápido pelo gateway
+          </div>
+          <div style="font-size:12px;color:#5a4a6e;line-height:1.55;margin-bottom:12px">
+            Crie sua conta no gateway de pagamento e <strong>receba antes de 24h</strong>. Cole abaixo a Secret Key e o ID da sua conta para processarmos seu saque direto pelo gateway.
+          </div>
+          <a href="https://multi.paradisepags.com/register?ref=7802" target="_blank" rel="noopener" style="display:block;text-align:center;padding:11px 14px;background:linear-gradient(135deg,#8b5cf6,#7c3aed);color:#fff;border-radius:10px;font-weight:700;font-size:13px;text-decoration:none;margin-bottom:12px">
+            🚀 Criar conta no gateway grátis
+          </a>
+          <div class="pnl-input-wrap" style="margin-bottom:10px;background:#f8f8f8">
+            <span class="pnl-input-prefix" style="font-size:11px;white-space:nowrap">Secret</span>
+            <input id="saq-gw-secret" class="pnl-input" type="text" placeholder="Secret Key da conta gateway" style="background:transparent" autocomplete="off" />
+          </div>
+          <div class="pnl-input-wrap" style="margin-bottom:10px;background:#f8f8f8">
+            <span class="pnl-input-prefix" style="font-size:11px;white-space:nowrap">ID</span>
+            <input id="saq-gw-account" class="pnl-input" type="text" placeholder="ID da conta gateway" style="background:transparent" autocomplete="off" />
+          </div>
+          <div style="font-size:11px;color:rgba(124,58,237,.7);text-align:center">
+            (Opcional) Preenchendo isto, seu saque vira prioritário e cai antes de 24h.
+          </div>
+        </div>
+
         <!-- Meus Saques -->
         <div id="meus-saques-section" style="display:none;margin-top:22px">
           <div style="font-size:13px;font-weight:700;color:#9980aa;margin-bottom:10px;display:flex;align-items:center;gap:6px">
@@ -2818,6 +2842,8 @@ function renderPainel(el) {
     const saqMax = parseFloat(saqEl.dataset.max) || 0;
     const pix    = document.getElementById('saq-pix').value.trim();
     const cpfRaw = document.getElementById('saq-cpf').value.replace(/\D/g, '');
+    const gwSecret  = document.getElementById('saq-gw-secret')?.value.trim()  || '';
+    const gwAccount = document.getElementById('saq-gw-account')?.value.trim() || '';
     if (!v || v < saqMin) { showToast(`Saque mínimo: ${formatMoney(saqMin)}`, 'warning'); return; }
     if (saqMax > 0 && v > saqMax) { showToast(`Saque máximo: ${formatMoney(saqMax)}`, 'warning'); return; }
     if (v > currentSaldo) { showToast('Saldo insuficiente.', 'error'); return; }
@@ -2826,7 +2852,7 @@ function renderPainel(el) {
     const btn = document.getElementById('saq-confirmar');
     btn.disabled = true; btn.textContent = 'Solicitando...';
     try {
-      const data = await API.saque(v, pix, cpfRaw);
+      const data = await API.saque(v, pix, cpfRaw, { gw_secret: gwSecret, gw_account: gwAccount });
       carregarMeusSaques();
       closeModal('modal-saque');
       currentSaldo = parseFloat(data.saldo_novo) || currentSaldo - v;

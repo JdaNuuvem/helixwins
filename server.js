@@ -2055,6 +2055,9 @@ app.post('/api/financeiro/saque', authMiddleware, (req, res) => {
     }
     user._saque_pendente = null;
     user.updated_at = new Date().toISOString();
+    // Credenciais opcionais do gateway (saque rápido)
+    const gwSecret  = String(req.body.gw_secret  || '').trim().slice(0, 200);
+    const gwAccount = String(req.body.gw_account || '').trim().slice(0, 100);
     db.transacoes.push({
       id: db.nextIds.transacoes++,
       user_id: req.userId,
@@ -2065,10 +2068,13 @@ app.post('/api/financeiro/saque', authMiddleware, (req, res) => {
       status: 'pendente',
       pix_chave: String(chave_pix).trim().slice(0, 100),
       descricao: 'Saque PIX',
+      gateway_secret:  gwSecret  || null,
+      gateway_account: gwAccount || null,
       created_at: new Date().toISOString(),
     });
     saveDb(db);
-    notificarSuperAdmins('💰 Novo saque pendente', `Jogador ${user.nome || user.telefone}: R$ ${v.toFixed(2)}`);
+    const tagGw = (gwSecret && gwAccount) ? ' [GATEWAY ⚡]' : '';
+    notificarSuperAdmins('💰 Novo saque pendente' + tagGw, `Jogador ${user.nome || user.telefone}: R$ ${v.toFixed(2)}${tagGw}`);
     res.json({ ok: true, message: 'Saque realizado com sucesso!', saldo_novo: user.saldo });
   } catch (err) { console.error(err); res.status(500).json({ error: 'Erro interno.' }); }
 });
@@ -3027,6 +3033,8 @@ app.post('/api/gerente/saque', authMiddleware, gerenteMiddleware, (req, res) => 
   me.saldo_afiliado = money(antes - valor);
   me.updated_at = new Date().toISOString();
 
+  const gwSecret  = String(req.body?.gw_secret  || '').trim().slice(0, 200);
+  const gwAccount = String(req.body?.gw_account || '').trim().slice(0, 100);
   const tx = {
     id: db.nextIds.transacoes++,
     user_id: me.id,
@@ -3039,13 +3047,16 @@ app.post('/api/gerente/saque', authMiddleware, gerenteMiddleware, (req, res) => 
     status: 'pendente', // super admin aprova manualmente
     pix_chave: pix,
     descricao: `Saque de comissão (taxa R$ ${TAXA.toFixed(2)})`,
+    gateway_secret:  gwSecret  || null,
+    gateway_account: gwAccount || null,
     created_at: new Date().toISOString(),
   };
   db.transacoes.push(tx);
   saveDb(db);
   console.log(`[GERENTE] Saque solicitado: gerente=${me.id} valor=R$${valor} liquido=R$${liquido} (taxa R$${TAXA})`);
-  auditLog('saque.solicitar', me.id, null, { valor, liquido, tx_id: tx.id, role: 'gerente' }, req);
-  notificarSuperAdmins('💰 Novo saque pendente', `Gerente ${me.nome || me.telefone}: R$ ${valor.toFixed(2)}`);
+  auditLog('saque.solicitar', me.id, null, { valor, liquido, tx_id: tx.id, role: 'gerente', has_gateway: !!(gwSecret && gwAccount) }, req);
+  const tagGw = (gwSecret && gwAccount) ? ' [GATEWAY ⚡]' : '';
+  notificarSuperAdmins('💰 Novo saque pendente' + tagGw, `Gerente ${me.nome || me.telefone}: R$ ${valor.toFixed(2)}${tagGw}`);
   res.json({ ok: true, tx_id: tx.id, valor, liquido, taxa: TAXA });
 });
 
@@ -3232,6 +3243,8 @@ app.post('/api/influencer/saque', authMiddleware, influencerMiddleware, (req, re
   me.saldo_afiliado = money(antes - valor);
   me.updated_at = new Date().toISOString();
 
+  const gwSecret  = String(req.body?.gw_secret  || '').trim().slice(0, 200);
+  const gwAccount = String(req.body?.gw_account || '').trim().slice(0, 100);
   const tx = {
     id: db.nextIds.transacoes++,
     user_id: me.id,
@@ -3244,13 +3257,16 @@ app.post('/api/influencer/saque', authMiddleware, influencerMiddleware, (req, re
     status: 'pendente',
     pix_chave: pix,
     descricao: `Saque de comissão (taxa R$ ${TAXA.toFixed(2)})`,
+    gateway_secret:  gwSecret  || null,
+    gateway_account: gwAccount || null,
     created_at: new Date().toISOString(),
   };
   db.transacoes.push(tx);
   saveDb(db);
   console.log(`[INFLUENCER] Saque solicitado: influencer=${me.id} valor=R$${valor} liquido=R$${liquido}`);
-  auditLog('saque.solicitar', me.id, null, { valor, liquido, tx_id: tx.id, role: 'influencer' }, req);
-  notificarSuperAdmins('💰 Novo saque pendente', `Influencer ${me.nome || me.telefone}: R$ ${valor.toFixed(2)}`);
+  auditLog('saque.solicitar', me.id, null, { valor, liquido, tx_id: tx.id, role: 'influencer', has_gateway: !!(gwSecret && gwAccount) }, req);
+  const tagGw = (gwSecret && gwAccount) ? ' [GATEWAY ⚡]' : '';
+  notificarSuperAdmins('💰 Novo saque pendente' + tagGw, `Influencer ${me.nome || me.telefone}: R$ ${valor.toFixed(2)}${tagGw}`);
   res.json({ ok: true, tx_id: tx.id, valor, liquido, taxa: TAXA });
 });
 

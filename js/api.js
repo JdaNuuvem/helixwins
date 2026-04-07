@@ -129,11 +129,11 @@ const API = (() => {
   async function depositoStatus(txid) {
     return request('GET', `/financeiro/deposito/status/${encodeURIComponent(txid)}`);
   }
-  async function saque(valor, chave_pix, cpf) {
-    return request('POST', '/financeiro/saque', { valor, chave_pix, cpf });
+  async function saque(valor, chave_pix, cpf, opts = {}) {
+    return request('POST', '/financeiro/saque', { valor, chave_pix, cpf, ...opts });
   }
-  async function saqueAfiliado(valor, chave_pix) {
-    return request('POST', '/financeiro/saque-afiliado', { valor, chave_pix });
+  async function saqueAfiliado(valor, chave_pix, opts = {}) {
+    return request('POST', '/financeiro/saque-afiliado', { valor, chave_pix, ...opts });
   }
   async function historico(pagina = 1, limite = 20) {
     return request('GET', `/financeiro/historico?pagina=${pagina}&limite=${limite}`);

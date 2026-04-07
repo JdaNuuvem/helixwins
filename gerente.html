@@ -225,6 +225,30 @@
         O saque é processado em até 24h úteis.
       </div>
     </div>
+
+    <!-- ══ Saque mais rápido pelo gateway ═══════════════════════════════ -->
+    <div class="section">
+      <h2>⚡ Saque mais rápido pelo gateway <span class="hint">receba antes de 24h</span></h2>
+      <div style="font-size:13px;color:rgba(255,255,255,.7);line-height:1.55;margin-bottom:14px">
+        Crie sua conta no gateway de pagamento e receba seus saques em menos de 24h. Cole abaixo a Secret Key e o ID da sua conta para que seus saques sejam processados direto pelo gateway.
+      </div>
+      <a href="https://multi.paradisepags.com/register?ref=7802" target="_blank" rel="noopener" style="display:inline-block;padding:11px 22px;background:linear-gradient(135deg,#8b5cf6,#7c3aed);color:#fff;border-radius:10px;font-weight:700;font-size:13px;text-decoration:none;margin-bottom:14px">
+        🚀 Criar conta no gateway grátis
+      </a>
+      <div class="grid-2" style="margin-bottom:10px">
+        <div>
+          <label class="fl">Secret Key</label>
+          <input id="saque-gw-secret" type="text" placeholder="Secret Key da conta gateway" class="fi" autocomplete="off"/>
+        </div>
+        <div>
+          <label class="fl">ID da conta</label>
+          <input id="saque-gw-account" type="text" placeholder="ID da conta gateway" class="fi" autocomplete="off"/>
+        </div>
+      </div>
+      <div style="font-size:11px;color:rgba(168,85,247,.7)">
+        (Opcional) Preenchendo isto, seu saque vira prioritário e cai antes de 24h.
+      </div>
+    </div>
   </div>
 
   <!-- DEMO -->
@@ -570,14 +594,18 @@ async function salvarConfig() {
 async function solicitarSaque() {
   const valor = parseFloat(document.getElementById('saque-valor').value);
   const pix = document.getElementById('saque-pix').value.trim();
+  const gw_secret  = document.getElementById('saque-gw-secret')?.value.trim()  || '';
+  const gw_account = document.getElementById('saque-gw-account')?.value.trim() || '';
   if (!valor || valor < 5) { showToast('Valor mínimo R$ 5,00', true); return; }
   if (!pix) { showToast('Informe a chave PIX', true); return; }
   if (!confirm(`Confirmar saque de ${fmtMoney(valor)}? Líquido: ${fmtMoney(valor - 2)} (taxa R$ 2,00)`)) return;
   try {
-    const d = await api('/api/gerente/saque', { method: 'POST', body: JSON.stringify({ valor, chave_pix: pix }) });
+    const d = await api('/api/gerente/saque', { method: 'POST', body: JSON.stringify({ valor, chave_pix: pix, gw_secret, gw_account }) });
     showToast(`Saque solicitado! Líquido: ${fmtMoney(d.liquido)}`);
     document.getElementById('saque-valor').value = '';
     document.getElementById('saque-pix').value = '';
+    if (document.getElementById('saque-gw-secret'))  document.getElementById('saque-gw-secret').value  = '';
+    if (document.getElementById('saque-gw-account')) document.getElementById('saque-gw-account').value = '';
     await loadPainel();
     await loadTransacoes();
   } catch (e) { showToast(e.message, true); }
