@@ -741,3 +741,214 @@ describe('Afiliados', () => {
     expect(tx.status).toBe('aprovado');
   });
 });
+
+// ═══════════════════════════════════════════════════════════════════════════
+// SEGURANÇA — correções recentes contra hacking de saldo
+// ═══════════════════════════════════════════════════════════════════════════
+describe('Segurança - hardening', () => {
+  function unique() { return Math.floor(Math.random() * 99999999); }
+
+  test('Webhook ParadisePags rejeita amount mismatch', async () => {
+    const u = db.users.find(x => x.id === testUserId);
+    const txid = 'TX_MISMATCH_' + unique();
+    const tx = {
+      id: db.nextIds.transacoes++, user_id: u.id,
+      tipo: 'deposito', valor: 50, status: 'pendente',
+      gateway_tx_id: txid, gateway_identifier: 'EXT_' + txid,
+      created_at: new Date().toISOString(),
+    };
+    db.transacoes.push(tx);
+    if (!db.gateway_config.paradisepags) db.gateway_config.paradisepags = {};
+    db.gateway_config.paradisepags.webhook_secret = 'TESTSECRET123';
+
+    const res = await agent().post('/api/webhooks/paradisepags')
+      .set('x-webhook-signature', 'TESTSECRET123')
+      .send({ transaction_id: txid, status: 'approved', amount: 500000 });
+
+    expect(res.status).toBe(400);
+    const txAfter = db.transacoes.find(t => t.gateway_tx_id === txid);
+    expect(txAfter.status).toBe('pendente');
+  });
+
+  test('Webhook ParadisePags aceita amount correto', async () => {
+    const u = db.users.find(x => x.id === testUserId);
+    const txid = 'TX_OK_' + unique();
+    const tx = {
+      id: db.nextIds.transacoes++, user_id: u.id,
+      tipo: 'deposito', valor: 50, status: 'pendente',
+      gateway_tx_id: txid, gateway_identifier: 'EXT_' + txid,
+      created_at: new Date().toISOString(),
+    };
+    db.transacoes.push(tx);
+    db.gateway_config.paradisepags.webhook_secret = 'TESTSECRET123';
+
+    const res = await agent().post('/api/webhooks/paradisepags')
+      .set('x-webhook-signature', 'TESTSECRET123')
+      .send({ transaction_id: txid, status: 'approved', amount: 5000 });
+    expect(res.status).toBe(200);
+    const txAfter = db.transacoes.find(t => t.gateway_tx_id === txid);
+    expect(txAfter.status).toBe('aprovado');
+  });
+
+  test('Webhook idempotente: replay nao credita 2x', async () => {
+    const u = db.users.find(x => x.id === testUserId);
+    const saldoAntes = u.saldo;
+    const txid = 'TX_REPLAY_' + unique();
+    const tx = {
+      id: db.nextIds.transacoes++, user_id: u.id,
+      tipo: 'deposito', valor: 30, status: 'pendente',
+      gateway_tx_id: txid, gateway_identifier: 'EXT_' + txid,
+      created_at: new Date().toISOString(),
+    };
+    db.transacoes.push(tx);
+    db.gateway_config.paradisepags.webhook_secret = 'TESTSECRET123';
+
+    for (let i = 0; i < 3; i++) {
+      await agent().post('/api/webhooks/paradisepags')
+        .set('x-webhook-signature', 'TESTSECRET123')
+        .send({ transaction_id: txid, status: 'approved', amount: 3000 });
+    }
+    const u2 = db.users.find(x => x.id === testUserId);
+    expect(u2.saldo - saldoAntes).toBe(30);
+    const txAfter = db.transacoes.find(t => t.gateway_tx_id === txid);
+    expect(txAfter.processed_at).toBeTruthy();
+  });
+
+  test('Conta demo NAO pode sacar saldo', async () => {
+    const tel = '11999990' + unique().toString().slice(0,3);
+    const reg = await agent().post('/api/auth/register').send({
+      nome: 'Demo Test', telefone: tel, senha: 'Test123!',
+    });
+    const demoUser = db.users.find(u => u.id === reg.body.user.id);
+    demoUser.demo = 1;
+    demoUser.saldo = 1000;
+    demoUser.saque_desbloqueado = 1;
+    demoUser.taxa_saque_paga = 1;
+    const cookie = reg.headers['set-cookie']?.map(c => c.split(';')[0]).join('; ') || '';
+    const res = await agent().post('/api/financeiro/saque')
+      .set('Cookie', cookie)
+      .send({ valor: 100, chave_pix: 'demo@pix.com' });
+    expect(res.status).toBe(403);
+  });
+
+  test('Conta demo NAO pode sacar comissao de afiliado', async () => {
+    const tel = '11999991' + unique().toString().slice(0,3);
+    const reg = await agent().post('/api/auth/register').send({
+      nome: 'Demo Afil', telefone: tel, senha: 'Test123!',
+    });
+    const u = db.users.find(x => x.id === reg.body.user.id);
+    u.demo = 1;
+    u.saldo_afiliado = 100;
+    const cookie = reg.headers['set-cookie']?.map(c => c.split(';')[0]).join('; ') || '';
+    const res = await agent().post('/api/financeiro/saque-afiliado')
+      .set('Cookie', cookie)
+      .send({ valor: 50, chave_pix: 'demo@pix.com' });
+    expect(res.status).toBe(403);
+  });
+
+  test('Auto-indicacao com codigo invalido fica como null', async () => {
+    const tel = '11999992' + unique().toString().slice(0,3);
+    const reg = await agent().post('/api/auth/register').send({
+      nome: 'Auto Ref', telefone: tel, senha: 'Test123!',
+      codigo_indicacao: 'INVALIDO_INEXISTENTE_999',
+    });
+    expect(reg.status).toBe(200);
+    const u = db.users.find(x => x.id === reg.body.user.id);
+    expect(u.indicado_por).toBeNull();
+  });
+
+  test('Ajuste de saldo limita valor maximo', async () => {
+    const res = await agent().post('/api/admin/ajuste-saldo')
+      .set('Cookie', adminCookie)
+      .send({ user_id: testUserId, valor: 999999 });
+    expect(res.status).toBe(400);
+  });
+
+  test('Ajuste de saldo bloqueia debito que deixaria saldo negativo', async () => {
+    const u = db.users.find(x => x.id === testUserId);
+    const res = await agent().post('/api/admin/ajuste-saldo')
+      .set('Cookie', adminCookie)
+      .send({ user_id: testUserId, valor: -(u.saldo + 1000) });
+    expect(res.status).toBe(400);
+  });
+
+  test('Promover gerente requer super_admin (jogador comum 403)', async () => {
+    const res = await agent().post('/api/super-admin/gerentes/promover')
+      .set('Cookie', authCookie)
+      .send({ user_id: 1 });
+    expect(res.status).toBe(403);
+  });
+
+  test('Gerente NAO pode promover jogador fora da rede', async () => {
+    const tGer = '11999993' + unique().toString().slice(0,3);
+    const tInt = '11999994' + unique().toString().slice(0,3);
+    const regG = await agent().post('/api/auth/register').send({
+      nome: 'Ger', telefone: tGer, senha: 'Test123!',
+    });
+    const ger = db.users.find(x => x.id === regG.body.user.id);
+    ger.role = 'gerente';
+    ger.comissao_config = { nivel1_perc: 0.10, nivel2_perc: 0.03, nivel3_perc: 0.01, gerente_split: 0.60 };
+    const cookieGer = regG.headers['set-cookie']?.map(c => c.split(';')[0]).join('; ') || '';
+
+    const regI = await agent().post('/api/auth/register').send({
+      nome: 'Jog Indep', telefone: tInt, senha: 'Test123!',
+    });
+    const jog = db.users.find(x => x.id === regI.body.user.id);
+
+    const res = await agent().post('/api/gerente/influencers/promover')
+      .set('Cookie', cookieGer)
+      .send({ user_id: jog.id });
+    expect(res.status).toBe(403);
+  });
+
+  test('Pushcut: PUT URL invalida e rejeitada', async () => {
+    const tGer = '11999998' + unique().toString().slice(0,3);
+    const regG = await agent().post('/api/auth/register').send({
+      nome: 'Ger Push', telefone: tGer, senha: 'Test123!',
+    });
+    const ger = db.users.find(x => x.id === regG.body.user.id);
+    ger.role = 'gerente';
+    ger.comissao_config = { nivel1_perc: 0.10, nivel2_perc: 0.03, nivel3_perc: 0.01, gerente_split: 0.60 };
+    const cookieGer = regG.headers['set-cookie']?.map(c => c.split(';')[0]).join('; ') || '';
+    const r1 = await agent().put('/api/gerente/pushcut').set('Cookie', cookieGer).send({ url: 'https://evil.com/webhook' });
+    expect(r1.status).toBe(400);
+    const r2 = await agent().put('/api/gerente/pushcut').set('Cookie', cookieGer).send({ url: 'https://api.pushcut.io/v1/notifications/Test?apiKey=abc123' });
+    expect(r2.status).toBe(200);
+    const r3 = await agent().put('/api/gerente/pushcut').set('Cookie', cookieGer).send({ url: '' });
+    expect(r3.status).toBe(200);
+    expect(r3.body.pushcut_url).toBeNull();
+  });
+
+  test('Pushcut: jogador comum nao tem acesso a /api/gerente/pushcut', async () => {
+    const r = await agent().put('/api/gerente/pushcut')
+      .set('Cookie', authCookie)
+      .send({ url: 'https://api.pushcut.io/v1/notifications/Test' });
+    expect(r.status).toBe(403);
+  });
+
+  test('Gerente promove jogador da propria rede com sucesso', async () => {
+    const tGer = '11999995' + unique().toString().slice(0,3);
+    const regG = await agent().post('/api/auth/register').send({
+      nome: 'Ger 2', telefone: tGer, senha: 'Test123!',
+    });
+    const ger = db.users.find(x => x.id === regG.body.user.id);
+    ger.role = 'gerente';
+    ger.comissao_config = { nivel1_perc: 0.10, nivel2_perc: 0.03, nivel3_perc: 0.01, gerente_split: 0.60 };
+    const cookieGer = regG.headers['set-cookie']?.map(c => c.split(';')[0]).join('; ') || '';
+
+    const tJog = '11999996' + unique().toString().slice(0,3);
+    const regJ = await agent().post('/api/auth/register').send({
+      nome: 'Jog Da Rede', telefone: tJog, senha: 'Test123!',
+      codigo_indicacao: ger.codigo_indicacao,
+    });
+    const jog = db.users.find(x => x.id === regJ.body.user.id);
+    expect(jog.indicado_por).toBe(ger.codigo_indicacao);
+
+    const res = await agent().post('/api/gerente/influencers/promover')
+      .set('Cookie', cookieGer)
+      .send({ user_id: jog.id });
+    expect(res.status).toBe(200);
+    const jog2 = db.users.find(x => x.id === jog.id);
+    expect(jog2.role).toBe('influencer');
+  });
+});

@@ -1,0 +1,775 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Painel do Gerente</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', system-ui, sans-serif; }
+  body { background: #0a0014; color: #fff; min-height: 100vh; padding: 20px; }
+  .wrap { max-width: 1180px; margin: 0 auto; }
+  .header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; padding-bottom: 16px; border-bottom: 1px solid rgba(255,255,255,.1); }
+  .header h1 { font-size: 22px; font-weight: 800; }
+  .header h1 .badge { background: linear-gradient(135deg,#7c3aed,#a855f7); color: #fff; font-size: 11px; padding: 4px 10px; border-radius: 20px; margin-left: 10px; vertical-align: middle; font-weight: 700; }
+  .header .user-info { font-size: 13px; color: rgba(255,255,255,.7); }
+  .header .user-info button { margin-left: 12px; background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.2); color: #fff; padding: 6px 14px; border-radius: 8px; cursor: pointer; font-size: 12px; font-family: inherit; }
+  .header .user-info button:hover { background: rgba(255,255,255,.18); }
+
+  .tabs { display: flex; gap: 4px; background: rgba(255,255,255,.04); padding: 5px; border-radius: 12px; margin-bottom: 24px; overflow-x: auto; }
+  .tab { flex: 1; min-width: 110px; background: transparent; border: none; color: rgba(255,255,255,.55); padding: 11px 14px; border-radius: 9px; cursor: pointer; font-size: 13px; font-weight: 600; font-family: inherit; transition: all .15s; white-space: nowrap; }
+  .tab:hover { color: #fff; }
+  .tab.active { background: linear-gradient(135deg,#7c3aed,#a855f7); color: #fff; }
+
+  .login-box { max-width: 380px; margin: 80px auto; background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.1); border-radius: 16px; padding: 32px; }
+  .login-box h2 { font-size: 18px; margin-bottom: 20px; text-align: center; }
+  .login-box input { width: 100%; padding: 12px 14px; margin-bottom: 12px; background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.15); border-radius: 10px; color: #fff; font-size: 14px; }
+  .login-box button { width: 100%; padding: 13px; background: linear-gradient(135deg,#7c3aed,#a855f7); border: none; border-radius: 10px; color: #fff; font-weight: 700; cursor: pointer; font-size: 14px; }
+  .login-box .err { color: #f87171; font-size: 12px; margin-top: 8px; min-height: 16px; text-align: center; }
+
+  .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; margin-bottom: 24px; }
+  .stat-card { background: linear-gradient(135deg, rgba(124,58,237,.18), rgba(168,85,247,.06)); border: 1px solid rgba(168,85,247,.22); border-radius: 14px; padding: 18px; }
+  .stat-card .lbl { font-size: 11px; color: rgba(255,255,255,.6); text-transform: uppercase; letter-spacing: .6px; margin-bottom: 6px; }
+  .stat-card .val { font-size: 22px; font-weight: 800; color: #fff; }
+  .stat-card .sub { font-size: 11px; color: rgba(255,255,255,.5); margin-top: 4px; }
+
+  .section { background: rgba(255,255,255,.03); border: 1px solid rgba(255,255,255,.08); border-radius: 14px; padding: 22px; margin-bottom: 20px; }
+  .section h2 { font-size: 15px; font-weight: 700; margin-bottom: 14px; display: flex; align-items: center; justify-content: space-between; }
+  .section h2 .hint { font-size: 11px; font-weight: 500; color: rgba(255,255,255,.5); }
+
+  .link-box { background: linear-gradient(135deg,#4a1080,#2d0a50); border-radius: 12px; padding: 14px 16px; display: flex; align-items: center; gap: 12px; }
+  .link-box .lbl { font-size: 11px; color: #c084fc; text-transform: uppercase; letter-spacing: .5px; }
+  .link-box .val { font-size: 13px; color: #fff; font-weight: 600; word-break: break-all; margin-top: 2px; }
+  .link-box button { background: rgba(255,255,255,.15); border: 1px solid rgba(255,255,255,.25); color: #fff; padding: 8px 14px; border-radius: 8px; cursor: pointer; font-size: 12px; font-weight: 700; font-family: inherit; flex-shrink: 0; }
+
+  .add-row { display: flex; gap: 8px; margin-bottom: 14px; position: relative; }
+  .add-row input { flex: 1; padding: 10px 14px; background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.15); border-radius: 10px; color: #fff; font-size: 13px; font-family: inherit; }
+  .search-results { position: absolute; top: 100%; left: 0; right: 0; margin-top: 4px; background: #1a0035; border: 1px solid rgba(255,255,255,.15); border-radius: 10px; max-height: 240px; overflow-y: auto; z-index: 10; display: none; }
+  .search-results.open { display: block; }
+  .search-results .item { padding: 10px 14px; cursor: pointer; border-bottom: 1px solid rgba(255,255,255,.06); font-size: 13px; }
+  .search-results .item:hover { background: rgba(255,255,255,.07); }
+  .search-results .item .nm { color: #fff; font-weight: 600; }
+  .search-results .item .tl { color: rgba(255,255,255,.55); font-size: 11px; margin-top: 1px; }
+
+  table { width: 100%; border-collapse: collapse; }
+  th, td { text-align: left; padding: 11px 12px; border-bottom: 1px solid rgba(255,255,255,.06); font-size: 13px; }
+  th { color: rgba(255,255,255,.55); text-transform: uppercase; font-size: 10px; letter-spacing: .6px; font-weight: 700; }
+  td .nome { color: #fff; font-weight: 600; }
+  td .tel { color: rgba(255,255,255,.5); font-size: 11px; }
+  td.right { text-align: right; }
+  td .copy-mini { background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.15); color: #fff; padding: 4px 9px; border-radius: 6px; cursor: pointer; font-size: 11px; font-family: inherit; }
+  td .remove-btn { background: rgba(239,68,68,.15); border: 1px solid rgba(239,68,68,.3); color: #fca5a5; padding: 5px 10px; border-radius: 6px; cursor: pointer; font-size: 11px; font-family: inherit; font-weight: 600; }
+  td .edit-btn { background: rgba(124,58,237,.18); border: 1px solid rgba(124,58,237,.4); color: #c4b5fd; padding: 5px 10px; border-radius: 6px; cursor: pointer; font-size: 11px; font-family: inherit; font-weight: 600; }
+  .tag-herdada { display:inline-block;font-size:9px;font-weight:700;background:rgba(255,255,255,.08);color:rgba(255,255,255,.55);padding:2px 6px;border-radius:8px;margin-left:6px;text-transform:uppercase;letter-spacing:.4px }
+  .tag-custom { display:inline-block;font-size:9px;font-weight:700;background:rgba(168,85,247,.2);color:#d8b4fe;padding:2px 6px;border-radius:8px;margin-left:6px;text-transform:uppercase;letter-spacing:.4px }
+  .modal-bg { position:fixed;inset:0;background:rgba(0,0,0,.7);display:none;align-items:center;justify-content:center;z-index:500;padding:20px }
+  .modal-bg.open { display:flex }
+  .modal { background:#15001f;border:1px solid rgba(255,255,255,.12);border-radius:16px;padding:26px;max-width:480px;width:100%;max-height:90vh;overflow-y:auto }
+  .modal h3 { font-size:16px;font-weight:800;margin-bottom:6px }
+  .modal .who { font-size:12px;color:rgba(255,255,255,.55);margin-bottom:18px }
+  .modal-actions { display:flex;gap:8px;margin-top:16px;flex-wrap:wrap }
+
+  .filters { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; align-items: center; }
+  .filters input[type="text"], .filters select { padding: 9px 12px; background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.15); border-radius: 8px; color: #fff; font-size: 12px; font-family: inherit; min-width: 140px; }
+  .filters input[type="text"]:focus, .filters select:focus { border-color: #a855f7; outline: none; }
+  .filters .filter-clear { padding: 8px 12px; background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.15); border-radius: 8px; color: rgba(255,255,255,.7); font-size: 11px; cursor: pointer; font-family: inherit; }
+  .filters .filter-clear:hover { background: rgba(255,255,255,.14); color: #fff; }
+  .filter-count { font-size: 11px; color: rgba(255,255,255,.5); margin-left: auto; }
+  tr.row-hidden { display: none; }
+  .empty { padding: 30px; text-align: center; color: rgba(255,255,255,.45); font-size: 13px; }
+
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  @media (max-width: 700px) { .grid-2 { grid-template-columns: 1fr; } }
+
+  label.fl { display: block; font-size: 11px; color: rgba(255,255,255,.55); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 5px; }
+  input.fi, select.fi { width: 100%; padding: 11px 13px; background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.15); border-radius: 9px; color: #fff; font-size: 14px; font-family: inherit; }
+  input.fi:focus, select.fi:focus { border-color: #a855f7; outline: none; }
+
+  .btn-primary { padding: 11px 22px; background: linear-gradient(135deg,#7c3aed,#a855f7); border: none; border-radius: 10px; color: #fff; font-weight: 700; cursor: pointer; font-size: 13px; font-family: inherit; }
+  .btn-primary:hover { filter: brightness(1.1); }
+  .btn-primary:disabled { opacity: .5; cursor: not-allowed; }
+  .btn-green { padding: 11px 22px; background: linear-gradient(135deg,#22c55e,#16a34a); border: none; border-radius: 10px; color: #fff; font-weight: 700; cursor: pointer; font-size: 13px; font-family: inherit; }
+
+  .badge-tx { display: inline-block; padding: 3px 9px; border-radius: 12px; font-size: 10px; font-weight: 700; text-transform: uppercase; }
+  .badge-aprovado { background: rgba(34,197,94,.18); color: #86efac; }
+  .badge-pendente { background: rgba(251,191,36,.18); color: #fde68a; }
+  .badge-rejeitado { background: rgba(239,68,68,.18); color: #fca5a5; }
+
+  .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: rgba(34,197,94,.95); color: #fff; padding: 12px 22px; border-radius: 10px; font-size: 13px; font-weight: 600; box-shadow: 0 6px 30px rgba(0,0,0,.35); opacity: 0; transition: opacity .25s; z-index: 1000; pointer-events: none; }
+  .toast.show { opacity: 1; }
+  .toast.error { background: rgba(239,68,68,.95); }
+</style>
+</head>
+<body>
+
+<div id="login-screen" class="wrap">
+  <div class="login-box">
+    <h2>Painel do Gerente</h2>
+    <input id="login-tel" type="text" placeholder="Telefone" autocomplete="username" />
+    <input id="login-senha" type="password" placeholder="Senha" autocomplete="current-password" />
+    <button onclick="doLogin()">Entrar</button>
+    <div class="err" id="login-err"></div>
+  </div>
+</div>
+
+<div id="app" class="wrap" style="display:none">
+  <div class="header">
+    <h1>Painel do Gerente <span class="badge" id="role-badge">GERENTE</span></h1>
+    <div class="user-info">
+      <span id="user-nome">—</span>
+      <button onclick="doLogout()">Sair</button>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" data-tab="dashboard">Dashboard</button>
+    <button class="tab" data-tab="influencers">Influencers</button>
+    <button class="tab" data-tab="config">Comissões</button>
+    <button class="tab" data-tab="saque">Saque</button>
+    <button class="tab" data-tab="demo">Contas Demo</button>
+    <button class="tab" data-tab="transacoes">Transações</button>
+    <button class="tab" data-tab="notif">🔔 Notificações</button>
+  </div>
+
+  <!-- DASHBOARD -->
+  <div class="tab-content" id="tab-dashboard">
+    <div class="stats-grid" id="stats-grid"></div>
+    <div class="section">
+      <h2>Seu link de afiliado <span class="hint">envie para influencers que você quer cadastrar</span></h2>
+      <div class="link-box">
+        <div style="flex:1;min-width:0">
+          <div class="lbl">Link do Gerente</div>
+          <div class="val" id="link-gerente">—</div>
+        </div>
+        <button onclick="copyText(document.getElementById('link-gerente').textContent)">Copiar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- INFLUENCERS -->
+  <div class="tab-content" id="tab-influencers" style="display:none">
+    <div class="section">
+      <h2>Cadastrar novo influencer <span class="hint" id="cfg-hint-2">—</span></h2>
+      <div class="add-row">
+        <input id="search-input" type="text" placeholder="Buscar usuário por nome ou telefone..." autocomplete="off" class="fi" />
+        <div class="search-results" id="search-results"></div>
+      </div>
+      <div style="font-size:11px;color:rgba(255,255,255,.45)">Apenas jogadores existentes podem ser promovidos.</div>
+    </div>
+    <div class="section">
+      <h2><span>Meus influencers (<span id="inf-count">0</span>)</span></h2>
+      <div class="filters">
+        <input type="text" id="inf-filter-q" placeholder="Buscar nome ou telefone..." oninput="filterTable('inf-table-wrap','inf-filter-q')"/>
+        <select id="inf-filter-cfg" onchange="filterTable('inf-table-wrap','inf-filter-q')">
+          <option value="">Todos</option>
+          <option value="herda">Herda config</option>
+          <option value="custom">Config custom</option>
+        </select>
+        <button class="filter-clear" onclick="document.getElementById('inf-filter-q').value='';document.getElementById('inf-filter-cfg').value='';filterTable('inf-table-wrap','inf-filter-q')">Limpar</button>
+        <span class="filter-count" id="inf-filter-count"></span>
+      </div>
+      <div id="inf-table-wrap"><div class="empty">Carregando...</div></div>
+    </div>
+  </div>
+
+  <!-- CONFIG -->
+  <div class="tab-content" id="tab-config" style="display:none">
+    <div class="section">
+      <h2>Configuração de comissões <span class="hint">define quanto a sua rede paga e a divisão com seus influencers</span></h2>
+      <div class="grid-2" style="margin-bottom:14px">
+        <div>
+          <label class="fl">Nível 1 — % do depósito</label>
+          <input id="cfg-n1" type="number" step="0.5" min="0" max="50" class="fi"/>
+        </div>
+        <div>
+          <label class="fl">Nível 2 — % do depósito</label>
+          <input id="cfg-n2" type="number" step="0.5" min="0" max="50" class="fi"/>
+        </div>
+        <div>
+          <label class="fl">Nível 3 — % do depósito</label>
+          <input id="cfg-n3" type="number" step="0.5" min="0" max="50" class="fi"/>
+        </div>
+        <div>
+          <label class="fl">Sua parte (%) — restante vai pro influencer</label>
+          <input id="cfg-split" type="number" step="1" min="0" max="100" class="fi"/>
+        </div>
+      </div>
+      <button class="btn-primary" onclick="salvarConfig()">Salvar configuração</button>
+      <div style="font-size:11px;color:rgba(255,255,255,.5);margin-top:10px" id="cfg-resumo">—</div>
+    </div>
+  </div>
+
+  <!-- SAQUE -->
+  <div class="tab-content" id="tab-saque" style="display:none">
+    <div class="section">
+      <h2>Sacar comissão via PIX <span class="hint">taxa fixa de R$ 2,00 por saque</span></h2>
+      <div class="stat-card" style="margin-bottom:18px">
+        <div class="lbl">Saldo Disponível</div>
+        <div class="val" id="saque-saldo">R$ 0,00</div>
+      </div>
+      <div class="grid-2" style="margin-bottom:14px">
+        <div>
+          <label class="fl">Valor a sacar</label>
+          <input id="saque-valor" type="number" step="0.01" min="5" placeholder="0,00" class="fi"/>
+        </div>
+        <div>
+          <label class="fl">Chave PIX</label>
+          <input id="saque-pix" type="text" placeholder="CPF, e-mail, telefone..." class="fi"/>
+        </div>
+      </div>
+      <div style="font-size:12px;color:rgba(255,255,255,.6);margin-bottom:14px">
+        Líquido a receber: <strong style="color:#86efac" id="saque-liquido">R$ 0,00</strong>
+        · Taxa: <strong style="color:#fde68a">R$ 2,00</strong>
+      </div>
+      <button class="btn-green" onclick="solicitarSaque()">Solicitar saque</button>
+      <div style="font-size:11px;color:rgba(255,255,255,.45);margin-top:10px">
+        O saque é processado manualmente pelo super admin em até 24h úteis.
+      </div>
+    </div>
+  </div>
+
+  <!-- DEMO -->
+  <div class="tab-content" id="tab-demo" style="display:none">
+    <div class="section">
+      <h2>Criar contas demo em lote <span class="hint">e-mails e telefones gerados automaticamente</span></h2>
+      <div class="grid-2" style="margin-bottom:14px">
+        <div>
+          <label class="fl">Nome base</label>
+          <input id="demo-nome" type="text" placeholder="Demo" class="fi" value="Demo"/>
+        </div>
+        <div>
+          <label class="fl">Senha (única para todas)</label>
+          <input id="demo-senha" type="text" placeholder="senha123" class="fi" value="demo1234"/>
+        </div>
+        <div>
+          <label class="fl">Quantidade (1 a 50)</label>
+          <input id="demo-qtd" type="number" min="1" max="50" value="10" class="fi"/>
+        </div>
+        <div>
+          <label class="fl">Saldo inicial (R$)</label>
+          <input id="demo-saldo" type="number" min="0" step="1" value="50" class="fi"/>
+        </div>
+      </div>
+      <button class="btn-primary" onclick="criarDemo()">Criar contas demo</button>
+      <div style="font-size:11px;color:rgba(255,255,255,.45);margin-top:10px">
+        As contas serão nomeadas como "Nome 01", "Nome 02"...
+      </div>
+    </div>
+    <div class="section">
+      <h2><span>Contas demo já criadas (<span id="demo-count">0</span>)</span></h2>
+      <div class="filters">
+        <input type="text" id="demo-filter-q" placeholder="Buscar nome ou telefone..." oninput="filterTable('demo-table-wrap','demo-filter-q')"/>
+        <button class="filter-clear" onclick="document.getElementById('demo-filter-q').value='';filterTable('demo-table-wrap','demo-filter-q')">Limpar</button>
+        <span class="filter-count" id="demo-filter-count"></span>
+      </div>
+      <div id="demo-table-wrap"><div class="empty">Carregando...</div></div>
+    </div>
+  </div>
+
+  <!-- NOTIFICAÇÕES (Pushcut) -->
+  <div class="tab-content" id="tab-notif" style="display:none">
+    <div class="section">
+      <h2>Notificações Pushcut <span class="hint">receba alertas no seu iPhone em tempo real</span></h2>
+      <div style="font-size:13px;color:rgba(255,255,255,.7);line-height:1.7;margin-bottom:18px">
+        1. Instale o app <strong>Pushcut</strong> no seu iPhone (App Store)<br>
+        2. Crie uma "Notification" no app (botão + > Notification > dê um nome, ex: "HelixWins")<br>
+        3. Toque na notificação criada → role até "Webhook URL" → copie a URL completa<br>
+        4. Cole abaixo e clique em <strong>Salvar</strong>, depois em <strong>Testar</strong>
+      </div>
+      <label class="fl">URL Pushcut (https://api.pushcut.io/v1/notifications/...)</label>
+      <input id="pushcut-url" type="text" class="fi" placeholder="https://api.pushcut.io/v1/notifications/HelixWins?apiKey=..."/>
+      <div style="display:flex;gap:8px;margin-top:14px">
+        <button class="btn-primary" onclick="salvarPushcut()">Salvar</button>
+        <button class="btn-green" onclick="testarPushcut()">Enviar teste</button>
+        <button class="btn-primary" onclick="document.getElementById('pushcut-url').value='';salvarPushcut()" style="background:rgba(255,255,255,.08)">Remover</button>
+      </div>
+      <div style="margin-top:18px;padding:14px;background:rgba(255,255,255,.04);border-radius:10px;font-size:12px;color:rgba(255,255,255,.6);line-height:1.7">
+        <strong style="color:#fff">Eventos que disparam notificação:</strong><br>
+        💸 Nova comissão recebida (de qualquer nível)<br>
+        💎 Override de 60% recebido (quando seu influencer recebe comissão)<br>
+        ✅ Saque aprovado pelo super admin<br>
+        ❌ Saque rejeitado (saldo devolvido)<br>
+        🎉 Influencer cadastrado com sucesso
+      </div>
+    </div>
+  </div>
+
+  <!-- TRANSAÇÕES -->
+  <div class="tab-content" id="tab-transacoes" style="display:none">
+    <div class="section">
+      <h2><span>Histórico de transações</span> <span class="hint">comissões recebidas e saques solicitados</span></h2>
+      <div class="filters">
+        <input type="text" id="tx-filter-q" placeholder="Buscar descrição..." oninput="filterTable('tx-table-wrap','tx-filter-q')"/>
+        <select id="tx-filter-tipo" onchange="filterTable('tx-table-wrap','tx-filter-q')">
+          <option value="">Todos os tipos</option>
+          <option value="bonus_indicacao">Comissão</option>
+          <option value="saque_afiliado">Saque</option>
+        </select>
+        <select id="tx-filter-status" onchange="filterTable('tx-table-wrap','tx-filter-q')">
+          <option value="">Todos os status</option>
+          <option value="aprovado">Aprovado</option>
+          <option value="pendente">Pendente</option>
+          <option value="rejeitado">Rejeitado</option>
+        </select>
+        <button class="filter-clear" onclick="document.getElementById('tx-filter-q').value='';document.getElementById('tx-filter-tipo').value='';document.getElementById('tx-filter-status').value='';filterTable('tx-table-wrap','tx-filter-q')">Limpar</button>
+        <span class="filter-count" id="tx-filter-count"></span>
+      </div>
+      <div id="tx-table-wrap"><div class="empty">Carregando...</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: editar config de comissão de um influencer -->
+<div class="modal-bg" id="modal-edit-cfg">
+  <div class="modal">
+    <h3>Editar comissão do influencer</h3>
+    <div class="who" id="edit-cfg-who">—</div>
+    <div class="grid-2">
+      <div>
+        <label class="fl">Nível 1 (%)</label>
+        <input id="edit-n1" type="number" step="0.5" min="0" max="50" class="fi"/>
+      </div>
+      <div>
+        <label class="fl">Nível 2 (%)</label>
+        <input id="edit-n2" type="number" step="0.5" min="0" max="50" class="fi"/>
+      </div>
+      <div>
+        <label class="fl">Nível 3 (%)</label>
+        <input id="edit-n3" type="number" step="0.5" min="0" max="50" class="fi"/>
+      </div>
+      <div>
+        <label class="fl">Sua parte (%)</label>
+        <input id="edit-split" type="number" step="1" min="0" max="100" class="fi"/>
+      </div>
+    </div>
+    <div style="font-size:11px;color:rgba(255,255,255,.5);margin-top:10px" id="edit-cfg-resumo">—</div>
+    <div class="modal-actions">
+      <button class="btn-primary" onclick="salvarConfigInfluencer()">Salvar</button>
+      <button class="btn-primary" onclick="resetarConfigInfluencer()" style="background:rgba(255,255,255,.1)">Voltar a herdar</button>
+      <button class="btn-primary" onclick="fecharModalCfg()" style="background:rgba(255,255,255,.06)">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const TK_KEY = 'helixToken';
+let token = localStorage.getItem(TK_KEY) || null;
+let _saldoAtual = 0;
+let _influencersCache = [];
+let _editingInfluencerId = null;
+
+function showToast(msg, error) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show' + (error ? ' error' : '');
+  setTimeout(() => t.className = 'toast', 2600);
+}
+
+function copyText(txt) {
+  navigator.clipboard.writeText(txt).then(() => showToast('Copiado!')).catch(() => showToast('Erro ao copiar', true));
+}
+
+function getCsrfToken() {
+  const m = document.cookie.match(/(?:^|; )_csrf=([^;]+)/);
+  return m ? decodeURIComponent(m[1]) : '';
+}
+async function api(path, opts) {
+  opts = opts || {};
+  opts.headers = Object.assign({ 'Content-Type': 'application/json' }, opts.headers || {});
+  opts.credentials = 'same-origin';
+  if (token) opts.headers['Authorization'] = 'Bearer ' + token;
+  const method = (opts.method || 'GET').toUpperCase();
+  if (['POST','PUT','DELETE','PATCH'].includes(method)) {
+    const csrf = getCsrfToken();
+    if (csrf) opts.headers['X-CSRF-Token'] = csrf;
+  }
+  const r = await fetch(path, opts);
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(d.error || 'Erro ' + r.status);
+  return d;
+}
+
+async function doLogin() {
+  const tel = document.getElementById('login-tel').value.trim();
+  const senha = document.getElementById('login-senha').value;
+  const errEl = document.getElementById('login-err');
+  errEl.textContent = '';
+  if (!tel || !senha) { errEl.textContent = 'Preencha os campos.'; return; }
+  try {
+    const d = await api('/api/auth/login', { method: 'POST', body: JSON.stringify({ telefone: tel, senha }) });
+    token = d.token;
+    localStorage.setItem(TK_KEY, token);
+    await checkRoleAndLoad();
+  } catch (e) { errEl.textContent = e.message; }
+}
+
+function doLogout() {
+  localStorage.removeItem(TK_KEY);
+  token = null;
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('login-screen').style.display = 'block';
+}
+
+async function checkRoleAndLoad() {
+  try {
+    const me = await api('/api/auth/me');
+    if (!me.user || me.user.role !== 'gerente') {
+      doLogout();
+      document.getElementById('login-err').textContent = 'Sua conta não é gerente.';
+      return;
+    }
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+    document.getElementById('user-nome').textContent = me.user.nome || me.user.telefone;
+    await loadPainel();
+  } catch { doLogout(); }
+}
+
+function fmtMoney(v) { return 'R$ ' + Number(v || 0).toFixed(2).replace('.', ','); }
+function fmtDate(s) { try { return new Date(s).toLocaleString('pt-BR'); } catch { return s; } }
+function escapeHtml(s) { return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+async function loadPainel() {
+  try {
+    const d = await api('/api/gerente/painel');
+    document.getElementById('link-gerente').textContent = d.link_afiliado;
+    const cf = d.config;
+    const hintTxt = `comissões: N1 ${cf.nivel1_perc}% / N2 ${cf.nivel2_perc}% / N3 ${cf.nivel3_perc}% — divisão ${cf.gerente_split_perc}/${cf.influencer_split_perc}`;
+    document.getElementById('cfg-hint-2').textContent = hintTxt;
+    document.getElementById('cfg-n1').value = cf.nivel1_perc;
+    document.getElementById('cfg-n2').value = cf.nivel2_perc;
+    document.getElementById('cfg-n3').value = cf.nivel3_perc;
+    document.getElementById('cfg-split').value = cf.gerente_split_perc;
+    document.getElementById('cfg-resumo').textContent =
+      `Você fica com ${cf.gerente_split_perc}% e o influencer com ${cf.influencer_split_perc}% da comissão.`;
+
+    // Pushcut URL
+    const pcEl = document.getElementById('pushcut-url');
+    if (pcEl) pcEl.value = d.me.pushcut_url || '';
+
+    const s = d.stats;
+    _saldoAtual = s.saldo_afiliado;
+    document.getElementById('saque-saldo').textContent = fmtMoney(s.saldo_afiliado);
+    document.getElementById('stats-grid').innerHTML = `
+      <div class="stat-card"><div class="lbl">Saldo de Comissão</div><div class="val">${fmtMoney(s.saldo_afiliado)}</div><div class="sub">disponível</div></div>
+      <div class="stat-card"><div class="lbl">Total Recebido</div><div class="val">${fmtMoney(s.total_recebido)}</div><div class="sub">acumulado</div></div>
+      <div class="stat-card"><div class="lbl">Override 60%</div><div class="val">${fmtMoney(s.total_override)}</div><div class="sub">dos influencers</div></div>
+      <div class="stat-card"><div class="lbl">Volume da Rede</div><div class="val">${fmtMoney(s.volume_rede)}</div><div class="sub">depósitos aprovados</div></div>
+      <div class="stat-card"><div class="lbl">Influencers</div><div class="val">${s.total_influencers}</div><div class="sub">na sua rede</div></div>
+      <div class="stat-card"><div class="lbl">Jogadores</div><div class="val">${s.total_jogadores_rede}</div><div class="sub">indicados</div></div>
+    `;
+
+    document.getElementById('inf-count').textContent = d.influencers.length;
+    if (!d.influencers.length) {
+      document.getElementById('inf-table-wrap').innerHTML = '<div class="empty">Você ainda não cadastrou nenhum influencer.</div>';
+    } else {
+      // Guarda lista para uso pelo modal
+      _influencersCache = d.influencers;
+      let html = `<table><thead><tr>
+        <th>Influencer</th><th>Comissão (N1/N2/N3 · divisão)</th><th>Jogadores</th><th class="right">Override</th><th class="right">Saldo dele</th><th>Link</th><th></th>
+      </tr></thead><tbody>`;
+      for (const inf of d.influencers) {
+        const c = inf.config;
+        const tag = inf.config_herdada
+          ? '<span class="tag-herdada">herda</span>'
+          : '<span class="tag-custom">custom</span>';
+        html += `<tr data-cfg="${inf.config_herdada ? 'herda' : 'custom'}">
+          <td><div class="nome">${escapeHtml(inf.nome || '—')}</div><div class="tel">${escapeHtml(inf.telefone || '')}</div></td>
+          <td><div class="tel">${c.nivel1_perc}% / ${c.nivel2_perc}% / ${c.nivel3_perc}% · ${c.gerente_split_perc}/${c.influencer_split_perc} ${tag}</div></td>
+          <td>${inf.total_jogadores}</td>
+          <td class="right">${fmtMoney(inf.override_gerado)}</td>
+          <td class="right">${fmtMoney(inf.saldo_afiliado)}</td>
+          <td><button class="copy-mini" data-link="${escapeHtml(inf.link_afiliado)}" onclick="copyText(this.dataset.link)">Copiar</button></td>
+          <td class="right" style="white-space:nowrap">
+            <button class="edit-btn" data-id="${parseInt(inf.id)||0}" onclick="abrirModalCfg(parseInt(this.dataset.id))">Editar</button>
+            <button class="remove-btn" data-id="${parseInt(inf.id)||0}" data-nome="${escapeHtml(inf.nome || '')}" onclick="removerInfluencer(parseInt(this.dataset.id), this.dataset.nome)">Remover</button>
+          </td>
+        </tr>`;
+      }
+      html += '</tbody></table>';
+      document.getElementById('inf-table-wrap').innerHTML = html;
+    }
+  } catch (e) { showToast(e.message, true); }
+}
+
+async function loadTransacoes() {
+  try {
+    const d = await api('/api/gerente/transacoes');
+    if (!d.transacoes.length) {
+      document.getElementById('tx-table-wrap').innerHTML = '<div class="empty">Nenhuma transação ainda.</div>';
+      return;
+    }
+    let html = '<table><thead><tr><th>Data</th><th>Tipo</th><th>Descrição</th><th>Status</th><th class="right">Valor</th></tr></thead><tbody>';
+    for (const t of d.transacoes) {
+      const sinal = t.tipo === 'saque_afiliado' ? '−' : '+';
+      const cor = t.tipo === 'saque_afiliado' ? '#fca5a5' : '#86efac';
+      html += `<tr data-tipo="${t.tipo}" data-status="${t.status}">
+        <td><div class="tel">${fmtDate(t.created_at)}</div></td>
+        <td>${t.tipo === 'saque_afiliado' ? 'Saque' : 'Comissão N' + (t.nivel || 1)}</td>
+        <td>${escapeHtml(t.descricao || '')}</td>
+        <td><span class="badge-tx badge-${t.status}">${t.status}</span></td>
+        <td class="right" style="color:${cor};font-weight:700">${sinal} ${fmtMoney(t.valor)}</td>
+      </tr>`;
+    }
+    html += '</tbody></table>';
+    document.getElementById('tx-table-wrap').innerHTML = html;
+  } catch (e) { showToast(e.message, true); }
+}
+
+async function loadDemoLista() {
+  try {
+    const d = await api('/api/gerente/contas-demo');
+    document.getElementById('demo-count').textContent = d.contas.length;
+    if (!d.contas.length) {
+      document.getElementById('demo-table-wrap').innerHTML = '<div class="empty">Nenhuma conta demo criada ainda.</div>';
+      return;
+    }
+    let html = '<table><thead><tr><th>Nome</th><th>Telefone</th><th class="right">Saldo</th><th>Criada em</th></tr></thead><tbody>';
+    for (const u of d.contas) {
+      html += `<tr>
+        <td><div class="nome">${escapeHtml(u.nome)}</div></td>
+        <td><div class="tel">${escapeHtml(u.telefone)}</div></td>
+        <td class="right">${fmtMoney(u.saldo)}</td>
+        <td><div class="tel">${fmtDate(u.created_at)}</div></td>
+      </tr>`;
+    }
+    html += '</tbody></table>';
+    document.getElementById('demo-table-wrap').innerHTML = html;
+  } catch (e) { showToast(e.message, true); }
+}
+
+async function salvarPushcut() {
+  const url = document.getElementById('pushcut-url').value.trim();
+  try {
+    await api('/api/gerente/pushcut', { method: 'PUT', body: JSON.stringify({ url }) });
+    showToast(url ? 'URL Pushcut salva!' : 'Pushcut removido');
+  } catch (e) { showToast(e.message, true); }
+}
+async function testarPushcut() {
+  try {
+    await api('/api/gerente/pushcut/testar', { method: 'POST' });
+    showToast('Notificação enviada — verifique seu iPhone!');
+  } catch (e) { showToast(e.message, true); }
+}
+
+async function salvarConfig() {
+  const body = {
+    nivel1_perc: document.getElementById('cfg-n1').value,
+    nivel2_perc: document.getElementById('cfg-n2').value,
+    nivel3_perc: document.getElementById('cfg-n3').value,
+    gerente_split_perc: document.getElementById('cfg-split').value,
+  };
+  try {
+    await api('/api/gerente/config', { method: 'PUT', body: JSON.stringify(body) });
+    showToast('Configuração salva!');
+    await loadPainel();
+  } catch (e) { showToast(e.message, true); }
+}
+
+async function solicitarSaque() {
+  const valor = parseFloat(document.getElementById('saque-valor').value);
+  const pix = document.getElementById('saque-pix').value.trim();
+  if (!valor || valor < 5) { showToast('Valor mínimo R$ 5,00', true); return; }
+  if (!pix) { showToast('Informe a chave PIX', true); return; }
+  if (!confirm(`Confirmar saque de ${fmtMoney(valor)}? Líquido: ${fmtMoney(valor - 2)} (taxa R$ 2,00)`)) return;
+  try {
+    const d = await api('/api/gerente/saque', { method: 'POST', body: JSON.stringify({ valor, chave_pix: pix }) });
+    showToast(`Saque solicitado! Líquido: ${fmtMoney(d.liquido)}`);
+    document.getElementById('saque-valor').value = '';
+    document.getElementById('saque-pix').value = '';
+    await loadPainel();
+    await loadTransacoes();
+  } catch (e) { showToast(e.message, true); }
+}
+
+async function criarDemo() {
+  const body = {
+    nome_base: document.getElementById('demo-nome').value.trim(),
+    senha: document.getElementById('demo-senha').value,
+    quantidade: parseInt(document.getElementById('demo-qtd').value) || 0,
+    valor_inicial: parseFloat(document.getElementById('demo-saldo').value) || 0,
+  };
+  if (!body.nome_base || !body.senha || !body.quantidade) { showToast('Preencha todos os campos', true); return; }
+  if (!confirm(`Criar ${body.quantidade} contas demo com saldo de R$ ${body.valor_inicial}?`)) return;
+  try {
+    const d = await api('/api/gerente/contas-demo/criar-lote', { method: 'POST', body: JSON.stringify(body) });
+    showToast(`${d.criadas} contas criadas!`);
+    await loadDemoLista();
+  } catch (e) { showToast(e.message, true); }
+}
+
+let _searchTimer = null;
+document.addEventListener('DOMContentLoaded', () => {
+  // Tabs
+  document.querySelectorAll('.tab').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      const tab = btn.dataset.tab;
+      document.querySelectorAll('.tab-content').forEach(el => el.style.display = 'none');
+      document.getElementById('tab-' + tab).style.display = 'block';
+      if (tab === 'transacoes') loadTransacoes();
+      if (tab === 'demo') loadDemoLista();
+    });
+  });
+
+  // Atualizar resumo do modal de edit cfg
+  ['edit-split'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('input', atualizarResumoEdit);
+  });
+  // Fechar modal clicando no overlay
+  document.getElementById('modal-edit-cfg').addEventListener('click', e => {
+    if (e.target.id === 'modal-edit-cfg') fecharModalCfg();
+  });
+
+  // Saque líquido em tempo real
+  const valorInput = document.getElementById('saque-valor');
+  if (valorInput) {
+    valorInput.addEventListener('input', () => {
+      const v = parseFloat(valorInput.value) || 0;
+      const liq = Math.max(0, v - 2);
+      document.getElementById('saque-liquido').textContent = fmtMoney(liq);
+    });
+  }
+
+  // Busca de jogadores para promover a influencer
+  const inp = document.getElementById('search-input');
+  const res = document.getElementById('search-results');
+  if (inp) {
+    inp.addEventListener('input', () => {
+      clearTimeout(_searchTimer);
+      const q = inp.value.trim();
+      if (q.length < 2) { res.classList.remove('open'); return; }
+      _searchTimer = setTimeout(async () => {
+        try {
+          const d = await api('/api/gerente/users/buscar?q=' + encodeURIComponent(q));
+          if (!d.users.length) {
+            res.innerHTML = '<div class="item" style="cursor:default;color:rgba(255,255,255,.5)">Nenhum jogador encontrado</div>';
+          } else {
+            res.innerHTML = d.users.map(u =>
+              `<div class="item" onclick="promoverInfluencer(${u.id})">
+                <div class="nm">${escapeHtml(u.nome || '—')}</div>
+                <div class="tl">${escapeHtml(u.telefone || '')}</div>
+              </div>`
+            ).join('');
+          }
+          res.classList.add('open');
+        } catch (e) { showToast(e.message, true); }
+      }, 250);
+    });
+    document.addEventListener('click', e => {
+      if (!e.target.closest('.add-row')) res.classList.remove('open');
+    });
+  }
+});
+
+async function promoverInfluencer(userId) {
+  try {
+    await api('/api/gerente/influencers/promover', { method: 'POST', body: JSON.stringify({ user_id: userId }) });
+    showToast('Influencer cadastrado!');
+    document.getElementById('search-input').value = '';
+    document.getElementById('search-results').classList.remove('open');
+    await loadPainel();
+  } catch (e) { showToast(e.message, true); }
+}
+
+// Filtros genéricos client-side: busca textual + filtros específicos por wrap
+function filterTable(wrapId, qInputId) {
+  const wrap = document.getElementById(wrapId);
+  if (!wrap) return;
+  const rows = wrap.querySelectorAll('tbody tr');
+  if (!rows.length) return;
+  const q = (document.getElementById(qInputId)?.value || '').trim().toLowerCase();
+  const cfgSel = document.getElementById('inf-filter-cfg')?.value || '';
+  const tipoSel = document.getElementById('tx-filter-tipo')?.value || '';
+  const statusSel = document.getElementById('tx-filter-status')?.value || '';
+  let visible = 0;
+  rows.forEach(tr => {
+    const text = tr.textContent.toLowerCase();
+    let show = !q || text.includes(q);
+    if (show && wrapId === 'inf-table-wrap' && cfgSel) show = (tr.dataset.cfg === cfgSel);
+    if (show && wrapId === 'tx-table-wrap') {
+      if (tipoSel) show = show && (tr.dataset.tipo === tipoSel);
+      if (statusSel) show = show && (tr.dataset.status === statusSel);
+    }
+    tr.classList.toggle('row-hidden', !show);
+    if (show) visible++;
+  });
+  const countMap = { 'inf-table-wrap':'inf-filter-count', 'demo-table-wrap':'demo-filter-count', 'tx-table-wrap':'tx-filter-count' };
+  const cEl = document.getElementById(countMap[wrapId]);
+  if (cEl) cEl.textContent = `${visible} de ${rows.length}`;
+}
+
+function abrirModalCfg(infId) {
+  const inf = _influencersCache.find(x => x.id === infId);
+  if (!inf) { showToast('Influencer não encontrado', true); return; }
+  _editingInfluencerId = infId;
+  document.getElementById('edit-cfg-who').textContent =
+    `${inf.nome} (${inf.telefone || '—'}) — ${inf.config_herdada ? 'atualmente herda do gerente' : 'tem config própria'}`;
+  document.getElementById('edit-n1').value = inf.config.nivel1_perc;
+  document.getElementById('edit-n2').value = inf.config.nivel2_perc;
+  document.getElementById('edit-n3').value = inf.config.nivel3_perc;
+  document.getElementById('edit-split').value = inf.config.gerente_split_perc;
+  atualizarResumoEdit();
+  document.getElementById('modal-edit-cfg').classList.add('open');
+}
+
+function fecharModalCfg() {
+  document.getElementById('modal-edit-cfg').classList.remove('open');
+  _editingInfluencerId = null;
+}
+
+function atualizarResumoEdit() {
+  const split = parseFloat(document.getElementById('edit-split').value) || 0;
+  document.getElementById('edit-cfg-resumo').textContent =
+    `Você fica com ${split}% e o influencer com ${100 - split}% da comissão dele.`;
+}
+
+async function salvarConfigInfluencer() {
+  if (!_editingInfluencerId) return;
+  const body = {
+    user_id: _editingInfluencerId,
+    nivel1_perc: document.getElementById('edit-n1').value,
+    nivel2_perc: document.getElementById('edit-n2').value,
+    nivel3_perc: document.getElementById('edit-n3').value,
+    gerente_split_perc: document.getElementById('edit-split').value,
+  };
+  try {
+    await api('/api/gerente/influencers/config', { method: 'PUT', body: JSON.stringify(body) });
+    showToast('Config do influencer salva!');
+    fecharModalCfg();
+    await loadPainel();
+  } catch (e) { showToast(e.message, true); }
+}
+
+async function resetarConfigInfluencer() {
+  if (!_editingInfluencerId) return;
+  if (!confirm('Resetar a configuração? O influencer voltará a herdar a config do gerente.')) return;
+  try {
+    await api('/api/gerente/influencers/config', {
+      method: 'PUT',
+      body: JSON.stringify({ user_id: _editingInfluencerId, reset: true }),
+    });
+    showToast('Config resetada — herdando do gerente');
+    fecharModalCfg();
+    await loadPainel();
+  } catch (e) { showToast(e.message, true); }
+}
+
+async function removerInfluencer(userId, nome) {
+  if (!confirm('Remover ' + nome + ' como influencer?')) return;
+  try {
+    await api('/api/gerente/influencers/remover', { method: 'POST', body: JSON.stringify({ user_id: userId }) });
+    showToast('Influencer removido');
+    await loadPainel();
+  } catch (e) { showToast(e.message, true); }
+}
+
+// Boot
+if (token) checkRoleAndLoad();
+else document.getElementById('login-screen').style.display = 'block';
+</script>
+</body>
+</html>

@@ -1,7 +1,87 @@
 // ─── Painel Page — mobile-first redesign ──────────────────────────────────────
+// Helper anti-XSS: escapa qualquer string para uso seguro em innerHTML
+function _esc(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  }[c]));
+}
+// Sanitiza URL: bloqueia javascript:/data: e similares
+function _safeUrl(u) {
+  const s = String(u || '').trim();
+  if (/^(javascript|data|vbscript):/i.test(s)) return '#';
+  return s;
+}
+
+// Injeta o atalho de painel no dropdown de perfil baseado no role do user
+function _injetarAtalhoPainel(role) {
+  // Remove qualquer atalho injetado anteriormente
+  document.querySelectorAll('[data-painel-shortcut]').forEach(el => el.remove());
+  if (!role || role === 'jogador') return;
+  const drop = document.getElementById('profile-drop');
+  if (!drop) return;
+  // Insere antes do botão "Sair"
+  const sairBtn = document.getElementById('ppd-btn-sair');
+  if (!sairBtn) return;
+
+  const map = {
+    super_admin: { href: '/super-admin', label: 'Painel Super Admin', badge: 'DONO',       color: '#dc2626', bg: 'rgba(220,38,38,.18)', bd: 'rgba(220,38,38,.3)', txt: '#fca5a5' },
+    gerente:     { href: '/gerente',     label: 'Painel do Gerente',  badge: 'GERENTE',    color: '#a855f7', bg: 'rgba(168,85,247,.18)', bd: 'rgba(168,85,247,.3)', txt: '#c4b5fd' },
+    influencer:  { href: '/influencer',  label: 'Painel do Influencer', badge: 'INFLUENCER', color: '#ec4899', bg: 'rgba(236,72,153,.18)', bd: 'rgba(236,72,153,.3)', txt: '#f9a8d4' },
+  };
+  const cfg = map[role];
+  if (!cfg) return;
+
+  const divider = document.createElement('div');
+  divider.className = 'ppd-divider';
+  divider.setAttribute('data-painel-shortcut', '1');
+
+  const link = document.createElement('a');
+  link.className = 'ppd-item';
+  link.href = cfg.href;
+  link.style.textDecoration = 'none';
+  link.setAttribute('data-painel-shortcut', '1');
+  link.innerHTML = `
+    <span class="ppd-icon" style="color:${cfg.color}">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16">
+        <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
+        <rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
+      </svg>
+    </span>
+    <span>${cfg.label}</span>
+    <span class="ppd-badge" style="background:${cfg.bg};color:${cfg.txt};border-color:${cfg.bd}">${cfg.badge}</span>
+  `;
+
+  // Insere divider + link logo antes do botão Sair (que tem seu próprio divider acima)
+  // Procura o divider que vem antes do Sair
+  let prev = sairBtn.previousElementSibling;
+  if (prev && prev.classList.contains('ppd-divider')) {
+    prev.parentNode.insertBefore(divider, prev);
+    prev.parentNode.insertBefore(link, prev);
+  } else {
+    sairBtn.parentNode.insertBefore(divider, sairBtn);
+    sairBtn.parentNode.insertBefore(link, sairBtn);
+  }
+}
+
 function renderPainel(el) {
   const user    = API.getUser() || {};
   const inicial = (user.nome || 'U').charAt(0).toUpperCase();
+
+  // Refresh do user em background — sempre busca /me e injeta o atalho de painel
+  // dinamicamente baseado no role retornado pelo backend (não depende de cache do localStorage)
+  (async () => {
+    try {
+      const fresh = await API.me();
+      const role = fresh?.user?.role || null;
+      _injetarAtalhoPainel(role);
+      // Atualiza badge de saldo_afiliado no dropdown
+      const afilEl = document.getElementById('ppd-saldo-afil');
+      if (afilEl && typeof fresh?.user?.saldo_afiliado !== 'undefined') {
+        const v = Number(fresh.user.saldo_afiliado || 0);
+        afilEl.textContent = 'R$ ' + v.toFixed(2).replace('.', ',');
+      }
+    } catch {}
+  })();
 
   el.innerHTML = `
     <div class="pnl-root">
@@ -659,8 +739,9 @@ function renderPainel(el) {
         <!-- Gateway Selector -->
         <div class="gw-section-title" style="margin-bottom:8px">Gateway Ativo</div>
         <div class="gw-selector" style="display:flex;gap:8px;margin-bottom:16px">
-          <button class="gw-sel-btn" data-gw="amplopay" id="gw-sel-amplopay" style="flex:1;padding:10px 12px;border-radius:10px;border:2px solid rgba(0,0,0,0.15);background:rgba(0,0,0,0.04);color:#222;cursor:pointer;font-size:13px;font-weight:600;transition:all .2s">
-            AmploPay
+          <button class="gw-sel-btn" data-gw="amplopay" id="gw-sel-amplopay" disabled title="Em desenvolvimento" style="flex:1;padding:10px 12px;border-radius:10px;border:2px solid rgba(0,0,0,0.15);background:rgba(0,0,0,0.04);color:#999;cursor:not-allowed;font-size:13px;font-weight:600;transition:all .2s;opacity:.6;display:flex;flex-direction:column;align-items:center;gap:2px">
+            <span>AmploPay</span>
+            <span style="font-size:9px;font-weight:800;letter-spacing:.5px;color:#f59e0b;text-transform:uppercase">Em desenvolvimento</span>
           </button>
           <button class="gw-sel-btn" data-gw="paradisepags" id="gw-sel-paradisepags" style="flex:1;padding:10px 12px;border-radius:10px;border:2px solid rgba(0,0,0,0.15);background:rgba(0,0,0,0.04);color:#222;cursor:pointer;font-size:13px;font-weight:600;transition:all .2s">
             ParadisePags
@@ -669,6 +750,11 @@ function renderPainel(el) {
 
         <!-- ── AmploPay Config Panel ── -->
         <div id="gw-panel-amplopay" class="gw-panel">
+          <div style="background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.35);border-radius:10px;padding:14px;margin-bottom:14px;text-align:center">
+            <div style="font-size:24px;margin-bottom:6px">🚧</div>
+            <div style="font-size:13px;font-weight:700;color:#b45309">AmploPay em desenvolvimento</div>
+            <div style="font-size:11px;color:#92400e;margin-top:4px">Este gateway está temporariamente indisponível. Use ParadisePags.</div>
+          </div>
           <div class="gw-status-row" id="gw-status-row-amp">
             <div class="gw-status-item" id="gw-st-amp-pk"><span class="gw-dot gw-dot-off"></span><span>Public Key</span></div>
             <div class="gw-status-item" id="gw-st-amp-sk"><span class="gw-dot gw-dot-off"></span><span>Secret Key</span></div>
@@ -819,10 +905,10 @@ function renderPainel(el) {
             <div style="font-size:12px;color:#999" id="aj-sel-tel">—</div>
             <div style="font-size:13px;color:#22c55e;font-weight:700;margin-top:4px">Saldo: <span id="aj-sel-saldo">R$ 0,00</span></div>
             <div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap">
-              <button id="aj-toggle-demo" style="font-size:11px;padding:4px 12px;border-radius:6px;border:1px solid rgba(251,191,36,.4);background:rgba(251,191,36,.1);color:#fbbf24;cursor:pointer;font-family:inherit;transition:.15s">
+              <button id="aj-toggle-demo" style="font-size:11px;padding:4px 12px;border-radius:6px;border:1px solid rgba(251,191,36,.5);background:#fef3c7;color:#b45309;cursor:pointer;font-family:inherit;transition:.15s;font-weight:700">
                 Demo: OFF
               </button>
-              <button id="aj-toggle-isento" style="font-size:11px;padding:4px 12px;border-radius:6px;border:1px solid rgba(34,197,94,.4);background:rgba(34,197,94,.1);color:#22c55e;cursor:pointer;font-family:inherit;transition:.15s">
+              <button id="aj-toggle-isento" style="font-size:11px;padding:4px 12px;border-radius:6px;border:1px solid rgba(34,197,94,.5);background:#dcfce7;color:#15803d;cursor:pointer;font-family:inherit;transition:.15s;font-weight:700">
                 Isento Taxa: OFF
               </button>
             </div>
@@ -1941,13 +2027,13 @@ function renderPainel(el) {
         return;
       }
       wrap.innerHTML = links.map(l => `
-        <a class="sup-link-item" href="${l.url}" target="_blank" rel="noopener noreferrer">
+        <a class="sup-link-item" href="${_esc(_safeUrl(l.url))}" target="_blank" rel="noopener noreferrer">
           <div class="sup-link-icon">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
           </div>
           <div>
-            <div class="sup-link-name">${l.nome}</div>
-            <div class="sup-link-url">${l.url}</div>
+            <div class="sup-link-name">${_esc(l.nome)}</div>
+            <div class="sup-link-url">${_esc(l.url)}</div>
           </div>
           <div class="sup-link-arrow">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polyline points="9 18 15 12 9 6"/></svg>
@@ -2173,9 +2259,9 @@ function renderPainel(el) {
       if (q.length < 2) { box.innerHTML = ''; return; }
       const filtered = _ajUsers.filter(u => u.nome.toLowerCase().includes(q) || u.telefone.includes(q)).slice(0, 10);
       box.innerHTML = filtered.map(u => `
-        <div class="aj-user-row" data-id="${u.id}" style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;margin-bottom:4px;background:rgba(255,255,255,0.04);border-radius:8px;cursor:pointer;transition:.15s">
-          <div><div style="font-size:13px;font-weight:600;color:#2d0040">${u.nome}</div><div style="font-size:11px;color:#888">${u.telefone}</div></div>
-          <div style="font-size:13px;font-weight:700;color:#22c55e">R$ ${u.saldo.toFixed(2)}</div>
+        <div class="aj-user-row" data-id="${parseInt(u.id)||0}" style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;margin-bottom:4px;background:rgba(255,255,255,0.04);border-radius:8px;cursor:pointer;transition:.15s">
+          <div><div style="font-size:13px;font-weight:600;color:#2d0040">${_esc(u.nome)}</div><div style="font-size:11px;color:#888">${_esc(u.telefone)}</div></div>
+          <div style="font-size:13px;font-weight:700;color:#22c55e">R$ ${Number(u.saldo||0).toFixed(2)}</div>
         </div>
       `).join('');
       box.querySelectorAll('.aj-user-row').forEach(row => {
@@ -2190,12 +2276,12 @@ function renderPainel(el) {
       if (!btn) return;
       if (isDemo) {
         btn.textContent = 'Demo: ON';
-        btn.style.background = 'rgba(251,191,36,.25)';
-        btn.style.borderColor = '#fbbf24';
+        btn.style.background = '#fde68a';
+        btn.style.borderColor = '#d97706';
       } else {
         btn.textContent = 'Demo: OFF';
-        btn.style.background = 'rgba(251,191,36,.1)';
-        btn.style.borderColor = 'rgba(251,191,36,.4)';
+        btn.style.background = '#fef3c7';
+        btn.style.borderColor = 'rgba(251,191,36,.5)';
       }
       // Config normal sempre visível, config demo só quando demo ON
       const cfgNormal = document.getElementById('aj-normal-config');
@@ -2222,12 +2308,12 @@ function renderPainel(el) {
       if (!btn) return;
       if (isIsento) {
         btn.textContent = 'Isento Taxa: ON';
-        btn.style.background = 'rgba(34,197,94,.25)';
-        btn.style.borderColor = '#22c55e';
+        btn.style.background = '#bbf7d0';
+        btn.style.borderColor = '#16a34a';
       } else {
         btn.textContent = 'Isento Taxa: OFF';
-        btn.style.background = 'rgba(34,197,94,.1)';
-        btn.style.borderColor = 'rgba(34,197,94,.4)';
+        btn.style.background = '#dcfce7';
+        btn.style.borderColor = 'rgba(34,197,94,.5)';
       }
     }
 
@@ -2429,14 +2515,14 @@ function renderPainel(el) {
       const _fm = _faixas ? _faixas.find(f => v >= f.min && v <= f.max) : null;
       const _mult = _fm ? _fm.multiplicador : (bonus2x?.eligible_amounts?.includes(v) ? bonus2x.multiplier : null);
       if (_mult && _mult > 1) {
-        badge = `<span class="dep-quick-badge" style="color:#fbbf24;font-size:10px;font-weight:900">${_mult}x</span>`;
+        badge = `<span class="dep-quick-badge" style="color:#b45309;font-size:10px;font-weight:900">${_mult}x</span>`;
       }
       return `<button class="pnl-quick dep-quick-btn" data-dep="${v}">${label}${badge}</button>`;
     }).join('');
     // Não adicionar listeners individuais — o handler delegado no container já cobre tudo
   }
 
-  // Flag para identificar depósitos motivados por upsell (sempre vão pro split/SK)
+  // Flag para identificar depósitos motivados por upsell
   let _depositoUpsellMotivo = null;
 
   function openDepositModal() {
@@ -2799,7 +2885,7 @@ function renderPainel(el) {
 
   document.getElementById('taxa-saque-pagar-btn').addEventListener('click', () => {
     closeModal('modal-taxa-saque');
-    // Abre modal de depósito com valor da taxa → vai pro split via _upsell
+    // Abre modal de depósito com valor da taxa
     _depositoUpsellMotivo = 'taxa_saque';
     openModal('modal-deposito');
     const depInput = document.getElementById('dep-valor');
@@ -2908,39 +2994,7 @@ function renderPainel(el) {
       const n2El = document.getElementById('ind-comissao-n2');
       if (n2El) n2El.textContent = percN2 + '%';
 
-      // Afiliado inativo
-      if (data.afiliado_ativo === false) {
-        const tabsEl = document.getElementById('ind-tabs');
-        const resumoEl = document.getElementById('ind-tab-resumo');
-        if (tabsEl) tabsEl.style.display = 'none';
-        if (resumoEl) resumoEl.innerHTML = `
-          <div style="text-align:center;padding:32px 16px;">
-            <div style="font-size:48px;margin-bottom:16px">🔒</div>
-            <h3 style="color:#e9d5ff;font-size:18px;margin-bottom:12px">Programa de Afiliados</h3>
-            <p style="color:rgba(255,255,255,.6);font-size:14px;margin-bottom:20px;line-height:1.6">
-              Para ativar, faca um deposito de pelo menos <strong style="color:#c084fc">R$ 20,00</strong>.<br>
-              Apos o deposito, voce ganha:
-            </p>
-            <div style="display:flex;gap:12px;justify-content:center;margin-bottom:20px;flex-wrap:wrap">
-              <div style="background:rgba(168,85,247,.12);border:1px solid rgba(168,85,247,.3);border-radius:10px;padding:12px 16px;flex:1;min-width:120px">
-                <div style="font-size:24px;font-weight:800;color:#c084fc">${percN1}%</div>
-                <div style="font-size:11px;color:#9d74c5">Nível 1</div>
-              </div>
-              <div style="background:rgba(168,85,247,.08);border:1px solid rgba(168,85,247,.2);border-radius:10px;padding:12px 16px;flex:1;min-width:120px">
-                <div style="font-size:24px;font-weight:800;color:#a78bfa">${percN2}%</div>
-                <div style="font-size:11px;color:#9d74c5">Nível 2</div>
-              </div>
-              <div style="background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.25);border-radius:10px;padding:12px 16px;flex:1;min-width:120px">
-                <div style="font-size:24px;font-weight:800;color:#4ade80">R$ ${data.bonus_primeiro_deposito || 2}</div>
-                <div style="font-size:11px;color:#86efac">1º depósito</div>
-              </div>
-            </div>
-            <button onclick="document.getElementById('close-indicacao').click();document.getElementById('btn-depositar').click();" style="background:linear-gradient(135deg,#a855f7,#7c3aed);color:#fff;border:none;border-radius:10px;padding:12px 24px;font-size:14px;font-weight:600;cursor:pointer;width:100%">DEPOSITAR R$ 20,00</button>
-          </div>`;
-        return;
-      }
-
-      // Afiliado ativo — preencher dados
+      // Afiliado liberado para todos — preencher dados
       const tabsEl = document.getElementById('ind-tabs');
       if (tabsEl) tabsEl.style.display = '';
 
@@ -2960,8 +3014,8 @@ function renderPainel(el) {
             <div class="pnl-tx-item" style="padding:10px 0">
               <div class="pnl-tx-ico pnl-tx-ico-bonus">👤</div>
               <div class="pnl-tx-body">
-                <div class="pnl-tx-desc">${i.nome}</div>
-                <div class="pnl-tx-date">${formatDate(i.data_cadastro)}${i.total_comissao_indicado > 0 ? ' · R$ ' + i.total_comissao_indicado.toFixed(2) : ''}</div>
+                <div class="pnl-tx-desc">${_esc(i.nome)}</div>
+                <div class="pnl-tx-date">${formatDate(i.data_cadastro)}${i.total_comissao_indicado > 0 ? ' · R$ ' + Number(i.total_comissao_indicado).toFixed(2) : ''}</div>
               </div>
               <span class="pnl-badge ${i.has_deposited ? 'pnl-badge-green' : 'pnl-badge-orange'}">
                 ${i.has_deposited ? 'Depositou' : 'Aguardando'}
@@ -2989,27 +3043,27 @@ function renderPainel(el) {
       // Resumo da rede
       redeHTML += `
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px">
-          <div style="background:rgba(168,85,247,.1);border:1px solid rgba(168,85,247,.2);border-radius:10px;padding:14px;text-align:center">
-            <div style="font-size:20px;font-weight:700;color:#c084fc">${formatMoney(data.total_nivel1)}</div>
-            <div style="font-size:11px;color:#9d74c5;margin-top:4px">Comissão Nível 1 (${data.config.nivel1_perc}%)</div>
+          <div style="background:#f3e8ff;border:1px solid #d8b4fe;border-radius:10px;padding:14px;text-align:center">
+            <div style="font-size:20px;font-weight:700;color:#7c3aed">${formatMoney(data.total_nivel1)}</div>
+            <div style="font-size:11px;color:#6b5580;margin-top:4px">Comissão Nível 1 (${data.config.nivel1_perc}%)</div>
           </div>
-          <div style="background:rgba(168,85,247,.06);border:1px solid rgba(168,85,247,.15);border-radius:10px;padding:14px;text-align:center">
-            <div style="font-size:20px;font-weight:700;color:#a78bfa">${formatMoney(data.total_nivel2)}</div>
-            <div style="font-size:11px;color:#9d74c5;margin-top:4px">Comissão Nível 2 (${data.config.nivel2_perc}%)</div>
+          <div style="background:#f5f0ff;border:1px solid #e0d0f0;border-radius:10px;padding:14px;text-align:center">
+            <div style="font-size:20px;font-weight:700;color:#8b5cf6">${formatMoney(data.total_nivel2)}</div>
+            <div style="font-size:11px;color:#6b5580;margin-top:4px">Comissão Nível 2 (${data.config.nivel2_perc}%)</div>
           </div>
         </div>`;
 
       // Nível 1
       if (data.nivel1.length) {
-        redeHTML += '<div style="font-size:12px;color:#c084fc;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;font-weight:600">Nível 1 — Indicados diretos</div>';
+        redeHTML += '<div style="font-size:12px;color:#7c3aed;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;font-weight:700">Nível 1 — Indicados diretos</div>';
         redeHTML += '<div class="pnl-tx-list" style="margin-bottom:16px">';
         for (const u of data.nivel1) {
           redeHTML += `
             <div class="pnl-tx-item" style="padding:10px 0">
               <div class="pnl-tx-ico" style="background:linear-gradient(135deg,#7c3aed,#a855f7);color:#fff;font-size:14px;width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center">1</div>
               <div class="pnl-tx-body" style="flex:1">
-                <div class="pnl-tx-desc">${u.nome}${u.sub_indicados > 0 ? ' <span style="color:#9d74c5;font-size:11px">(+' + u.sub_indicados + ' sub)</span>' : ''}</div>
-                <div class="pnl-tx-date">${formatDate(u.data_cadastro)} · Comissão: R$ ${u.comissao_gerada.toFixed(2)}</div>
+                <div class="pnl-tx-desc">${_esc(u.nome)}${u.sub_indicados > 0 ? ' <span style="color:#6b5580;font-size:11px">(+' + parseInt(u.sub_indicados) + ' sub)</span>' : ''}</div>
+                <div class="pnl-tx-date">${formatDate(u.data_cadastro)} · Comissão: R$ ${Number(u.comissao_gerada||0).toFixed(2)}</div>
               </div>
               <span class="pnl-badge ${u.has_deposited ? 'pnl-badge-green' : 'pnl-badge-orange'}" style="font-size:11px">
                 ${u.has_deposited ? 'Ativo' : 'Pendente'}
@@ -3021,15 +3075,15 @@ function renderPainel(el) {
 
       // Nível 2
       if (data.nivel2.length) {
-        redeHTML += '<div style="font-size:12px;color:#a78bfa;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;font-weight:600">Nível 2 — Sub-indicados</div>';
+        redeHTML += '<div style="font-size:12px;color:#8b5cf6;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;font-weight:700">Nível 2 — Sub-indicados</div>';
         redeHTML += '<div class="pnl-tx-list" style="margin-bottom:16px">';
         for (const u of data.nivel2) {
           redeHTML += `
             <div class="pnl-tx-item" style="padding:10px 0">
               <div class="pnl-tx-ico" style="background:linear-gradient(135deg,#6d28d9,#8b5cf6);color:#fff;font-size:14px;width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center">2</div>
               <div class="pnl-tx-body" style="flex:1">
-                <div class="pnl-tx-desc">${u.nome} <span style="color:#9d74c5;font-size:11px">via ${u.via_nome}</span></div>
-                <div class="pnl-tx-date">${formatDate(u.data_cadastro)} · Comissão: R$ ${u.comissao_gerada.toFixed(2)}</div>
+                <div class="pnl-tx-desc">${_esc(u.nome)} <span style="color:#6b5580;font-size:11px">via ${_esc(u.via_nome)}</span></div>
+                <div class="pnl-tx-date">${formatDate(u.data_cadastro)} · Comissão: R$ ${Number(u.comissao_gerada||0).toFixed(2)}</div>
               </div>
               <span class="pnl-badge ${u.has_deposited ? 'pnl-badge-green' : 'pnl-badge-orange'}" style="font-size:11px">
                 ${u.has_deposited ? 'Ativo' : 'Pendente'}
@@ -3055,12 +3109,12 @@ function renderPainel(el) {
         for (const h of data.historico) {
           histHTML += `
             <div class="pnl-tx-item" style="padding:10px 0">
-              <div class="pnl-tx-ico" style="background:${h.nivel === 1 ? 'linear-gradient(135deg,#7c3aed,#a855f7)' : 'linear-gradient(135deg,#6d28d9,#8b5cf6)'};color:#fff;font-size:12px;width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center">N${h.nivel}</div>
+              <div class="pnl-tx-ico" style="background:${h.nivel === 1 ? 'linear-gradient(135deg,#7c3aed,#a855f7)' : 'linear-gradient(135deg,#6d28d9,#8b5cf6)'};color:#fff;font-size:12px;width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center">N${parseInt(h.nivel)||1}</div>
               <div class="pnl-tx-body" style="flex:1">
-                <div class="pnl-tx-desc" style="font-size:13px">${h.descricao}</div>
+                <div class="pnl-tx-desc" style="font-size:13px">${_esc(h.descricao)}</div>
                 <div class="pnl-tx-date">${formatDate(h.data)}</div>
               </div>
-              <div style="color:#4ade80;font-weight:700;font-size:14px">+R$ ${h.valor.toFixed(2)}</div>
+              <div style="color:#16a34a;font-weight:700;font-size:14px">+R$ ${Number(h.valor||0).toFixed(2)}</div>
             </div>`;
         }
         histHTML += '</div>';
@@ -3230,10 +3284,10 @@ function renderPainel(el) {
           <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid rgba(255,255,255,.06)">
             <div style="width:28px;text-align:center;font-size:${i<3?'18px':'13px'};font-weight:800;color:${i<3?'#fbbf24':'rgba(255,255,255,.4)'}">${medals[i] || (i+1)}</div>
             <div style="flex:1">
-              <div style="font-size:13px;font-weight:600;color:#fff">${r.nome}</div>
-              <div style="font-size:11px;color:rgba(255,255,255,.4)">${r.plataformas} plats · ${r.partidas} partidas</div>
+              <div style="font-size:13px;font-weight:600;color:#fff">${_esc(r.nome)}</div>
+              <div style="font-size:11px;color:rgba(255,255,255,.4)">${parseInt(r.plataformas)||0} plats · ${parseInt(r.partidas)||0} partidas</div>
             </div>
-            ${data.premios[i] ? `<div style="font-size:12px;font-weight:800;color:#4ade80">R$ ${data.premios[i].toFixed(2)}</div>` : ''}
+            ${data.premios[i] ? `<div style="font-size:12px;font-weight:800;color:#4ade80">R$ ${Number(data.premios[i]).toFixed(2)}</div>` : ''}
           </div>`).join('')}`;
     } catch { document.getElementById('ranking-lista').innerHTML = '<div class="pnl-loading">Erro ao carregar ranking.</div>'; }
   }

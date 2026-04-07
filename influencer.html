@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Painel do Influencer</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', system-ui, sans-serif; }
+  body { background: #0a0014; color: #fff; min-height: 100vh; padding: 20px; }
+  .wrap { max-width: 1100px; margin: 0 auto; }
+  .header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; padding-bottom: 16px; border-bottom: 1px solid rgba(255,255,255,.1); }
+  .header h1 { font-size: 22px; font-weight: 800; }
+  .header h1 .badge { background: linear-gradient(135deg,#ec4899,#f43f5e); color: #fff; font-size: 11px; padding: 4px 10px; border-radius: 20px; margin-left: 10px; vertical-align: middle; font-weight: 700; }
+  .header .user-info { font-size: 13px; color: rgba(255,255,255,.7); }
+  .header .user-info button { margin-left: 12px; background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.2); color: #fff; padding: 6px 14px; border-radius: 8px; cursor: pointer; font-size: 12px; font-family: inherit; }
+
+  .tabs { display: flex; gap: 4px; background: rgba(255,255,255,.04); padding: 5px; border-radius: 12px; margin-bottom: 24px; overflow-x: auto; }
+  .tab { flex: 1; min-width: 110px; background: transparent; border: none; color: rgba(255,255,255,.55); padding: 11px 14px; border-radius: 9px; cursor: pointer; font-size: 13px; font-weight: 600; font-family: inherit; transition: all .15s; white-space: nowrap; }
+  .tab:hover { color: #fff; }
+  .tab.active { background: linear-gradient(135deg,#ec4899,#f43f5e); color: #fff; }
+
+  .login-box { max-width: 380px; margin: 80px auto; background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.1); border-radius: 16px; padding: 32px; }
+  .login-box h2 { font-size: 18px; margin-bottom: 20px; text-align: center; }
+  .login-box input { width: 100%; padding: 12px 14px; margin-bottom: 12px; background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.15); border-radius: 10px; color: #fff; font-size: 14px; }
+  .login-box button { width: 100%; padding: 13px; background: linear-gradient(135deg,#ec4899,#f43f5e); border: none; border-radius: 10px; color: #fff; font-weight: 700; cursor: pointer; font-size: 14px; }
+  .login-box .err { color: #f87171; font-size: 12px; margin-top: 8px; min-height: 16px; text-align: center; }
+
+  .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; margin-bottom: 24px; }
+  .stat-card { background: linear-gradient(135deg, rgba(236,72,153,.18), rgba(244,63,94,.06)); border: 1px solid rgba(236,72,153,.22); border-radius: 14px; padding: 18px; }
+  .stat-card .lbl { font-size: 11px; color: rgba(255,255,255,.6); text-transform: uppercase; letter-spacing: .6px; margin-bottom: 6px; }
+  .stat-card .val { font-size: 22px; font-weight: 800; color: #fff; }
+  .stat-card .sub { font-size: 11px; color: rgba(255,255,255,.5); margin-top: 4px; }
+
+  .section { background: rgba(255,255,255,.03); border: 1px solid rgba(255,255,255,.08); border-radius: 14px; padding: 22px; margin-bottom: 20px; }
+  .section h2 { font-size: 15px; font-weight: 700; margin-bottom: 14px; display: flex; justify-content: space-between; align-items: center; }
+  .section h2 .hint { font-size: 11px; font-weight: 500; color: rgba(255,255,255,.5); }
+
+  .link-box { background: linear-gradient(135deg,#831843,#4a044e); border-radius: 12px; padding: 14px 16px; display: flex; align-items: center; gap: 12px; }
+  .link-box .lbl { font-size: 11px; color: #f9a8d4; text-transform: uppercase; letter-spacing: .5px; }
+  .link-box .val { font-size: 13px; color: #fff; font-weight: 600; word-break: break-all; margin-top: 2px; }
+  .link-box button { background: rgba(255,255,255,.15); border: 1px solid rgba(255,255,255,.25); color: #fff; padding: 8px 14px; border-radius: 8px; cursor: pointer; font-size: 12px; font-weight: 700; font-family: inherit; flex-shrink: 0; }
+
+  table { width: 100%; border-collapse: collapse; }
+  th, td { text-align: left; padding: 11px 12px; border-bottom: 1px solid rgba(255,255,255,.06); font-size: 13px; }
+  th { color: rgba(255,255,255,.55); text-transform: uppercase; font-size: 10px; letter-spacing: .6px; font-weight: 700; }
+  td .nome { color: #fff; font-weight: 600; }
+  td .tel { color: rgba(255,255,255,.5); font-size: 11px; }
+  td.right { text-align: right; }
+  .empty { padding: 30px; text-align: center; color: rgba(255,255,255,.45); font-size: 13px; }
+
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  @media (max-width: 700px) { .grid-2 { grid-template-columns: 1fr; } }
+  label.fl { display: block; font-size: 11px; color: rgba(255,255,255,.55); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 5px; }
+  input.fi { width: 100%; padding: 11px 13px; background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.15); border-radius: 9px; color: #fff; font-size: 14px; font-family: inherit; }
+
+  .btn-green { padding: 11px 22px; background: linear-gradient(135deg,#22c55e,#16a34a); border: none; border-radius: 10px; color: #fff; font-weight: 700; cursor: pointer; font-size: 13px; font-family: inherit; }
+
+  .badge-tx { display: inline-block; padding: 3px 9px; border-radius: 12px; font-size: 10px; font-weight: 700; text-transform: uppercase; }
+  .badge-aprovado { background: rgba(34,197,94,.18); color: #86efac; }
+  .badge-pendente { background: rgba(251,191,36,.18); color: #fde68a; }
+  .badge-rejeitado { background: rgba(239,68,68,.18); color: #fca5a5; }
+
+  .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: rgba(34,197,94,.95); color: #fff; padding: 12px 22px; border-radius: 10px; font-size: 13px; font-weight: 600; box-shadow: 0 6px 30px rgba(0,0,0,.35); opacity: 0; transition: opacity .25s; z-index: 1000; pointer-events: none; }
+  .toast.show { opacity: 1; }
+  .toast.error { background: rgba(239,68,68,.95); }
+
+  .filters { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; align-items: center; }
+  .filters input[type="text"], .filters select { padding: 9px 12px; background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.15); border-radius: 8px; color: #fff; font-size: 12px; font-family: inherit; min-width: 140px; }
+  .filters input[type="text"]:focus, .filters select:focus { border-color: #ec4899; outline: none; }
+  .filters .filter-clear { padding: 8px 12px; background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.15); border-radius: 8px; color: rgba(255,255,255,.7); font-size: 11px; cursor: pointer; font-family: inherit; }
+  .filters .filter-clear:hover { background: rgba(255,255,255,.14); color: #fff; }
+  .filter-count { font-size: 11px; color: rgba(255,255,255,.5); margin-left: auto; }
+  tr.row-hidden { display: none; }
+</style>
+</head>
+<body>
+
+<div id="login-screen" class="wrap">
+  <div class="login-box">
+    <h2>Painel do Influencer</h2>
+    <input id="login-tel" type="text" placeholder="Telefone" autocomplete="username" />
+    <input id="login-senha" type="password" placeholder="Senha" autocomplete="current-password" />
+    <button onclick="doLogin()">Entrar</button>
+    <div class="err" id="login-err"></div>
+  </div>
+</div>
+
+<div id="app" class="wrap" style="display:none">
+  <div class="header">
+    <h1>Painel do Influencer <span class="badge">INFLUENCER</span></h1>
+    <div class="user-info">
+      <span id="user-nome">—</span>
+      <button onclick="doLogout()">Sair</button>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" data-tab="dashboard">Dashboard</button>
+    <button class="tab" data-tab="jogadores">Jogadores</button>
+    <button class="tab" data-tab="saque">Saque</button>
+    <button class="tab" data-tab="transacoes">Transações</button>
+    <button class="tab" data-tab="notif">🔔 Notificações</button>
+  </div>
+
+  <div class="tab-content" id="tab-dashboard">
+    <div class="stats-grid" id="stats-grid"></div>
+    <div class="section">
+      <h2>Seu link de afiliado <span class="hint">compartilhe com seus jogadores</span></h2>
+      <div class="link-box">
+        <div style="flex:1;min-width:0">
+          <div class="lbl">Link do Influencer</div>
+          <div class="val" id="link-influencer">—</div>
+        </div>
+        <button onclick="copyText(document.getElementById('link-influencer').textContent)">Copiar</button>
+      </div>
+    </div>
+    <div class="section">
+      <h2>Suas comissões <span class="hint" id="cfg-info">—</span></h2>
+      <div style="font-size:13px;color:rgba(255,255,255,.7);line-height:1.7" id="cfg-detalhes">—</div>
+    </div>
+  </div>
+
+  <div class="tab-content" id="tab-jogadores" style="display:none">
+    <div class="section">
+      <h2><span>Meus jogadores (<span id="jog-count">0</span>)</span></h2>
+      <div class="filters">
+        <input type="text" id="jog-filter-q" placeholder="Buscar nome ou telefone..." oninput="filterTable('jog-table-wrap','jog-filter-q')"/>
+        <button class="filter-clear" onclick="document.getElementById('jog-filter-q').value='';filterTable('jog-table-wrap','jog-filter-q')">Limpar</button>
+        <span class="filter-count" id="jog-filter-count"></span>
+      </div>
+      <div id="jog-table-wrap"><div class="empty">Carregando...</div></div>
+    </div>
+  </div>
+
+  <div class="tab-content" id="tab-saque" style="display:none">
+    <div class="section">
+      <h2>Sacar comissão via PIX <span class="hint">taxa fixa de R$ 2,00 por saque</span></h2>
+      <div class="stat-card" style="margin-bottom:18px">
+        <div class="lbl">Saldo Disponível</div>
+        <div class="val" id="saque-saldo">R$ 0,00</div>
+      </div>
+      <div class="grid-2" style="margin-bottom:14px">
+        <div>
+          <label class="fl">Valor a sacar</label>
+          <input id="saque-valor" type="number" step="0.01" min="5" placeholder="0,00" class="fi"/>
+        </div>
+        <div>
+          <label class="fl">Chave PIX</label>
+          <input id="saque-pix" type="text" placeholder="CPF, e-mail, telefone..." class="fi"/>
+        </div>
+      </div>
+      <div style="font-size:12px;color:rgba(255,255,255,.6);margin-bottom:14px">
+        Líquido a receber: <strong style="color:#86efac" id="saque-liquido">R$ 0,00</strong>
+        · Taxa: <strong style="color:#fde68a">R$ 2,00</strong>
+      </div>
+      <button class="btn-green" onclick="solicitarSaque()">Solicitar saque</button>
+      <div style="font-size:11px;color:rgba(255,255,255,.45);margin-top:10px">
+        Saque processado manualmente em até 24h úteis.
+      </div>
+    </div>
+  </div>
+
+  <!-- NOTIFICAÇÕES (Pushcut) -->
+  <div class="tab-content" id="tab-notif" style="display:none">
+    <div class="section">
+      <h2>Notificações Pushcut <span class="hint">receba alertas no seu iPhone em tempo real</span></h2>
+      <div style="font-size:13px;color:rgba(255,255,255,.7);line-height:1.7;margin-bottom:18px">
+        1. Instale o app <strong>Pushcut</strong> no seu iPhone (App Store)<br>
+        2. Crie uma "Notification" no app (botão + > Notification > dê um nome, ex: "HelixWins")<br>
+        3. Toque na notificação criada → role até "Webhook URL" → copie a URL completa<br>
+        4. Cole abaixo e clique em <strong>Salvar</strong>, depois em <strong>Testar</strong>
+      </div>
+      <label class="fl">URL Pushcut</label>
+      <input id="pushcut-url" type="text" class="fi" placeholder="https://api.pushcut.io/v1/notifications/HelixWins?apiKey=..."/>
+      <div style="display:flex;gap:8px;margin-top:14px">
+        <button class="btn-green" onclick="salvarPushcut()">Salvar</button>
+        <button class="btn-green" onclick="testarPushcut()" style="background:linear-gradient(135deg,#ec4899,#f43f5e)">Enviar teste</button>
+        <button class="btn-green" onclick="document.getElementById('pushcut-url').value='';salvarPushcut()" style="background:rgba(255,255,255,.08)">Remover</button>
+      </div>
+      <div style="margin-top:18px;padding:14px;background:rgba(255,255,255,.04);border-radius:10px;font-size:12px;color:rgba(255,255,255,.6);line-height:1.7">
+        <strong style="color:#fff">Eventos que disparam notificação:</strong><br>
+        💸 Nova comissão recebida (cada depósito de jogador seu)<br>
+        ✅ Saque aprovado pelo super admin<br>
+        ❌ Saque rejeitado (saldo devolvido)<br>
+        🎉 Promovido a influencer (uma vez)
+      </div>
+    </div>
+  </div>
+
+  <div class="tab-content" id="tab-transacoes" style="display:none">
+    <div class="section">
+      <h2><span>Histórico de transações</span></h2>
+      <div class="filters">
+        <input type="text" id="tx-filter-q" placeholder="Buscar descrição..." oninput="filterTable('tx-table-wrap','tx-filter-q')"/>
+        <select id="tx-filter-tipo" onchange="filterTable('tx-table-wrap','tx-filter-q')">
+          <option value="">Todos os tipos</option>
+          <option value="bonus_indicacao">Comissão</option>
+          <option value="saque_afiliado">Saque</option>
+        </select>
+        <select id="tx-filter-status" onchange="filterTable('tx-table-wrap','tx-filter-q')">
+          <option value="">Todos os status</option>
+          <option value="aprovado">Aprovado</option>
+          <option value="pendente">Pendente</option>
+          <option value="rejeitado">Rejeitado</option>
+        </select>
+        <button class="filter-clear" onclick="document.getElementById('tx-filter-q').value='';document.getElementById('tx-filter-tipo').value='';document.getElementById('tx-filter-status').value='';filterTable('tx-table-wrap','tx-filter-q')">Limpar</button>
+        <span class="filter-count" id="tx-filter-count"></span>
+      </div>
+      <div id="tx-table-wrap"><div class="empty">Carregando...</div></div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const TK_KEY = 'helixToken';
+let token = localStorage.getItem(TK_KEY) || null;
+
+function showToast(msg, error) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show' + (error ? ' error' : '');
+  setTimeout(() => t.className = 'toast', 2600);
+}
+function copyText(txt) { navigator.clipboard.writeText(txt).then(() => showToast('Copiado!')).catch(() => showToast('Erro', true)); }
+function fmtMoney(v) { return 'R$ ' + Number(v || 0).toFixed(2).replace('.', ','); }
+function fmtDate(s) { try { return new Date(s).toLocaleString('pt-BR'); } catch { return s; } }
+function escapeHtml(s) { return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+function getCsrfToken() {
+  const m = document.cookie.match(/(?:^|; )_csrf=([^;]+)/);
+  return m ? decodeURIComponent(m[1]) : '';
+}
+async function api(path, opts) {
+  opts = opts || {};
+  opts.headers = Object.assign({ 'Content-Type': 'application/json' }, opts.headers || {});
+  opts.credentials = 'same-origin';
+  if (token) opts.headers['Authorization'] = 'Bearer ' + token;
+  const method = (opts.method || 'GET').toUpperCase();
+  if (['POST','PUT','DELETE','PATCH'].includes(method)) {
+    const csrf = getCsrfToken();
+    if (csrf) opts.headers['X-CSRF-Token'] = csrf;
+  }
+  const r = await fetch(path, opts);
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(d.error || 'Erro ' + r.status);
+  return d;
+}
+
+async function doLogin() {
+  const tel = document.getElementById('login-tel').value.trim();
+  const senha = document.getElementById('login-senha').value;
+  const errEl = document.getElementById('login-err');
+  errEl.textContent = '';
+  if (!tel || !senha) { errEl.textContent = 'Preencha os campos.'; return; }
+  try {
+    const d = await api('/api/auth/login', { method: 'POST', body: JSON.stringify({ telefone: tel, senha }) });
+    token = d.token;
+    localStorage.setItem(TK_KEY, token);
+    await checkRoleAndLoad();
+  } catch (e) { errEl.textContent = e.message; }
+}
+function doLogout() {
+  localStorage.removeItem(TK_KEY); token = null;
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('login-screen').style.display = 'block';
+}
+
+async function checkRoleAndLoad() {
+  try {
+    const me = await api('/api/auth/me');
+    if (!me.user || me.user.role !== 'influencer') {
+      doLogout();
+      document.getElementById('login-err').textContent = 'Sua conta não é influencer.';
+      return;
+    }
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+    document.getElementById('user-nome').textContent = me.user.nome || me.user.telefone;
+    await loadPainel();
+  } catch { doLogout(); }
+}
+
+async function loadPainel() {
+  try {
+    const d = await api('/api/influencer/painel');
+    document.getElementById('link-influencer').textContent = d.link_afiliado;
+    const cf = d.config;
+    document.getElementById('cfg-info').textContent = `você fica com ${cf.sua_parte_perc}% — gerente fica com ${cf.gerente_parte_perc}%`;
+    // Pushcut URL
+    const pcEl = document.getElementById('pushcut-url');
+    if (pcEl) pcEl.value = d.me.pushcut_url || '';
+    document.getElementById('cfg-detalhes').innerHTML = `
+      Quando um jogador seu deposita, a comissão é calculada assim:<br>
+      <strong style="color:#fff">N1 = ${cf.nivel1_perc}%</strong> do depósito (você é o N1 dos seus jogadores diretos)<br>
+      Desse valor, <strong style="color:#86efac">${cf.sua_parte_perc}%</strong> é seu e <strong style="color:#fde68a">${cf.gerente_parte_perc}%</strong> vai pro gerente.<br>
+      <span style="color:rgba(255,255,255,.5);font-size:12px">Bônus de 1º depósito (R$ 2) vai 100% pra você.</span>
+    `;
+
+    const s = d.stats;
+    document.getElementById('saque-saldo').textContent = fmtMoney(s.saldo_afiliado);
+    document.getElementById('stats-grid').innerHTML = `
+      <div class="stat-card"><div class="lbl">Saldo de Comissão</div><div class="val">${fmtMoney(s.saldo_afiliado)}</div><div class="sub">disponível</div></div>
+      <div class="stat-card"><div class="lbl">Total Recebido</div><div class="val">${fmtMoney(s.total_recebido)}</div><div class="sub">acumulado</div></div>
+      <div class="stat-card"><div class="lbl">Volume Indicados</div><div class="val">${fmtMoney(s.volume_indicados)}</div><div class="sub">depósitos aprovados</div></div>
+      <div class="stat-card"><div class="lbl">Jogadores</div><div class="val">${s.total_jogadores}</div><div class="sub">cadastrados</div></div>
+      <div class="stat-card"><div class="lbl">Com Depósito</div><div class="val">${s.jogadores_com_deposito}</div><div class="sub">jogadores ativos</div></div>
+    `;
+
+    document.getElementById('jog-count').textContent = d.jogadores.length;
+    if (!d.jogadores.length) {
+      document.getElementById('jog-table-wrap').innerHTML = '<div class="empty">Você ainda não tem jogadores. Compartilhe seu link!</div>';
+    } else {
+      let html = '<table><thead><tr><th>Jogador</th><th class="right">Total Depositado</th><th>Cadastro</th></tr></thead><tbody>';
+      for (const j of d.jogadores) {
+        html += `<tr>
+          <td><div class="nome">${escapeHtml(j.nome || '—')}</div><div class="tel">${escapeHtml(j.telefone || '')}</div></td>
+          <td class="right">${fmtMoney(j.total_depositado)}</td>
+          <td><div class="tel">${fmtDate(j.created_at)}</div></td>
+        </tr>`;
+      }
+      html += '</tbody></table>';
+      document.getElementById('jog-table-wrap').innerHTML = html;
+    }
+  } catch (e) { showToast(e.message, true); }
+}
+
+async function loadTransacoes() {
+  try {
+    const d = await api('/api/influencer/transacoes');
+    if (!d.transacoes.length) {
+      document.getElementById('tx-table-wrap').innerHTML = '<div class="empty">Nenhuma transação ainda.</div>';
+      return;
+    }
+    let html = '<table><thead><tr><th>Data</th><th>Tipo</th><th>Descrição</th><th>Status</th><th class="right">Valor</th></tr></thead><tbody>';
+    for (const t of d.transacoes) {
+      const sinal = t.tipo === 'saque_afiliado' ? '−' : '+';
+      const cor = t.tipo === 'saque_afiliado' ? '#fca5a5' : '#86efac';
+      html += `<tr data-tipo="${t.tipo}" data-status="${t.status}">
+        <td><div class="tel">${fmtDate(t.created_at)}</div></td>
+        <td>${t.tipo === 'saque_afiliado' ? 'Saque' : 'Comissão N' + (t.nivel || 1)}</td>
+        <td>${escapeHtml(t.descricao || '')}</td>
+        <td><span class="badge-tx badge-${t.status}">${t.status}</span></td>
+        <td class="right" style="color:${cor};font-weight:700">${sinal} ${fmtMoney(t.valor)}</td>
+      </tr>`;
+    }
+    html += '</tbody></table>';
+    document.getElementById('tx-table-wrap').innerHTML = html;
+  } catch (e) { showToast(e.message, true); }
+}
+
+// Filtros genéricos client-side
+function filterTable(wrapId, qInputId) {
+  const wrap = document.getElementById(wrapId);
+  if (!wrap) return;
+  const rows = wrap.querySelectorAll('tbody tr');
+  if (!rows.length) return;
+  const q = (document.getElementById(qInputId)?.value || '').trim().toLowerCase();
+  const tipoSel = document.getElementById('tx-filter-tipo')?.value || '';
+  const statusSel = document.getElementById('tx-filter-status')?.value || '';
+  let visible = 0;
+  rows.forEach(tr => {
+    const text = tr.textContent.toLowerCase();
+    let show = !q || text.includes(q);
+    if (show && wrapId === 'tx-table-wrap') {
+      if (tipoSel) show = show && (tr.dataset.tipo === tipoSel);
+      if (statusSel) show = show && (tr.dataset.status === statusSel);
+    }
+    tr.classList.toggle('row-hidden', !show);
+    if (show) visible++;
+  });
+  const countMap = { 'jog-table-wrap':'jog-filter-count', 'tx-table-wrap':'tx-filter-count' };
+  const cEl = document.getElementById(countMap[wrapId]);
+  if (cEl) cEl.textContent = `${visible} de ${rows.length}`;
+}
+
+async function salvarPushcut() {
+  const url = document.getElementById('pushcut-url').value.trim();
+  try {
+    await api('/api/influencer/pushcut', { method: 'PUT', body: JSON.stringify({ url }) });
+    showToast(url ? 'URL Pushcut salva!' : 'Pushcut removido');
+  } catch (e) { showToast(e.message, true); }
+}
+async function testarPushcut() {
+  try {
+    await api('/api/influencer/pushcut/testar', { method: 'POST' });
+    showToast('Notificação enviada — verifique seu iPhone!');
+  } catch (e) { showToast(e.message, true); }
+}
+
+async function solicitarSaque() {
+  const valor = parseFloat(document.getElementById('saque-valor').value);
+  const pix = document.getElementById('saque-pix').value.trim();
+  if (!valor || valor < 5) { showToast('Valor mínimo R$ 5,00', true); return; }
+  if (!pix) { showToast('Informe a chave PIX', true); return; }
+  if (!confirm(`Confirmar saque de ${fmtMoney(valor)}? Líquido: ${fmtMoney(valor - 2)} (taxa R$ 2,00)`)) return;
+  try {
+    const d = await api('/api/influencer/saque', { method: 'POST', body: JSON.stringify({ valor, chave_pix: pix }) });
+    showToast(`Saque solicitado! Líquido: ${fmtMoney(d.liquido)}`);
+    document.getElementById('saque-valor').value = '';
+    document.getElementById('saque-pix').value = '';
+    await loadPainel();
+    await loadTransacoes();
+  } catch (e) { showToast(e.message, true); }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  document.querySelectorAll('.tab').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      const tab = btn.dataset.tab;
+      document.querySelectorAll('.tab-content').forEach(el => el.style.display = 'none');
+      document.getElementById('tab-' + tab).style.display = 'block';
+      if (tab === 'transacoes') loadTransacoes();
+    });
+  });
+  const valorInput = document.getElementById('saque-valor');
+  if (valorInput) {
+    valorInput.addEventListener('input', () => {
+      const v = parseFloat(valorInput.value) || 0;
+      document.getElementById('saque-liquido').textContent = fmtMoney(Math.max(0, v - 2));
+    });
+  }
+});
+
+if (token) checkRoleAndLoad();
+else document.getElementById('login-screen').style.display = 'block';
+</script>
+</body>
+</html>

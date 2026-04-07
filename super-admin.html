@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Painel do Super Admin</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', system-ui, sans-serif; }
+  body { background: #0a0014; color: #fff; min-height: 100vh; padding: 20px; }
+  .wrap { max-width: 1180px; margin: 0 auto; }
+  .header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; padding-bottom: 16px; border-bottom: 1px solid rgba(255,255,255,.1); }
+  .header h1 { font-size: 22px; font-weight: 800; }
+  .header h1 .badge { background: linear-gradient(135deg,#dc2626,#991b1b); color: #fff; font-size: 11px; padding: 4px 10px; border-radius: 20px; margin-left: 10px; vertical-align: middle; font-weight: 700; }
+  .header .user-info { font-size: 13px; color: rgba(255,255,255,.7); }
+  .header .user-info button { margin-left: 12px; background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.2); color: #fff; padding: 6px 14px; border-radius: 8px; cursor: pointer; font-size: 12px; font-family: inherit; }
+
+  .tabs { display: flex; gap: 4px; background: rgba(255,255,255,.04); padding: 5px; border-radius: 12px; margin-bottom: 24px; overflow-x: auto; }
+  .tab { flex: 1; min-width: 120px; background: transparent; border: none; color: rgba(255,255,255,.55); padding: 11px 14px; border-radius: 9px; cursor: pointer; font-size: 13px; font-weight: 600; font-family: inherit; transition: all .15s; white-space: nowrap; }
+  .tab:hover { color: #fff; }
+  .tab.active { background: linear-gradient(135deg,#dc2626,#991b1b); color: #fff; }
+
+  .login-box { max-width: 380px; margin: 80px auto; background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.1); border-radius: 16px; padding: 32px; }
+  .login-box h2 { font-size: 18px; margin-bottom: 20px; text-align: center; }
+  .login-box input { width: 100%; padding: 12px 14px; margin-bottom: 12px; background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.15); border-radius: 10px; color: #fff; font-size: 14px; }
+  .login-box button { width: 100%; padding: 13px; background: linear-gradient(135deg,#dc2626,#991b1b); border: none; border-radius: 10px; color: #fff; font-weight: 700; cursor: pointer; font-size: 14px; }
+  .login-box .err { color: #f87171; font-size: 12px; margin-top: 8px; min-height: 16px; text-align: center; }
+
+  .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; margin-bottom: 24px; }
+  .stat-card { background: linear-gradient(135deg, rgba(220,38,38,.18), rgba(153,27,27,.06)); border: 1px solid rgba(220,38,38,.22); border-radius: 14px; padding: 18px; }
+  .stat-card .lbl { font-size: 11px; color: rgba(255,255,255,.6); text-transform: uppercase; letter-spacing: .6px; margin-bottom: 6px; }
+  .stat-card .val { font-size: 22px; font-weight: 800; color: #fff; }
+  .stat-card .sub { font-size: 11px; color: rgba(255,255,255,.5); margin-top: 4px; }
+
+  .section { background: rgba(255,255,255,.03); border: 1px solid rgba(255,255,255,.08); border-radius: 14px; padding: 22px; margin-bottom: 20px; }
+  .section h2 { font-size: 15px; font-weight: 700; margin-bottom: 14px; display: flex; align-items: center; justify-content: space-between; }
+  .section h2 .hint { font-size: 11px; font-weight: 500; color: rgba(255,255,255,.5); }
+
+  .add-row { display: flex; gap: 8px; margin-bottom: 14px; position: relative; }
+  .add-row input { flex: 1; padding: 10px 14px; background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.15); border-radius: 10px; color: #fff; font-size: 13px; font-family: inherit; }
+  .search-results { position: absolute; top: 100%; left: 0; right: 0; margin-top: 4px; background: #1a0014; border: 1px solid rgba(255,255,255,.15); border-radius: 10px; max-height: 240px; overflow-y: auto; z-index: 10; display: none; }
+  .search-results.open { display: block; }
+  .search-results .item { padding: 10px 14px; cursor: pointer; border-bottom: 1px solid rgba(255,255,255,.06); font-size: 13px; }
+  .search-results .item:hover { background: rgba(255,255,255,.07); }
+  .search-results .item .nm { color: #fff; font-weight: 600; }
+  .search-results .item .tl { color: rgba(255,255,255,.55); font-size: 11px; margin-top: 1px; }
+
+  table { width: 100%; border-collapse: collapse; }
+  th, td { text-align: left; padding: 11px 12px; border-bottom: 1px solid rgba(255,255,255,.06); font-size: 13px; }
+  th { color: rgba(255,255,255,.55); text-transform: uppercase; font-size: 10px; letter-spacing: .6px; font-weight: 700; }
+  td .nome { color: #fff; font-weight: 600; }
+  td .tel { color: rgba(255,255,255,.5); font-size: 11px; }
+  td.right { text-align: right; }
+  .empty { padding: 30px; text-align: center; color: rgba(255,255,255,.45); font-size: 13px; }
+
+  .btn-green { padding: 8px 14px; background: rgba(34,197,94,.2); border: 1px solid rgba(34,197,94,.4); border-radius: 8px; color: #86efac; font-weight: 700; cursor: pointer; font-size: 11px; font-family: inherit; }
+  .btn-red   { padding: 8px 14px; background: rgba(239,68,68,.18); border: 1px solid rgba(239,68,68,.35); border-radius: 8px; color: #fca5a5; font-weight: 700; cursor: pointer; font-size: 11px; font-family: inherit; }
+  .btn-primary { padding: 11px 22px; background: linear-gradient(135deg,#dc2626,#991b1b); border: none; border-radius: 10px; color: #fff; font-weight: 700; cursor: pointer; font-size: 13px; font-family: inherit; }
+
+  .badge-tx { display: inline-block; padding: 3px 9px; border-radius: 12px; font-size: 10px; font-weight: 700; text-transform: uppercase; }
+  .badge-aprovado { background: rgba(34,197,94,.18); color: #86efac; }
+  .badge-pendente { background: rgba(251,191,36,.18); color: #fde68a; }
+  .badge-rejeitado { background: rgba(239,68,68,.18); color: #fca5a5; }
+
+  .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: rgba(34,197,94,.95); color: #fff; padding: 12px 22px; border-radius: 10px; font-size: 13px; font-weight: 600; box-shadow: 0 6px 30px rgba(0,0,0,.35); opacity: 0; transition: opacity .25s; z-index: 1000; pointer-events: none; }
+  .toast.show { opacity: 1; }
+  .toast.error { background: rgba(239,68,68,.95); }
+
+  .info-line { font-size:12px;color:rgba(255,255,255,.6);margin-top:8px }
+  .info-line strong { color:#fff }
+
+  .filters { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; align-items: center; }
+  .filters input[type="text"], .filters input[type="date"], .filters select { padding: 9px 12px; background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.15); border-radius: 8px; color: #fff; font-size: 12px; font-family: inherit; min-width: 140px; }
+  .filters input[type="text"]:focus, .filters select:focus, .filters input[type="date"]:focus { border-color: #dc2626; outline: none; }
+  .filters .filter-clear { padding: 8px 12px; background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.15); border-radius: 8px; color: rgba(255,255,255,.7); font-size: 11px; cursor: pointer; font-family: inherit; }
+  .filters .filter-clear:hover { background: rgba(255,255,255,.14); color: #fff; }
+  .filter-count { font-size: 11px; color: rgba(255,255,255,.5); margin-left: auto; }
+  tr.row-hidden { display: none; }
+
+  .role-badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: .4px; margin-left: 6px; vertical-align: middle; }
+  .role-badge-jogador     { background: rgba(148,163,184,.18); color: #cbd5e1; border: 1px solid rgba(148,163,184,.35); }
+  .role-badge-influencer  { background: rgba(236,72,153,.18);  color: #f9a8d4; border: 1px solid rgba(236,72,153,.4); }
+  .role-badge-gerente     { background: rgba(168,85,247,.18);  color: #d8b4fe; border: 1px solid rgba(168,85,247,.4); }
+  .role-badge-super_admin { background: rgba(220,38,38,.18);   color: #fca5a5; border: 1px solid rgba(220,38,38,.4); }
+
+  .quick-filter-bar { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
+  .quick-filter-bar button { padding: 7px 12px; background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.12); border-radius: 8px; color: rgba(255,255,255,.7); font-size: 11px; font-weight: 600; cursor: pointer; font-family: inherit; transition: all .15s; }
+  .quick-filter-bar button:hover { background: rgba(255,255,255,.1); color: #fff; }
+  .quick-filter-bar button.active { background: linear-gradient(135deg,#dc2626,#991b1b); color: #fff; border-color: transparent; }
+  .quick-filter-bar .sep { width: 1px; background: rgba(255,255,255,.1); margin: 0 4px; }
+
+  .role-counter { display: inline-flex; align-items: center; gap: 4px; padding: 6px 10px; background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.1); border-radius: 8px; font-size: 11px; }
+  .role-counter .dot { width: 8px; height: 8px; border-radius: 50%; }
+  .role-counter .num { font-weight: 800; color: #fff; margin-left: 2px; }
+
+  tr.row-jogador td { background: rgba(148,163,184,.03); }
+  tr.row-sacavel td { background: rgba(34,197,94,.03); }
+</style>
+</head>
+<body>
+
+<div id="login-screen" class="wrap">
+  <div class="login-box">
+    <h2>Painel do Super Admin</h2>
+    <input id="login-tel" type="text" placeholder="Telefone" autocomplete="username" />
+    <input id="login-senha" type="password" placeholder="Senha" autocomplete="current-password" />
+    <button onclick="doLogin()">Entrar</button>
+    <div class="err" id="login-err"></div>
+  </div>
+</div>
+
+<div id="app" class="wrap" style="display:none">
+  <div class="header">
+    <h1>Super Admin <span class="badge">DONO DA PLATAFORMA</span></h1>
+    <div class="user-info">
+      <span id="user-nome">—</span>
+      <button onclick="doLogout()">Sair</button>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" data-tab="dashboard">Dashboard</button>
+    <button class="tab" data-tab="gerentes">Gerentes</button>
+    <button class="tab" data-tab="saques">Saques pendentes</button>
+    <button class="tab" data-tab="transacoes">Transações</button>
+    <button class="tab" data-tab="audit">Audit Log</button>
+    <button class="tab" data-tab="atalhos">Atalhos</button>
+  </div>
+
+  <div class="tab-content" id="tab-dashboard">
+    <div class="stats-grid" id="stats-grid"></div>
+    <div class="section">
+      <h2>Resumo da plataforma</h2>
+      <div class="info-line">Use a aba <strong>Saques pendentes</strong> para aprovar/rejeitar saques de gerentes, influencers e jogadores.</div>
+      <div class="info-line">Use a aba <strong>Gerentes</strong> para promover novos gerentes à plataforma.</div>
+      <div class="info-line">Configuração do gateway (PIX) fica no painel principal do app.</div>
+    </div>
+  </div>
+
+  <div class="tab-content" id="tab-gerentes" style="display:none">
+    <div class="section">
+      <h2>Promover novo gerente <span class="hint">busque por nome ou telefone</span></h2>
+      <div class="add-row">
+        <input id="search-input" type="text" placeholder="Buscar jogador para promover a gerente..." autocomplete="off" />
+        <div class="search-results" id="search-results"></div>
+      </div>
+      <div style="font-size:11px;color:rgba(255,255,255,.45)">O gerente terá acesso ao painel próprio em /gerente, poderá cadastrar influencers e definir as próprias % de comissão.</div>
+    </div>
+    <div class="section">
+      <h2><span>Gerentes ativos (<span id="ger-count">0</span>)</span></h2>
+      <div class="filters">
+        <input type="text" id="ger-filter-q" placeholder="Buscar por nome ou telefone..." oninput="filterTable('ger-table-wrap', 'ger-filter-q')"/>
+        <button class="filter-clear" onclick="document.getElementById('ger-filter-q').value='';filterTable('ger-table-wrap','ger-filter-q')">Limpar</button>
+        <span class="filter-count" id="ger-filter-count"></span>
+      </div>
+      <div id="ger-table-wrap"><div class="empty">Carregando...</div></div>
+    </div>
+  </div>
+
+  <div class="tab-content" id="tab-saques" style="display:none">
+    <div class="section">
+      <h2><span>Saques pendentes</span> <span class="hint">⚠ jogadores finais normalmente não são pagos de verdade</span></h2>
+
+      <!-- Contadores por tipo -->
+      <div class="quick-filter-bar" id="saques-counters"></div>
+
+      <!-- Filtros rápidos por grupo -->
+      <div class="quick-filter-bar">
+        <button class="active" data-quick="" onclick="aplicarFiltroRapido('')">Todos</button>
+        <button data-quick="pagaveis" onclick="aplicarFiltroRapido('pagaveis')">💰 Pagáveis (Gerente/Influencer/Super)</button>
+        <button data-quick="jogador" onclick="aplicarFiltroRapido('jogador')">🎮 Apenas Jogadores</button>
+        <div class="sep"></div>
+        <button data-quick="role:gerente" onclick="aplicarFiltroRapido('role:gerente')">Gerentes</button>
+        <button data-quick="role:influencer" onclick="aplicarFiltroRapido('role:influencer')">Influencers</button>
+        <button data-quick="role:super_admin" onclick="aplicarFiltroRapido('role:super_admin')">Super Admin</button>
+      </div>
+
+      <div class="filters">
+        <input type="text" id="saques-filter-q" placeholder="Buscar nome / telefone / chave PIX..." oninput="filterTable('saques-table-wrap', 'saques-filter-q')"/>
+        <select id="saques-filter-tipo" onchange="filterTable('saques-table-wrap','saques-filter-q')">
+          <option value="">Todos os tipos</option>
+          <option value="saque">Saldo</option>
+          <option value="saque_afiliado">Comissão</option>
+        </select>
+        <select id="saques-filter-role" onchange="filterTable('saques-table-wrap','saques-filter-q')">
+          <option value="">Todos os roles</option>
+          <option value="jogador">Jogador</option>
+          <option value="influencer">Influencer</option>
+          <option value="gerente">Gerente</option>
+          <option value="super_admin">Super admin</option>
+        </select>
+        <button class="filter-clear" onclick="document.getElementById('saques-filter-q').value='';document.getElementById('saques-filter-tipo').value='';document.getElementById('saques-filter-role').value='';aplicarFiltroRapido('')">Limpar</button>
+        <span class="filter-count" id="saques-filter-count"></span>
+      </div>
+      <div id="saques-table-wrap"><div class="empty">Carregando...</div></div>
+    </div>
+  </div>
+
+  <div class="tab-content" id="tab-transacoes" style="display:none">
+    <div class="section">
+      <h2><span>Transações da plataforma</span> <span class="hint">últimas 300</span></h2>
+      <div style="margin-bottom:12px;display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn-primary" onclick="loadTx('')" style="padding:8px 14px;font-size:12px">Todas</button>
+        <button class="btn-primary" onclick="loadTx('deposito')" style="padding:8px 14px;font-size:12px">Depósitos</button>
+        <button class="btn-primary" onclick="loadTx('saque')" style="padding:8px 14px;font-size:12px">Saques</button>
+        <button class="btn-primary" onclick="loadTx('saque_afiliado')" style="padding:8px 14px;font-size:12px">Saques afiliado</button>
+        <button class="btn-primary" onclick="loadTx('bonus_indicacao')" style="padding:8px 14px;font-size:12px">Comissões</button>
+      </div>
+      <div class="filters">
+        <input type="text" id="tx-filter-q" placeholder="Buscar nome / descrição / role..." oninput="filterTable('tx-table-wrap','tx-filter-q')"/>
+        <select id="tx-filter-status" onchange="filterTable('tx-table-wrap','tx-filter-q')">
+          <option value="">Todos os status</option>
+          <option value="aprovado">Aprovado</option>
+          <option value="pendente">Pendente</option>
+          <option value="rejeitado">Rejeitado</option>
+        </select>
+        <button class="filter-clear" onclick="document.getElementById('tx-filter-q').value='';document.getElementById('tx-filter-status').value='';filterTable('tx-table-wrap','tx-filter-q')">Limpar</button>
+        <span class="filter-count" id="tx-filter-count"></span>
+      </div>
+      <div id="tx-table-wrap"><div class="empty">Carregando...</div></div>
+    </div>
+  </div>
+
+  <div class="tab-content" id="tab-audit" style="display:none">
+    <div class="section">
+      <h2><span>Audit Log</span> <span class="hint">ações sensíveis registradas</span></h2>
+      <div style="margin-bottom:12px;display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn-primary" onclick="loadAudit('')" style="padding:8px 14px;font-size:12px">Todos</button>
+        <button class="btn-primary" onclick="loadAudit('login')" style="padding:8px 14px;font-size:12px">Logins</button>
+        <button class="btn-primary" onclick="loadAudit('saque')" style="padding:8px 14px;font-size:12px">Saques</button>
+        <button class="btn-primary" onclick="loadAudit('gerente')" style="padding:8px 14px;font-size:12px">Gerentes</button>
+        <button class="btn-primary" onclick="loadAudit('influencer')" style="padding:8px 14px;font-size:12px">Influencers</button>
+      </div>
+      <div class="filters">
+        <input type="text" id="audit-filter-q" placeholder="Buscar usuário / IP / detalhes..." oninput="filterTable('audit-table-wrap','audit-filter-q')"/>
+        <button class="filter-clear" onclick="document.getElementById('audit-filter-q').value='';filterTable('audit-table-wrap','audit-filter-q')">Limpar</button>
+        <span class="filter-count" id="audit-filter-count"></span>
+      </div>
+      <div id="audit-table-wrap"><div class="empty">Carregando...</div></div>
+    </div>
+  </div>
+
+  <div class="tab-content" id="tab-atalhos" style="display:none">
+    <div class="section">
+      <h2>Atalhos administrativos</h2>
+      <div class="info-line"><a href="/painel" target="_blank" style="color:#f87171">/painel</a> — painel principal (gateway, ajustes, etc.)</div>
+      <div class="info-line"><a href="/gerente" target="_blank" style="color:#f87171">/gerente</a> — preview do painel do gerente</div>
+      <div class="info-line"><a href="/influencer" target="_blank" style="color:#f87171">/influencer</a> — preview do painel do influencer</div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const TK_KEY = 'helixToken';
+let token = localStorage.getItem(TK_KEY) || null;
+
+function showToast(msg, error) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show' + (error ? ' error' : '');
+  setTimeout(() => t.className = 'toast', 2600);
+}
+function fmtMoney(v) { return 'R$ ' + Number(v || 0).toFixed(2).replace('.', ','); }
+function fmtDate(s) { try { return new Date(s).toLocaleString('pt-BR'); } catch { return s; } }
+function escapeHtml(s) { return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+function getCsrfToken() {
+  const m = document.cookie.match(/(?:^|; )_csrf=([^;]+)/);
+  return m ? decodeURIComponent(m[1]) : '';
+}
+async function api(path, opts) {
+  opts = opts || {};
+  opts.headers = Object.assign({ 'Content-Type': 'application/json' }, opts.headers || {});
+  opts.credentials = 'same-origin';
+  if (token) opts.headers['Authorization'] = 'Bearer ' + token;
+  const method = (opts.method || 'GET').toUpperCase();
+  if (['POST','PUT','DELETE','PATCH'].includes(method)) {
+    const csrf = getCsrfToken();
+    if (csrf) opts.headers['X-CSRF-Token'] = csrf;
+  }
+  const r = await fetch(path, opts);
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(d.error || 'Erro ' + r.status);
+  return d;
+}
+
+async function doLogin() {
+  const tel = document.getElementById('login-tel').value.trim();
+  const senha = document.getElementById('login-senha').value;
+  const errEl = document.getElementById('login-err');
+  errEl.textContent = '';
+  if (!tel || !senha) { errEl.textContent = 'Preencha os campos.'; return; }
+  try {
+    const d = await api('/api/auth/login', { method: 'POST', body: JSON.stringify({ telefone: tel, senha }) });
+    token = d.token;
+    localStorage.setItem(TK_KEY, token);
+    await checkRoleAndLoad();
+  } catch (e) { errEl.textContent = e.message; }
+}
+function doLogout() {
+  localStorage.removeItem(TK_KEY); token = null;
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('login-screen').style.display = 'block';
+}
+
+async function checkRoleAndLoad() {
+  try {
+    const me = await api('/api/auth/me');
+    if (!me.user || me.user.role !== 'super_admin') {
+      doLogout();
+      document.getElementById('login-err').textContent = 'Sua conta não é super admin.';
+      return;
+    }
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+    document.getElementById('user-nome').textContent = me.user.nome || me.user.telefone;
+    await loadDashboard();
+    await loadGerentes();
+  } catch { doLogout(); }
+}
+
+async function loadDashboard() {
+  try {
+    const d = await api('/api/super-admin/painel');
+    const s = d.stats;
+    document.getElementById('stats-grid').innerHTML = `
+      <div class="stat-card"><div class="lbl">Saldo Split</div><div class="val">${fmtMoney(s.saldo_split)}</div><div class="sub">disponível</div></div>
+      <div class="stat-card"><div class="lbl">Total Split Recebido</div><div class="val">${fmtMoney(s.total_split_recebido)}</div><div class="sub">acumulado</div></div>
+      <div class="stat-card"><div class="lbl">Volume da Plataforma</div><div class="val">${fmtMoney(s.volume_depositos)}</div><div class="sub">${s.total_depositos} depósitos</div></div>
+      <div class="stat-card"><div class="lbl">Saques Pendentes</div><div class="val">${s.saques_pendentes}</div><div class="sub">aguardando aprovação</div></div>
+      <div class="stat-card"><div class="lbl">Gerentes</div><div class="val">${s.total_gerentes}</div><div class="sub">ativos</div></div>
+      <div class="stat-card"><div class="lbl">Influencers</div><div class="val">${s.total_influencers}</div><div class="sub">ativos</div></div>
+      <div class="stat-card"><div class="lbl">Jogadores</div><div class="val">${s.total_jogadores}</div><div class="sub">cadastrados</div></div>
+      <div class="stat-card"><div class="lbl">Total de Usuários</div><div class="val">${s.total_users}</div><div class="sub">na plataforma</div></div>
+    `;
+  } catch (e) { showToast(e.message, true); }
+}
+
+async function loadGerentes() {
+  try {
+    const d = await api('/api/super-admin/gerentes');
+    document.getElementById('ger-count').textContent = d.gerentes.length;
+    if (!d.gerentes.length) {
+      document.getElementById('ger-table-wrap').innerHTML = '<div class="empty">Nenhum gerente cadastrado ainda.</div>';
+      return;
+    }
+    let html = `<table><thead><tr>
+      <th>Gerente</th><th>Influencers</th><th>N1/N2/N3</th><th>Split</th><th class="right">Saldo</th><th></th>
+    </tr></thead><tbody>`;
+    for (const g of d.gerentes) {
+      const c = g.comissao_config || { nivel1_perc: 0.10, nivel2_perc: 0.03, nivel3_perc: 0.01, gerente_split: 0.60 };
+      const splitG = Math.round(c.gerente_split * 100);
+      html += `<tr data-role="gerente">
+        <td><div class="nome">${escapeHtml(g.nome || '—')}</div><div class="tel">${escapeHtml(g.telefone || '')}</div></td>
+        <td>${g.total_influencers}</td>
+        <td><div class="tel">${(c.nivel1_perc*100).toFixed(1)}% / ${(c.nivel2_perc*100).toFixed(1)}% / ${(c.nivel3_perc*100).toFixed(1)}%</div></td>
+        <td><div class="tel">${splitG}/${100-splitG}</div></td>
+        <td class="right">${fmtMoney(g.saldo_afiliado)}</td>
+        <td class="right"><button class="btn-red" data-id="${parseInt(g.id)||0}" data-nome="${escapeHtml(g.nome || '')}" onclick="removerGerente(parseInt(this.dataset.id), this.dataset.nome)">Remover</button></td>
+      </tr>`;
+    }
+    html += '</tbody></table>';
+    document.getElementById('ger-table-wrap').innerHTML = html;
+  } catch (e) { showToast(e.message, true); }
+}
+
+async function loadSaques() {
+  try {
+    const d = await api('/api/super-admin/saques');
+    // Contadores por tipo
+    const counts = { jogador: 0, influencer: 0, gerente: 0, super_admin: 0, total: 0, pagaveis: 0 };
+    const totaisPorRole = { jogador: 0, influencer: 0, gerente: 0, super_admin: 0 };
+    for (const s of d.saques) {
+      const r = s.user?.role || 'jogador';
+      counts[r] = (counts[r] || 0) + 1;
+      counts.total++;
+      totaisPorRole[r] = (totaisPorRole[r] || 0) + Number(s.valor || 0);
+      if (r !== 'jogador') counts.pagaveis++;
+    }
+    // Renderiza contadores
+    const counterBar = document.getElementById('saques-counters');
+    if (counterBar) {
+      counterBar.innerHTML = `
+        <div class="role-counter"><span class="dot" style="background:#cbd5e1"></span> Jogadores: <span class="num">${counts.jogador}</span> <span style="color:rgba(255,255,255,.4)">(${fmtMoney(totaisPorRole.jogador)})</span></div>
+        <div class="role-counter"><span class="dot" style="background:#f9a8d4"></span> Influencers: <span class="num">${counts.influencer}</span> <span style="color:rgba(255,255,255,.4)">(${fmtMoney(totaisPorRole.influencer)})</span></div>
+        <div class="role-counter"><span class="dot" style="background:#d8b4fe"></span> Gerentes: <span class="num">${counts.gerente}</span> <span style="color:rgba(255,255,255,.4)">(${fmtMoney(totaisPorRole.gerente)})</span></div>
+        <div class="role-counter"><span class="dot" style="background:#fca5a5"></span> Super Admin: <span class="num">${counts.super_admin}</span> <span style="color:rgba(255,255,255,.4)">(${fmtMoney(totaisPorRole.super_admin)})</span></div>
+        <div class="role-counter" style="border-color:rgba(34,197,94,.35);background:rgba(34,197,94,.08)">💰 Pagáveis: <span class="num">${counts.pagaveis}</span></div>
+      `;
+    }
+
+    if (!d.saques.length) {
+      document.getElementById('saques-table-wrap').innerHTML = '<div class="empty">Nenhum saque pendente.</div>';
+      return;
+    }
+    let html = `<table><thead><tr>
+      <th>Solicitado em</th><th>Usuário</th><th>Tipo</th><th class="right">Valor</th><th class="right">Líquido</th><th>Chave PIX</th><th></th>
+    </tr></thead><tbody>`;
+    for (const s of d.saques) {
+      const role = s.user?.role || '';
+      const tipoLabel = s.tipo === 'saque_afiliado' ? 'Comissão' : 'Saldo';
+      const roleBadge = role ? `<span class="role-badge role-badge-${role}">${role === 'super_admin' ? 'SUPER' : role}</span>` : '';
+      const rowClass = role === 'jogador' ? 'row-jogador' : 'row-sacavel';
+      html += `<tr class="${rowClass}" data-tipo="${s.tipo}" data-role="${role}">
+        <td><div class="tel">${fmtDate(s.created_at)}</div></td>
+        <td>${s.user ? `<div class="nome">${escapeHtml(s.user.nome || '—')}${roleBadge}</div><div class="tel">${escapeHtml(s.user.telefone || '')}</div>` : '—'}</td>
+        <td>${tipoLabel}</td>
+        <td class="right">${fmtMoney(s.valor)}</td>
+        <td class="right">${fmtMoney(s.valor_liquido || s.valor)}${s.taxa ? `<div class="tel">taxa ${fmtMoney(s.taxa)}</div>` : ''}</td>
+        <td><div class="tel" style="word-break:break-all">${escapeHtml(s.pix_chave || '—')}</div></td>
+        <td class="right" style="white-space:nowrap">
+          <button class="btn-green" data-id="${parseInt(s.id)||0}" onclick="aprovarSaque(parseInt(this.dataset.id))">Aprovar</button>
+          <button class="btn-red" data-id="${parseInt(s.id)||0}" onclick="rejeitarSaque(parseInt(this.dataset.id))">Rejeitar</button>
+        </td>
+      </tr>`;
+    }
+    html += '</tbody></table>';
+    document.getElementById('saques-table-wrap').innerHTML = html;
+  } catch (e) { showToast(e.message, true); }
+}
+
+// Pré-filtro rápido: aplica valor nos selects e dispara filterTable
+function aplicarFiltroRapido(preset) {
+  // Marca botão ativo
+  document.querySelectorAll('.quick-filter-bar button[data-quick]').forEach(b => {
+    b.classList.toggle('active', b.dataset.quick === preset);
+  });
+  const roleSel = document.getElementById('saques-filter-role');
+  if (!roleSel) return;
+
+  if (preset === '') {
+    roleSel.value = '';
+    // Reset qualquer filtro virtual
+    _saquesVirtualFilter = null;
+  } else if (preset === 'pagaveis') {
+    roleSel.value = '';
+    _saquesVirtualFilter = 'pagaveis'; // exclui jogador
+  } else if (preset === 'jogador') {
+    roleSel.value = 'jogador';
+    _saquesVirtualFilter = null;
+  } else if (preset.startsWith('role:')) {
+    roleSel.value = preset.slice(5);
+    _saquesVirtualFilter = null;
+  }
+  filterTable('saques-table-wrap', 'saques-filter-q');
+}
+let _saquesVirtualFilter = null;
+
+async function loadTx(tipo) {
+  try {
+    const d = await api('/api/super-admin/transacoes' + (tipo ? '?tipo=' + tipo : ''));
+    if (!d.transacoes.length) {
+      document.getElementById('tx-table-wrap').innerHTML = '<div class="empty">Nenhuma transação encontrada.</div>';
+      return;
+    }
+    let html = `<table><thead><tr>
+      <th>Data</th><th>Usuário</th><th>Tipo</th><th>Descrição</th><th>Status</th><th class="right">Valor</th>
+    </tr></thead><tbody>`;
+    for (const t of d.transacoes) {
+      html += `<tr data-status="${t.status}" data-tipo="${t.tipo}">
+        <td><div class="tel">${fmtDate(t.created_at)}</div></td>
+        <td>${t.user ? `<div class="nome">${escapeHtml(t.user.nome || '—')}</div><div class="tel">${t.user.role}</div>` : '—'}</td>
+        <td>${t.tipo}</td>
+        <td><div class="tel">${escapeHtml(t.descricao || '')}</div></td>
+        <td><span class="badge-tx badge-${t.status}">${t.status}</span></td>
+        <td class="right">${fmtMoney(t.valor)}</td>
+      </tr>`;
+    }
+    html += '</tbody></table>';
+    document.getElementById('tx-table-wrap').innerHTML = html;
+  } catch (e) { showToast(e.message, true); }
+}
+
+// Filtra linhas de uma tabela genericamente: busca textual + filtros específicos por id
+function filterTable(wrapId, qInputId) {
+  const wrap = document.getElementById(wrapId);
+  if (!wrap) return;
+  const rows = wrap.querySelectorAll('tbody tr');
+  if (!rows.length) return;
+  const q = (document.getElementById(qInputId)?.value || '').trim().toLowerCase();
+  // Filtros específicos por tabela
+  const tipoSel = document.getElementById('saques-filter-tipo')?.value || '';
+  const roleSel = document.getElementById('saques-filter-role')?.value || '';
+  const statusSel = document.getElementById('tx-filter-status')?.value || '';
+  let visible = 0;
+  rows.forEach(tr => {
+    const text = tr.textContent.toLowerCase();
+    let show = !q || text.includes(q);
+    if (show && wrapId === 'saques-table-wrap') {
+      if (tipoSel) show = show && (tr.dataset.tipo === tipoSel);
+      if (roleSel) show = show && (tr.dataset.role === roleSel);
+      // Filtro virtual "pagaveis": exclui jogadores comuns
+      if (typeof _saquesVirtualFilter !== 'undefined' && _saquesVirtualFilter === 'pagaveis') {
+        show = show && (tr.dataset.role && tr.dataset.role !== 'jogador');
+      }
+    }
+    if (show && wrapId === 'tx-table-wrap' && statusSel) {
+      show = show && (tr.dataset.status === statusSel);
+    }
+    tr.classList.toggle('row-hidden', !show);
+    if (show) visible++;
+  });
+  // Atualiza contador
+  const countMap = {
+    'ger-table-wrap': 'ger-filter-count',
+    'saques-table-wrap': 'saques-filter-count',
+    'tx-table-wrap': 'tx-filter-count',
+    'audit-table-wrap': 'audit-filter-count',
+  };
+  const countEl = document.getElementById(countMap[wrapId]);
+  if (countEl) countEl.textContent = `${visible} de ${rows.length}`;
+}
+
+async function loadAudit(action) {
+  try {
+    const d = await api('/api/super-admin/audit-log' + (action ? '?action=' + encodeURIComponent(action) : ''));
+    if (!d.audit_log.length) {
+      document.getElementById('audit-table-wrap').innerHTML = '<div class="empty">Nenhum registro.</div>';
+      return;
+    }
+    let html = `<table><thead><tr>
+      <th>Quando</th><th>Ação</th><th>Quem</th><th>Alvo</th><th>Detalhes</th><th>IP</th>
+    </tr></thead><tbody>`;
+    for (const e of d.audit_log) {
+      const detStr = e.details ? JSON.stringify(e.details) : '';
+      html += `<tr>
+        <td><div class="tel">${fmtDate(e.created_at)}</div></td>
+        <td><strong>${escapeHtml(e.action)}</strong></td>
+        <td>${e.actor ? `<div class="nome">${escapeHtml(e.actor.nome || '—')}</div><div class="tel">${e.actor.role}</div>` : '<div class="tel">—</div>'}</td>
+        <td>${e.target ? `<div class="nome">${escapeHtml(e.target.nome || '—')}</div><div class="tel">${e.target.role}</div>` : '<div class="tel">—</div>'}</td>
+        <td><div class="tel" style="max-width:300px;word-break:break-all">${escapeHtml(detStr)}</div></td>
+        <td><div class="tel">${escapeHtml(e.ip || '—')}</div></td>
+      </tr>`;
+    }
+    html += '</tbody></table>';
+    document.getElementById('audit-table-wrap').innerHTML = html;
+  } catch (e) { showToast(e.message, true); }
+}
+
+async function aprovarSaque(id) {
+  if (!confirm('Aprovar este saque? Confirme antes que você já fez o PIX.')) return;
+  try {
+    await api('/api/super-admin/saques/aprovar', { method: 'POST', body: JSON.stringify({ tx_id: id }) });
+    showToast('Saque aprovado');
+    await loadSaques();
+    await loadDashboard();
+  } catch (e) { showToast(e.message, true); }
+}
+
+async function rejeitarSaque(id) {
+  if (!confirm('Rejeitar este saque? O valor será devolvido ao saldo do usuário.')) return;
+  try {
+    await api('/api/super-admin/saques/rejeitar', { method: 'POST', body: JSON.stringify({ tx_id: id }) });
+    showToast('Saque rejeitado');
+    await loadSaques();
+    await loadDashboard();
+  } catch (e) { showToast(e.message, true); }
+}
+
+async function removerGerente(id, nome) {
+  if (!confirm('Remover ' + nome + ' como gerente? Os influencers vinculados voltarão a ser jogadores comuns.')) return;
+  try {
+    await api('/api/super-admin/gerentes/remover', { method: 'POST', body: JSON.stringify({ user_id: id }) });
+    showToast('Gerente removido');
+    await loadGerentes();
+    await loadDashboard();
+  } catch (e) { showToast(e.message, true); }
+}
+
+let _searchTimer = null;
+document.addEventListener('DOMContentLoaded', () => {
+  document.querySelectorAll('.tab').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      const tab = btn.dataset.tab;
+      document.querySelectorAll('.tab-content').forEach(el => el.style.display = 'none');
+      document.getElementById('tab-' + tab).style.display = 'block';
+      if (tab === 'saques') loadSaques();
+      if (tab === 'transacoes') loadTx('');
+      if (tab === 'gerentes') loadGerentes();
+      if (tab === 'audit') loadAudit('');
+    });
+  });
+
+  // Busca de jogadores para promover a gerente
+  const inp = document.getElementById('search-input');
+  const res = document.getElementById('search-results');
+  if (inp) {
+    inp.addEventListener('input', () => {
+      clearTimeout(_searchTimer);
+      const q = inp.value.trim();
+      if (q.length < 2) { res.classList.remove('open'); return; }
+      _searchTimer = setTimeout(async () => {
+        try {
+          const d = await api('/api/super-admin/users/buscar?q=' + encodeURIComponent(q));
+          if (!d.users.length) {
+            res.innerHTML = '<div class="item" style="cursor:default;color:rgba(255,255,255,.5)">Nenhum jogador encontrado</div>';
+          } else {
+            res.innerHTML = d.users.map(u =>
+              `<div class="item" onclick="promoverGerente(${u.id})">
+                <div class="nm">${escapeHtml(u.nome || '—')}</div>
+                <div class="tl">${escapeHtml(u.telefone || '')}</div>
+              </div>`
+            ).join('');
+          }
+          res.classList.add('open');
+        } catch (e) { showToast(e.message, true); }
+      }, 250);
+    });
+    document.addEventListener('click', e => {
+      if (!e.target.closest('.add-row')) res.classList.remove('open');
+    });
+  }
+});
+
+async function promoverGerente(userId) {
+  try {
+    await api('/api/super-admin/gerentes/promover', { method: 'POST', body: JSON.stringify({ user_id: userId }) });
+    showToast('Gerente promovido!');
+    document.getElementById('search-input').value = '';
+    document.getElementById('search-results').classList.remove('open');
+    await loadGerentes();
+    await loadDashboard();
+  } catch (e) { showToast(e.message, true); }
+}
+
+if (token) checkRoleAndLoad();
+else document.getElementById('login-screen').style.display = 'block';
+</script>
+</body>
+</html>

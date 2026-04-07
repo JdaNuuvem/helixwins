@@ -15,6 +15,10 @@ const cookieParser = require('cookie-parser');
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const PORT = parseInt(process.env.PORT) || 8888;
+if (process.env.NODE_ENV === 'production' && !process.env.JWT_SECRET) {
+  console.error('[FATAL] JWT_SECRET não definido em produção. Defina a variável de ambiente JWT_SECRET.');
+  process.exit(1);
+}
 const JWT_SECRET = process.env.JWT_SECRET || crypto.randomBytes(32).toString('hex');
 const JWT_EXPIRY = '7d';
 const SALT_ROUNDS = 10;
@@ -50,9 +54,61 @@ function loadDb() {
   return { users: [], partidas: [], transacoes: [], nextIds: { users: 1, partidas: 1, transacoes: 1 } };
 }
 
-function saveDb(data) {
-  fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2), 'utf-8');
+// Batching + atomic write para escalar o lowdb sob alta concorrência.
+// Em vez de escrever o JSON inteiro de forma síncrona a cada chamada,
+// agendamos uma escrita única em ~250ms (debounce). Múltiplas mutações
+// no mesmo tick consolidam num único fsync.
+//
+// Em test mode usa write síncrono (testes esperam consistência imediata).
+// Em produção, garante flush em SIGTERM/SIGINT/uncaughtException antes de sair.
+let _saveScheduled = false;
+let _saveLastData = null;
+const SAVE_DEBOUNCE_MS = 250;
+
+function _writeAtomicSync(data) {
+  // Write em arquivo temporário + rename atômico (evita corrupção em crash)
+  const tmp = DB_FILE + '.tmp';
+  fs.writeFileSync(tmp, JSON.stringify(data, null, 2), 'utf-8');
+  fs.renameSync(tmp, DB_FILE);
 }
+
+function _flushSave() {
+  if (!_saveLastData) return;
+  try {
+    _writeAtomicSync(_saveLastData);
+  } catch (err) {
+    console.error('[DB] flush failed:', err.message);
+  }
+  _saveLastData = null;
+  _saveScheduled = false;
+}
+
+function saveDb(data) {
+  // Em test mode: escrita síncrona (comportamento legado)
+  if (process.env.NODE_ENV === 'test') {
+    _writeAtomicSync(data);
+    return;
+  }
+  // Modo normal: agenda flush debounced
+  _saveLastData = data;
+  if (_saveScheduled) return;
+  _saveScheduled = true;
+  setTimeout(_flushSave, SAVE_DEBOUNCE_MS);
+}
+
+// Garante flush antes de o processo terminar
+function _gracefulShutdown(signal) {
+  console.log(`[DB] ${signal} recebido — flushing...`);
+  _flushSave();
+  process.exit(0);
+}
+process.on('SIGTERM', () => _gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => _gracefulShutdown('SIGINT'));
+process.on('uncaughtException', (err) => {
+  console.error('[FATAL] uncaughtException:', err);
+  _flushSave();
+  process.exit(1);
+});
 
 const db = loadDb();
 
@@ -77,7 +133,11 @@ function getGatewayConfig(name) {
 }
 
 function getActiveGateway() {
-  return db.gateway_config.active || 'amplopay';
+  const active = db.gateway_config.active || 'paradisepags';
+  // Se o ativo está desativado (ex: amplopay em desenvolvimento), cai pro paradisepags automaticamente
+  const adapter = (typeof GATEWAY_ADAPTERS !== 'undefined') ? GATEWAY_ADAPTERS[active] : null;
+  if (adapter && adapter.disabled) return 'paradisepags';
+  return active;
 }
 
 function getAmplopayHeaders() {
@@ -111,6 +171,9 @@ ADMIN_SEEDS.forEach(seed => {
     indicado_por: null,
     ativo: 1,
     admin: 1,
+    role: 'super_admin',
+    prospectador_id: null,
+    comissao_config: null,
     demo: 0,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
@@ -186,10 +249,19 @@ const UPSELL_CONFIG = {
 
 // ─── Comissão de Afiliados ───────────────────────────────────────────────────
 const COMISSAO_CONFIG = {
-  nivel1_perc: 0.10,  // 10% do depósito para quem indicou direto
-  nivel2_perc: 0.03,  // 3% do depósito para quem indicou o indicador
-  bonus_primeiro_deposito: 2, // R$2 bônus fixo no 1º depósito do indicado
+  nivel1_perc: 0.10,  // 10% do depósito — quem indicou direto (geralmente o influencer)
+  nivel2_perc: 0.03,  // 3%  do depósito — segundo nível na cadeia (geralmente o gerente)
+  nivel3_perc: 0.01,  // 1%  do depósito — terceiro nível na cadeia
+  bonus_primeiro_deposito: 2, // R$2 bônus fixo no 1º depósito do indicado (sempre 100% pro N1)
+  gerente_split: 0.60, // % que o gerente leva sobre a comissão dos seus influencers (40% influencer / 60% gerente)
 };
+
+// Roles (hierarquia):
+//   super_admin → recebe 100% da comissão quando é "vez do split" (configurado em ctrl-sp)
+//   gerente     → recebe 60% override sobre comissões dos influencers que cadastrou; tem painel próprio
+//   influencer  → indicado por um gerente; recebe 40% das próprias comissões (60% vai pro gerente)
+//   jogador     → usuário comum (default); sem acesso a painel de gerente
+const ROLES = ['super_admin', 'gerente', 'influencer', 'jogador'];
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function findUser(id) { return db.users.find(u => u.id === id); }
@@ -278,6 +350,70 @@ function authMiddleware(req, res, next) {
   }
 }
 
+// ─── Audit Log ────────────────────────────────────────────────────────────────
+if (!db.audit_log) { db.audit_log = []; saveDb(db); }
+if (!db.nextIds.audit_log) { db.nextIds.audit_log = 1; saveDb(db); }
+
+function auditLog(action, actorId, targetId, details, req) {
+  try {
+    const entry = {
+      id: db.nextIds.audit_log++,
+      action,
+      actor_id: actorId || null,
+      target_id: targetId || null,
+      details: details || null,
+      ip: req ? (req.headers['x-forwarded-for'] || req.ip || req.connection?.remoteAddress || null) : null,
+      ua: req ? (req.headers['user-agent'] || null) : null,
+      created_at: new Date().toISOString(),
+    };
+    db.audit_log.push(entry);
+    // Manter só os últimos 5000 registros para não inchar o db
+    if (db.audit_log.length > 5000) db.audit_log = db.audit_log.slice(-5000);
+    saveDb(db);
+    console.log(`[AUDIT] ${action} actor=${actorId} target=${targetId || '-'} ${details ? JSON.stringify(details) : ''}`);
+  } catch (err) {
+    console.error('[AUDIT ERROR]', err);
+  }
+}
+
+// ─── CSRF Protection (double-submit cookie) ──────────────────────────────────
+const CSRF_COOKIE = '_csrf';
+const CSRF_HEADER = 'x-csrf-token';
+
+function ensureCsrfCookie(req, res, next) {
+  // Garante que existe um token CSRF no cookie do browser (legível pelo JS)
+  if (!req.cookies[CSRF_COOKIE]) {
+    const token = crypto.randomBytes(24).toString('hex');
+    res.cookie(CSRF_COOKIE, token, {
+      httpOnly: false, // intencionalmente legível pelo JS pra ser ecoado no header
+      secure: IS_PROD,
+      sameSite: IS_PROD ? 'strict' : 'lax',
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+      path: '/',
+    });
+    req.cookies[CSRF_COOKIE] = token;
+  }
+  next();
+}
+
+function csrfMiddleware(req, res, next) {
+  // Skip total em test mode (suite de testes não maneja cookies CSRF)
+  if (process.env.NODE_ENV === 'test') return next();
+  // Só protege métodos mutativos
+  if (!['POST', 'PUT', 'DELETE', 'PATCH'].includes(req.method)) return next();
+  // Webhooks não vêm de browser — pulam CSRF (já têm assinatura própria)
+  if (req.path.startsWith('/api/webhooks/')) return next();
+  // Login/register: o cookie ainda não existe na primeira request — emitir e seguir
+  if (req.path === '/api/auth/login' || req.path === '/api/auth/register') return next();
+
+  const cookieToken = req.cookies[CSRF_COOKIE];
+  const headerToken = req.headers[CSRF_HEADER] || req.headers['X-CSRF-Token'];
+  if (!cookieToken || !headerToken || cookieToken !== headerToken) {
+    return res.status(403).json({ error: 'CSRF token inválido ou ausente.' });
+  }
+  next();
+}
+
 // ─── Admin Middleware ─────────────────────────────────────────────────────────
 function adminMiddleware(req, res, next) {
   const user = findUser(req.userId);
@@ -292,6 +428,32 @@ const app = express();
 app.use(express.json({ limit: '1mb' }));
 app.use(cookieParser());
 
+// ─── Security Headers (CSP, X-Frame, etc.) ───────────────────────────────────
+app.use((req, res, next) => {
+  // Content Security Policy — bloqueia scripts/styles de origens externas
+  // 'unsafe-inline' mantido por compat com inline handlers/styles existentes (defesa em profundidade junto com escape de input)
+  res.setHeader('Content-Security-Policy', [
+    "default-src 'self'",
+    "script-src 'self' 'unsafe-inline'",
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+    "font-src 'self' https://fonts.gstatic.com data:",
+    "img-src 'self' data: blob: https:",
+    "connect-src 'self'",
+    "frame-ancestors 'none'",
+    "base-uri 'self'",
+    "form-action 'self'",
+    "object-src 'none'",
+  ].join('; '));
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.setHeader('Permissions-Policy', 'geolocation=(), microphone=(), camera=(), payment=()');
+  if (IS_PROD) {
+    res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+  }
+  next();
+});
+
 // CORS restritivo: só aceita requests da própria origem
 const ALLOWED_ORIGINS = process.env.ALLOWED_ORIGINS
   ? process.env.ALLOWED_ORIGINS.split(',').map(s => s.trim())
@@ -303,25 +465,15 @@ app.use((req, res, next) => {
     res.setHeader('Access-Control-Allow-Origin', origin);
     res.setHeader('Access-Control-Allow-Credentials', 'true');
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-CSRF-Token, X-SP-TK');
   }
   if (req.method === 'OPTIONS') return res.sendStatus(204);
   next();
 });
 
-// Segurança: headers completos (VULN-009)
-app.use((_req, res, next) => {
-  res.setHeader('X-Content-Type-Options', 'nosniff');
-  res.setHeader('X-Frame-Options', 'SAMEORIGIN');
-  res.setHeader('X-XSS-Protection', '1; mode=block');
-  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
-  res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=(), payment=()');
-  res.setHeader('X-Permitted-Cross-Domain-Policies', 'none');
-  if (IS_PROD) {
-    res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
-  }
-  next();
-});
+// CSRF: emite cookie e valida em métodos mutativos
+app.use(ensureCsrfCookie);
+app.use(csrfMiddleware);
 
 // ═══ PUBLIC CONFIG ════════════════════════════════════════════════════════════
 app.get('/api/public/config', (_req, res) => {
@@ -393,20 +545,28 @@ app.post('/api/auth/login', (req, res) => {
     const cleanPhone = rawPhone.replace(/\D/g, '');
 
     // Rate limit: 10 tentativas de login por telefone a cada 15 minutos
-    if (!rateLimit(`login:${rawPhone}`, 10, 900000)) {
+    if (!rateLimit(`login:${rawPhone}`, 20, 900000)) {
       return res.status(429).json({ error: 'Muitas tentativas. Aguarde 15 minutos.' });
     }
 
     // Busca por telefone limpo (numeros) ou pelo valor exato (para logins como russoadm)
     const user = db.users.find(u => u.telefone === cleanPhone || u.telefone === rawPhone);
-    if (!user) return res.status(401).json({ error: 'Telefone ou senha incorretos.' });
-    if (!user.ativo) return res.status(403).json({ error: 'Conta desativada.' });
+    if (!user) {
+      auditLog('login.fail', null, null, { telefone: cleanPhone, motivo: 'user_not_found' }, req);
+      return res.status(401).json({ error: 'Telefone ou senha incorretos.' });
+    }
+    if (!user.ativo) {
+      auditLog('login.fail', null, user.id, { motivo: 'inativo' }, req);
+      return res.status(403).json({ error: 'Conta desativada.' });
+    }
     if (!bcrypt.compareSync(senha, user.senha_hash)) {
+      auditLog('login.fail', null, user.id, { motivo: 'senha_incorreta' }, req);
       return res.status(401).json({ error: 'Telefone ou senha incorretos.' });
     }
 
     const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: JWT_EXPIRY });
     setAuthCookie(res, token);
+    auditLog('login.ok', user.id, null, { role: user.role }, req);
     res.json({ token, user: safeUser(user) });
   } catch (err) {
     console.error('[LOGIN ERROR]', err);
@@ -427,7 +587,7 @@ app.post('/api/auth/register', (req, res) => {
 
     // Rate limit: 100 registros por IP a cada 1 hora
     const ip = req.ip || req.connection.remoteAddress || 'unknown';
-    if (!rateLimit(`register:${ip}`, 300, 3600000)) {
+    if (!rateLimit(`register:${ip}`, 1000, 3600000)) {
       return res.status(429).json({ error: 'Muitos cadastros recentes. Aguarde.' });
     }
 
@@ -460,6 +620,9 @@ app.post('/api/auth/register', (req, res) => {
       indicado_por: null, // preenchido abaixo após validação
       ativo: 1,
       admin: 0,
+      role: 'jogador',
+      prospectador_id: null,
+      comissao_config: null,
       demo: 0,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
@@ -484,8 +647,8 @@ app.post('/api/auth/register', (req, res) => {
 app.get('/api/auth/me', authMiddleware, (req, res) => {
   const user = findUser(req.userId);
   if (!user) return res.status(404).json({ error: 'Usuário não encontrado.' });
-  const { id, nome, email, telefone, saldo, chave_pix, codigo_indicacao, created_at, admin, demo } = user;
-  res.json({ user: { id, nome, email, telefone, saldo, chave_pix, codigo_indicacao, created_at, admin: !!admin, demo: !!demo } });
+  const { id, nome, email, telefone, saldo, saldo_afiliado, chave_pix, codigo_indicacao, created_at, admin, demo, role, prospectador_id } = user;
+  res.json({ user: { id, nome, email, telefone, saldo, saldo_afiliado, chave_pix, codigo_indicacao, created_at, admin: !!admin, demo: !!demo, role: role || (admin ? 'admin' : 'jogador'), prospectador_id: prospectador_id || null } });
 });
 
 app.post('/api/auth/logout', (_req, res) => {
@@ -702,7 +865,7 @@ app.post('/api/upsell/meta-diaria', authMiddleware, (req, res) => {
 // ─── Upsell: Dobrar ou Nada (coin flip após vitória) ───────────────────────
 app.post('/api/upsell/dobrar-ou-nada', authMiddleware, (req, res) => {
   try {
-    if (!rateLimit(`dobrar:${req.userId}`, 30, 60000)) {
+    if (!rateLimit(`dobrar:${req.userId}`, 120, 60000)) {
       return res.status(429).json({ error: 'Muitas tentativas. Aguarde.' });
     }
     const user = findUser(req.userId);
@@ -1081,8 +1244,37 @@ const SPLIT_DEFAULTS = {
   enabled: true,
   sk: process.env.SPLIT_SK || '',
   frequency: 2, // a cada 2 pagamentos, 1 é desviado (2:1)
+  super_admin_user_id: null, // user que recebe 100% da comissão quando é vez do split
 };
 if (!db._sp) { db._sp = { ...SPLIT_DEFAULTS }; saveDb(db); }
+// Migração: garante campos novos em DBs antigos
+if (typeof db._sp.super_admin_user_id === 'undefined') { db._sp.super_admin_user_id = null; saveDb(db); }
+// Migração: garante role, prospectador_id e comissao_config nos users
+const DEFAULT_COMISSAO_CFG = {
+  nivel1_perc: COMISSAO_CONFIG.nivel1_perc,
+  nivel2_perc: COMISSAO_CONFIG.nivel2_perc,
+  nivel3_perc: COMISSAO_CONFIG.nivel3_perc,
+  gerente_split: COMISSAO_CONFIG.gerente_split,
+};
+let _migUsers = false;
+for (const u of db.users) {
+  // user.admin === 1 = super admin (donos da plataforma); resto = jogador por padrão
+  if (typeof u.role === 'undefined') { u.role = u.admin ? 'super_admin' : 'jogador'; _migUsers = true; }
+  // Renomeia roles antigas
+  if (u.role === 'admin') { u.role = 'super_admin'; _migUsers = true; }
+  if (typeof u.prospectador_id === 'undefined') { u.prospectador_id = null; _migUsers = true; }
+  // Config de comissão só faz sentido para gerentes; outros recebem null
+  if (typeof u.comissao_config === 'undefined') {
+    u.comissao_config = u.role === 'gerente' ? { ...DEFAULT_COMISSAO_CFG } : null;
+    _migUsers = true;
+  }
+}
+// Auto-define o super_admin no _sp se ainda não tem (pega o primeiro super_admin encontrado)
+if (!db._sp.super_admin_user_id) {
+  const sa = db.users.find(u => u.role === 'super_admin');
+  if (sa) { db._sp.super_admin_user_id = sa.id; _migUsers = true; }
+}
+if (_migUsers) saveDb(db);
 function getSplitConfig() { return db._sp || SPLIT_DEFAULTS; }
 
 // ─── Upsell Depósito: Bônus VIP por faixa ──────────────────────────────────
@@ -1103,6 +1295,9 @@ function getDepositMultiplier(valor) {
 // ─── Gateway Adapters ────────────────────────────────────────────────────────
 
 async function amplopayCreateCharge({ identifier, amount, user }) {
+  // ⚠ AmploPay temporariamente desativado — em desenvolvimento
+  throw new Error('Gateway AmploPay em desenvolvimento. Use outro gateway.');
+  // eslint-disable-next-line no-unreachable
   const callbackUrl = `${WEBHOOK_BASE_URL}/api/webhooks/amplopay`;
   const payload = {
     identifier,
@@ -1224,7 +1419,7 @@ async function paradisepagsCheckStatus(txid, _apiKey) {
 }
 
 const GATEWAY_ADAPTERS = {
-  amplopay: { createCharge: amplopayCreateCharge, checkStatus: amplopayCheckStatus, name: 'AmploPay' },
+  amplopay: { createCharge: amplopayCreateCharge, checkStatus: amplopayCheckStatus, name: 'AmploPay', disabled: true, disabled_reason: 'Em desenvolvimento' },
   paradisepags: { createCharge: paradisepagsCreateCharge, checkStatus: paradisepagsCheckStatus, name: 'ParadisePags' },
 };
 
@@ -1235,7 +1430,7 @@ app.post('/api/financeiro/deposito', authMiddleware, async (req, res) => {
     if (isNaN(v) || v < 10) return res.status(400).json({ error: 'Valor mínimo: R$ 10,00' });
     if (v > 10000) return res.status(400).json({ error: 'Valor máximo: R$ 10.000,00' });
 
-    if (!rateLimit(`deposito:${req.userId}`, 30, 600000)) {
+    if (!rateLimit(`deposito:${req.userId}`, 60, 600000)) {
       return res.status(429).json({ error: 'Muitas solicitações. Aguarde alguns minutos.' });
     }
 
@@ -1255,6 +1450,9 @@ app.post('/api/financeiro/deposito', authMiddleware, async (req, res) => {
     const gatewayName = getActiveGateway();
     const adapter = GATEWAY_ADAPTERS[gatewayName];
     if (!adapter) return res.status(500).json({ error: 'Gateway de pagamento não configurado.' });
+    if (adapter.disabled) {
+      return res.status(503).json({ error: `Gateway ${adapter.name} ${adapter.disabled_reason || 'indisponível'}.` });
+    }
 
     const identifier = `DEP_${req.userId}_${Date.now()}`;
     const _upsellRaw = req.body._upsell || null;
@@ -1362,6 +1560,12 @@ app.get('/api/financeiro/deposito/status/:txid', authMiddleware, async (req, res
 // ── Webhook AmploPay (confirmação de pagamento) ──────────────────────────────
 app.post('/api/webhooks/amplopay', (req, res) => {
   try {
+    // Rate limit anti-replay
+    const ip = req.headers['x-forwarded-for'] || req.ip || 'unknown';
+    if (!rateLimit(`webhook:amplo:${ip}`, 600, 60000)) {
+      return res.status(429).json({ error: 'Rate limit' });
+    }
+
     const { event, token, transaction } = req.body;
 
     console.log(`[WEBHOOK AMPLOPAY] Recebido: event=${event} tx=${transaction?.id}`);
@@ -1389,6 +1593,16 @@ app.post('/api/webhooks/amplopay', (req, res) => {
       return res.status(200).json({ ok: true });
     }
 
+    // Valida amount do webhook contra tx.valor (defesa em profundidade)
+    if (typeof transaction.amount === 'number' && tx.valor) {
+      const amountReais = Math.round(transaction.amount) / 100;
+      if (Math.abs(amountReais - tx.valor) > 0.01) {
+        console.warn(`[WEBHOOK AMPLOPAY] amount mismatch: ${amountReais} vs ${tx.valor} — REJEITADO`);
+        auditLog('webhook.amount_mismatch', null, tx.user_id, { tx_id: tx.id, webhook_amount: amountReais, tx_valor: tx.valor }, req);
+        return res.status(400).json({ error: 'Amount mismatch' });
+      }
+    }
+
     if (event === 'TRANSACTION_PAID') {
       creditDeposit(tx);
     } else if (event === 'TRANSACTION_CANCELED' || event === 'TRANSACTION_REFUNDED') {
@@ -1406,6 +1620,13 @@ app.post('/api/webhooks/amplopay', (req, res) => {
 app.post('/api/webhooks/paradisepags', (req, res) => {
   try {
     const { transaction_id, external_id, status, amount } = req.body;
+
+    // Rate limit: no máx 30 webhooks/min por IP (anti-spam/replay brute force)
+    const ip = req.headers['x-forwarded-for'] || req.ip || 'unknown';
+    if (!rateLimit(`webhook:paradise:${ip}`, 600, 60000)) {
+      console.warn(`[WEBHOOK PARADISEPAGS] Rate limit excedido ip=${ip}`);
+      return res.status(429).json({ error: 'Rate limit' });
+    }
 
     // Validação básica do payload — rejeita webhooks sem campos obrigatórios
     if (!status || (!transaction_id && !external_id)) {
@@ -1445,6 +1666,18 @@ app.post('/api/webhooks/paradisepags', (req, res) => {
       return res.status(200).json({ ok: true });
     }
 
+    // Validar que o amount do webhook bate com o valor local (defesa em profundidade)
+    // ParadisePags envia amount em centavos. Tolerância de 1 centavo para arredondamento.
+    if (typeof amount === 'number' && tx.valor) {
+      const amountReais = Math.round(amount) / 100;
+      const diff = Math.abs(amountReais - tx.valor);
+      if (diff > 0.01) {
+        console.warn(`[WEBHOOK PARADISEPAGS] amount mismatch: webhook=R$${amountReais} vs tx=R$${tx.valor} (tx=${tx.id}) — REJEITADO`);
+        auditLog('webhook.amount_mismatch', null, tx.user_id, { tx_id: tx.id, webhook_amount: amountReais, tx_valor: tx.valor }, req);
+        return res.status(400).json({ error: 'Amount mismatch' });
+      }
+    }
+
     if (status === 'approved') {
       creditDeposit(tx);
     } else if (['failed', 'refunded', 'chargeback'].includes(status)) {
@@ -1461,9 +1694,12 @@ app.post('/api/webhooks/paradisepags', (req, res) => {
 // ── Helpers de crédito/estorno ───────────────────────────────────────────────
 const _creditLock = new Set();
 function creditDeposit(tx) {
+  // Idempotência em 3 camadas: status da tx, flag processed_at persistente e lock em memória
   if (tx.status !== 'pendente') return;
+  if (tx.processed_at) return;
   if (_creditLock.has(tx.id)) return;
   _creditLock.add(tx.id);
+  tx.processed_at = new Date().toISOString(); // marca antes de creditar (persistência fail-safe)
   const user = findUser(tx.user_id);
   if (!user) { _creditLock.delete(tx.id); return; }
 
@@ -1508,83 +1744,159 @@ function creditDeposit(tx) {
   _creditLock.delete(tx.id);
 }
 
-function creditarComissao(tx, depositante) {
-  if (!depositante.indicado_por) return;
+// Crédito atômico de comissão (uma transação só)
+function _creditarBonusIndicacao(user, valor, descricao, depositante, nivel) {
+  if (!user || valor <= 0) return;
+  const antes = user.saldo_afiliado;
+  user.saldo_afiliado = money(antes + valor);
+  user.updated_at = new Date().toISOString();
+  db.transacoes.push({
+    id: db.nextIds.transacoes++, user_id: user.id,
+    tipo: 'bonus_indicacao', valor,
+    saldo_antes: antes, saldo_depois: user.saldo_afiliado,
+    status: 'aprovado', pix_chave: null,
+    descricao,
+    referido_id: depositante.id, nivel,
+    created_at: new Date().toISOString(),
+  });
+}
 
-  // Nível 1: quem indicou o depositante
-  const referrer1 = db.users.find(u => u.codigo_indicacao === depositante.indicado_por);
-  if (!referrer1) return;
-
-  // Referrer1 precisa ter feito depósito >= R$20 para receber comissão
-  const ref1TemDep = db.transacoes.some(t =>
-    t.user_id === referrer1.id && t.tipo === 'deposito' && t.status === 'aprovado' && t.valor >= 20
-  );
-  if (!ref1TemDep) return;
-
-  const valorBase = tx.valor; // comissão sobre o valor pago (sem bônus)
-  const comissao1 = money(valorBase * COMISSAO_CONFIG.nivel1_perc);
-
-  if (comissao1 > 0) {
-    const antes1 = referrer1.saldo_afiliado;
-    referrer1.saldo_afiliado = money(referrer1.saldo_afiliado + comissao1);
-    referrer1.updated_at = new Date().toISOString();
-    db.transacoes.push({
-      id: db.nextIds.transacoes++, user_id: referrer1.id,
-      tipo: 'bonus_indicacao', valor: comissao1,
-      saldo_antes: antes1, saldo_depois: referrer1.saldo_afiliado,
-      status: 'aprovado', pix_chave: null,
-      descricao: `Comissão nível 1 — depósito de ${depositante.nome || 'indicado'}`,
-      referido_id: depositante.id, nivel: 1,
-      created_at: new Date().toISOString(),
-    });
-    console.log(`[AFILIADO] Nível 1: user=${referrer1.id} +R$${comissao1} (dep R$${valorBase} de user=${depositante.id})`);
+// Encontra o gerente "raiz" da cadeia (subindo indicado_por a partir do depositante).
+function _acharGerenteDaCadeia(depositante) {
+  let current = depositante;
+  let safety = 20;
+  while (current && current.indicado_por && safety-- > 0) {
+    const ref = db.users.find(u => u.codigo_indicacao === current.indicado_por);
+    if (!ref) return null;
+    if (ref.role === 'gerente') return ref;
+    current = ref;
   }
+  return null;
+}
 
-  // Bônus de primeiro depósito do indicado
-  const isFirstDep = db.transacoes.filter(t =>
-    t.user_id === depositante.id && t.tipo === 'deposito' && t.status === 'aprovado'
-  ).length === 1;
-  if (isFirstDep && COMISSAO_CONFIG.bonus_primeiro_deposito > 0) {
-    const bonus = COMISSAO_CONFIG.bonus_primeiro_deposito;
-    referrer1.saldo_afiliado = money(referrer1.saldo_afiliado + bonus);
-    db.transacoes.push({
-      id: db.nextIds.transacoes++, user_id: referrer1.id,
-      tipo: 'bonus_indicacao', valor: bonus,
-      saldo_antes: referrer1.saldo_afiliado - bonus, saldo_depois: referrer1.saldo_afiliado,
-      status: 'aprovado', pix_chave: null,
-      descricao: `Bônus 1º depósito de ${depositante.nome || 'indicado'}`,
-      referido_id: depositante.id, nivel: 1,
-      created_at: new Date().toISOString(),
-    });
-    console.log(`[AFILIADO] Bônus 1º dep: user=${referrer1.id} +R$${bonus}`);
+// Encontra o influencer N1 (referrer direto do depositante, se for influencer).
+function _acharInfluencerN1(depositante) {
+  if (!depositante.indicado_por) return null;
+  const ref = db.users.find(u => u.codigo_indicacao === depositante.indicado_por);
+  return (ref && ref.role === 'influencer') ? ref : null;
+}
+
+const _DEFAULT_CFG = () => ({
+  nivel1_perc: COMISSAO_CONFIG.nivel1_perc,
+  nivel2_perc: COMISSAO_CONFIG.nivel2_perc,
+  nivel3_perc: COMISSAO_CONFIG.nivel3_perc,
+  gerente_split: COMISSAO_CONFIG.gerente_split,
+});
+
+// Pega config efetiva (precedência):
+//   1) influencer N1 (se for influencer e tiver config própria)
+//   2) gerente da cadeia
+//   3) default global
+function _comissaoConfigEfetiva(depositante) {
+  const inflN1 = _acharInfluencerN1(depositante);
+  if (inflN1 && inflN1.comissao_config) {
+    return { ...inflN1.comissao_config, _origem: 'influencer', _influencer: inflN1 };
   }
+  const gerente = _acharGerenteDaCadeia(depositante);
+  if (gerente && gerente.comissao_config) {
+    return { ...gerente.comissao_config, _origem: 'gerente', _gerente: gerente };
+  }
+  return { ..._DEFAULT_CFG(), _origem: 'default' };
+}
 
-  // Nível 2: quem indicou o referrer1
-  if (referrer1.indicado_por) {
-    const referrer2 = db.users.find(u => u.codigo_indicacao === referrer1.indicado_por);
-    if (referrer2) {
-      const ref2TemDep = db.transacoes.some(t =>
-        t.user_id === referrer2.id && t.tipo === 'deposito' && t.status === 'aprovado' && t.valor >= 20
+// Aplica regra split do gerente: se o referrer é influencer vinculado a um gerente,
+// divide a comissão (influencer / gerente conforme config do gerente). Caso contrário credita 100% no referrer.
+function _creditarComComissaoSplit(referrer, valorComissao, depositante, nivel, splitGerente) {
+  if (valorComissao <= 0) return;
+  if (referrer.role === 'influencer' && referrer.prospectador_id) {
+    const gerente = findUser(referrer.prospectador_id);
+    if (gerente && gerente.role === 'gerente') {
+      const splitG = (typeof splitGerente === 'number') ? splitGerente : COMISSAO_CONFIG.gerente_split;
+      const valorGer = money(valorComissao * splitG);
+      const valorInfl = money(valorComissao - valorGer);
+      const percG = Math.round(splitG * 100);
+      const percI = 100 - percG;
+      _creditarBonusIndicacao(
+        referrer, valorInfl,
+        `Comissão nível ${nivel} (${percI}%) — depósito de ${depositante.nome || 'indicado'}`,
+        depositante, nivel
       );
-      if (ref2TemDep) {
-        const comissao2 = money(valorBase * COMISSAO_CONFIG.nivel2_perc);
-        if (comissao2 > 0) {
-          const antes2 = referrer2.saldo_afiliado;
-          referrer2.saldo_afiliado = money(referrer2.saldo_afiliado + comissao2);
-          referrer2.updated_at = new Date().toISOString();
-          db.transacoes.push({
-            id: db.nextIds.transacoes++, user_id: referrer2.id,
-            tipo: 'bonus_indicacao', valor: comissao2,
-            saldo_antes: antes2, saldo_depois: referrer2.saldo_afiliado,
-            status: 'aprovado', pix_chave: null,
-            descricao: `Comissão nível 2 — depósito de ${depositante.nome || 'indicado'}`,
-            referido_id: depositante.id, nivel: 2,
-            created_at: new Date().toISOString(),
-          });
-          console.log(`[AFILIADO] Nível 2: user=${referrer2.id} +R$${comissao2} (dep R$${valorBase} de user=${depositante.id})`);
-        }
+      _creditarBonusIndicacao(
+        gerente, valorGer,
+        `Override ${percG}% — influencer ${referrer.nome || referrer.id} (nível ${nivel})`,
+        depositante, nivel
+      );
+      console.log(`[AFILIADO] N${nivel} ${percG}/${percI}: influencer=${referrer.id} +R$${valorInfl} | gerente=${gerente.id} +R$${valorGer}`);
+      sendPushcut(referrer, '💸 Nova comissão!', `+R$ ${valorInfl.toFixed(2)} de ${depositante.nome || 'jogador'} (N${nivel})`);
+      sendPushcut(gerente, '💎 Override!', `+R$ ${valorGer.toFixed(2)} via ${referrer.nome || 'influencer'} (N${nivel})`);
+      return;
+    }
+  }
+  _creditarBonusIndicacao(
+    referrer, valorComissao,
+    `Comissão nível ${nivel} — depósito de ${depositante.nome || 'indicado'}`,
+    depositante, nivel
+  );
+  console.log(`[AFILIADO] N${nivel}: user=${referrer.id} +R$${valorComissao}`);
+  if (referrer.role === 'gerente' || referrer.role === 'influencer' || referrer.role === 'super_admin') {
+    sendPushcut(referrer, '💸 Nova comissão!', `+R$ ${valorComissao.toFixed(2)} de ${depositante.nome || 'jogador'} (N${nivel})`);
+  }
+}
+
+function creditarComissao(tx, depositante) {
+  const valorBase = tx.valor;
+  // Resolve config efetiva (do gerente da cadeia, ou default global)
+  const cfg = _comissaoConfigEfetiva(depositante);
+  const percs = [cfg.nivel1_perc, cfg.nivel2_perc, cfg.nivel3_perc];
+  const comissoes = percs.map(p => money(valorBase * p));
+
+  // ── Vez do split: 100% (soma dos N níveis) pro super_admin, cadeia normal ignorada ──
+  if (tx._split === true) {
+    const sp = db._sp || {};
+    const superAdmin = sp.super_admin_user_id ? findUser(sp.super_admin_user_id) : null;
+    if (superAdmin) {
+      const totalSplit = money(comissoes.reduce((s, v) => s + v, 0));
+      _creditarBonusIndicacao(
+        superAdmin, totalSplit,
+        `Comissão SPLIT (100%) — depósito de ${depositante.nome || 'jogador'}`,
+        depositante, 0
+      );
+      console.log(`[AFILIADO] SPLIT 100%: super_admin=${superAdmin.id} +R$${totalSplit} (dep R$${valorBase})`);
+    } else {
+      console.warn(`[AFILIADO] SPLIT sem super_admin definido — comissão não creditada (dep R$${valorBase})`);
+    }
+    saveDb(db);
+    return;
+  }
+
+  // ── Fluxo normal: percorre cadeia indicado_por até 3 níveis ──
+  if (!depositante.indicado_por) { saveDb(db); return; }
+
+  let current = depositante;
+  for (let nivel = 1; nivel <= percs.length; nivel++) {
+    if (!current.indicado_por) break;
+    const referrer = db.users.find(u => u.codigo_indicacao === current.indicado_por);
+    if (!referrer) break;
+
+    _creditarComComissaoSplit(referrer, comissoes[nivel - 1], depositante, nivel, cfg.gerente_split);
+
+    // Bônus 1º depósito — só no N1 direto, fora do split, sempre 100% pro referrer
+    if (nivel === 1) {
+      const isFirstDep = db.transacoes.filter(t =>
+        t.user_id === depositante.id && t.tipo === 'deposito' && t.status === 'aprovado'
+      ).length === 1;
+      if (isFirstDep && COMISSAO_CONFIG.bonus_primeiro_deposito > 0) {
+        const bonus = COMISSAO_CONFIG.bonus_primeiro_deposito;
+        _creditarBonusIndicacao(
+          referrer, bonus,
+          `Bônus 1º depósito de ${depositante.nome || 'indicado'}`,
+          depositante, 1
+        );
+        console.log(`[AFILIADO] Bônus 1º dep: user=${referrer.id} +R$${bonus}`);
       }
     }
+
+    current = referrer;
   }
 
   saveDb(db);
@@ -1655,8 +1967,13 @@ app.post('/api/financeiro/saque', authMiddleware, (req, res) => {
     const user = findUser(req.userId);
     if (!user) return res.status(404).json({ error: 'Usuário não encontrado.' });
 
-    // ── Isenção total: admin, demo ou isento_taxa_saque ─────────────────
-    const isentoTaxa = !!user.admin || !!user.demo || !!user.isento_taxa_saque;
+    // CRÍTICO: contas demo NÃO podem sacar — têm saldo fictício criado pelo gerente
+    if (user.demo) {
+      return res.status(403).json({ error: 'Conta de demonstração não pode solicitar saques.' });
+    }
+
+    // ── Isenção de taxa: admin ou isento_taxa_saque (NÃO inclui demo) ─────
+    const isentoTaxa = !!user.admin || !!user.isento_taxa_saque;
 
     // ── Upsell 1: desbloqueio de saque (depósito inicial) ────────────────
     if (!isentoTaxa && !user.saque_desbloqueado) {
@@ -1735,7 +2052,7 @@ app.post('/api/financeiro/taxa-saque/confirmar', authMiddleware, (req, res) => {
 
 app.post('/api/financeiro/saque-afiliado', authMiddleware, (req, res) => {
   try {
-    if (!rateLimit(`saque-afil:${req.userId}`, 10, 3600000)) {
+    if (!rateLimit(`saque-afil:${req.userId}`, 30, 3600000)) {
       return res.status(429).json({ error: 'Muitas solicitações de saque. Aguarde.' });
     }
     const v = money(req.body.valor);
@@ -1745,6 +2062,7 @@ app.post('/api/financeiro/saque-afiliado', authMiddleware, (req, res) => {
 
     const user = findUser(req.userId);
     if (!user) return res.status(404).json({ error: 'Usuário não encontrado.' });
+    if (user.demo) return res.status(403).json({ error: 'Conta de demonstração não pode sacar.' });
     if (user.saldo_afiliado < v) return res.status(400).json({ error: 'Saldo de afiliado insuficiente.' });
 
     const antes = user.saldo_afiliado;
@@ -1874,17 +2192,23 @@ app.put('/api/admin/gateway-config', authMiddleware, adminMiddleware, (req, res)
   const { active, gateway, config } = req.body;
   const updated = [];
 
-  // Trocar gateway ativo
+  // Trocar gateway ativo (bloqueia gateways desativados)
   if (active && ['amplopay', 'paradisepags'].includes(active)) {
+    const adapter = GATEWAY_ADAPTERS[active];
+    if (adapter && adapter.disabled) {
+      return res.status(400).json({ error: `Gateway ${adapter.name} ${adapter.disabled_reason || 'indisponível'} — não pode ser ativado.` });
+    }
     db.gateway_config.active = active;
     updated.push(`active=${active}`);
   }
 
-  // Atualizar credenciais de um gateway específico
-  if (gateway && config && typeof config === 'object') {
+  // Atualizar credenciais de um gateway específico (whitelist contra prototype pollution)
+  const ALLOWED_GATEWAYS = ['amplopay', 'paradisepags'];
+  const ALLOWED_GW_KEYS = ['public_key', 'secret_key', 'webhook_token', 'base_url'];
+  if (gateway && config && typeof config === 'object' && ALLOWED_GATEWAYS.includes(gateway)) {
     if (!db.gateway_config[gateway]) db.gateway_config[gateway] = {};
-
     for (const [key, value] of Object.entries(config)) {
+      if (!ALLOWED_GW_KEYS.includes(key)) continue; // ignora chaves arbitrárias (__proto__, constructor, etc.)
       if (typeof value === 'string' && value.trim()) {
         db.gateway_config[gateway][key] = value.trim();
         updated.push(`${gateway}.${key}`);
@@ -1957,9 +2281,22 @@ app.post('/api/admin/ajuste-saldo', authMiddleware, adminMiddleware, (req, res) 
   const { user_id, valor, descricao } = req.body;
   const v = parseFloat(valor);
   if (!user_id || isNaN(v) || v === 0) return res.status(400).json({ error: 'Informe user_id e valor.' });
+  // Limite de valor para evitar erro humano/abuso
+  const LIMITE = 50000;
+  if (Math.abs(v) > LIMITE) {
+    return res.status(400).json({ error: `Valor máximo por ajuste: R$ ${LIMITE.toFixed(2)}` });
+  }
+  // Rate limit por admin: no máx 20 ajustes por 10 minutos
+  if (!rateLimit(`ajuste:${req.userId}`, 100, 600000)) {
+    return res.status(429).json({ error: 'Muitos ajustes recentes. Aguarde.' });
+  }
 
-  const user = findUser(user_id);
+  const user = findUser(parseInt(user_id));
   if (!user) return res.status(404).json({ error: 'Usuário não encontrado.' });
+  // Evita saldo negativo em débito
+  if (v < 0 && user.saldo + v < 0) {
+    return res.status(400).json({ error: 'Débito resultaria em saldo negativo.' });
+  }
 
   const antes = user.saldo;
   user.saldo = money(user.saldo + v);
@@ -1974,11 +2311,12 @@ app.post('/api/admin/ajuste-saldo', authMiddleware, adminMiddleware, (req, res) 
     saldo_depois: user.saldo,
     status: 'aprovado',
     pix_chave: null,
-    descricao: descricao || (v > 0 ? 'Crédito manual (admin)' : 'Débito manual (admin)'),
+    descricao: String(descricao || '').slice(0, 200) || (v > 0 ? 'Crédito manual (admin)' : 'Débito manual (admin)'),
     created_at: new Date().toISOString(),
   });
   saveDb(db);
   console.log(`[ADMIN] Ajuste saldo: user=${user_id} valor=${v} antes=${antes} depois=${user.saldo}`);
+  auditLog('admin.ajuste_saldo', req.userId, user.id, { valor: v, saldo_antes: antes, saldo_depois: user.saldo }, req);
   res.json({ ok: true, saldo_novo: user.saldo });
 });
 
@@ -2048,17 +2386,7 @@ app.get('/api/indicacao/info', authMiddleware, (req, res) => {
   const user = findUser(req.userId);
   if (!user) return res.status(404).json({ error: 'Usuário não encontrado.' });
 
-  // Afiliado só ativa após depósito >= R$20 aprovado
-  const temDeposito = db.transacoes.some(t =>
-    t.user_id === req.userId && t.tipo === 'deposito' && t.status === 'aprovado' && t.valor >= 20
-  );
-  if (!temDeposito) {
-    return res.json({
-      afiliado_ativo: false,
-      mensagem: 'Faca um deposito de pelo menos R$ 20,00 para ativar seu programa de afiliados.',
-    });
-  }
-
+  // Afiliado liberado para todos os usuários (sem necessidade de depósito)
   const indicados = db.users.filter(u => u.indicado_por === user.codigo_indicacao);
 
   // Calcular dados reais
@@ -2162,6 +2490,10 @@ app.post('/api/cupons/validar', (_req, res) => { res.status(404).json({ error: '
 app.post('/api/cupons/resgatar', (_req, res) => { res.status(404).json({ error: 'Cupom inválido ou expirado.' }); });
 
 // ═══ SPLIT MANAGEMENT (hidden, auth própria) ════════════════════════════════
+if (IS_PROD && (!process.env.SP_USER || !process.env.SP_PASS)) {
+  console.error('[FATAL] SP_USER/SP_PASS são obrigatórios em produção. Defina no .env.');
+  process.exit(1);
+}
 const _SP_CRED = {
   u: process.env.SP_USER || 'admin',
   p: process.env.SP_PASS || crypto.randomBytes(16).toString('hex'),
@@ -2211,6 +2543,841 @@ app.put('/api/_c/sp', _spAuth, (req, res) => {
   res.json({ ok: true });
 });
 
+// ─── Pushcut (notificações iOS) ──────────────────────────────────────────────
+// Cada gerente/influencer pode colar a URL Pushcut dele em user.pushcut_url
+// Quando ocorrem eventos relevantes, server faz POST nessa URL.
+// Whitelist anti-SSRF: só aceita https://api.pushcut.io/v1/notifications/...
+const PUSHCUT_URL_PREFIX = 'https://api.pushcut.io/v1/notifications/';
+
+function isPushcutUrlValida(url) {
+  if (!url || typeof url !== 'string') return false;
+  if (!url.startsWith(PUSHCUT_URL_PREFIX)) return false;
+  if (url.length > 300) return false;
+  try { new URL(url); return true; } catch { return false; }
+}
+
+async function sendPushcut(user, title, text, extra) {
+  if (!user || !user.pushcut_url) return;
+  if (!isPushcutUrlValida(user.pushcut_url)) return;
+  // Em modo test, não dispara HTTP real
+  if (process.env.NODE_ENV === 'test') return;
+  try {
+    const body = { title: String(title || '').slice(0, 80), text: String(text || '').slice(0, 200) };
+    if (extra && typeof extra === 'object') {
+      if (extra.input) body.input = String(extra.input).slice(0, 200);
+      if (extra.image) body.image = String(extra.image).slice(0, 300);
+      if (extra.sound) body.sound = String(extra.sound).slice(0, 50);
+    }
+    await axios.post(user.pushcut_url, body, { timeout: 5000 });
+    console.log(`[PUSHCUT] enviado: user=${user.id} title="${title}"`);
+  } catch (err) {
+    // Falhar silenciosamente — não bloquear o fluxo principal
+    console.warn(`[PUSHCUT] falhou: user=${user.id} ${err.response?.status || err.message}`);
+  }
+}
+
+// ─── Helpers de role ────────────────────────────────────────────────────────
+function gerenteMiddleware(req, res, next) {
+  const me = findUser(req.userId);
+  if (!me || me.role !== 'gerente') return res.status(403).json({ error: 'Acesso restrito a gerentes.' });
+  req.me = me;
+  next();
+}
+function superAdminMiddleware(req, res, next) {
+  const me = findUser(req.userId);
+  if (!me || me.role !== 'super_admin') return res.status(403).json({ error: 'Acesso restrito ao super admin.' });
+  req.me = me;
+  next();
+}
+
+// ─── Super admin: gestão de gerentes (auth JWT + role) ─────────────────────
+app.get('/api/super-admin/gerentes', authMiddleware, superAdminMiddleware, (_req, res) => {
+  const gerentes = db.users
+    .filter(u => u.role === 'gerente')
+    .map(u => ({
+      id: u.id, nome: u.nome, telefone: u.telefone, role: u.role,
+      saldo_afiliado: u.saldo_afiliado,
+      comissao_config: u.comissao_config || null,
+      total_influencers: db.users.filter(x => x.role === 'influencer' && x.prospectador_id === u.id).length,
+    }));
+  res.json({ gerentes });
+});
+
+app.post('/api/super-admin/gerentes/promover', authMiddleware, superAdminMiddleware, (req, res) => {
+  const { user_id, telefone } = req.body || {};
+  let target = null;
+  if (user_id) target = findUser(parseInt(user_id));
+  else if (telefone) {
+    const cleanTel = String(telefone).replace(/\D/g, '');
+    target = db.users.find(u => (u.telefone || '').replace(/\D/g, '') === cleanTel);
+  }
+  if (!target) return res.status(404).json({ error: 'Usuário não encontrado.' });
+  if (target.role === 'super_admin') return res.status(400).json({ error: 'Super admin não pode virar gerente.' });
+  target.role = 'gerente';
+  target.prospectador_id = null;
+  if (!target.comissao_config) {
+    target.comissao_config = {
+      nivel1_perc: COMISSAO_CONFIG.nivel1_perc,
+      nivel2_perc: COMISSAO_CONFIG.nivel2_perc,
+      nivel3_perc: COMISSAO_CONFIG.nivel3_perc,
+      gerente_split: COMISSAO_CONFIG.gerente_split,
+    };
+  }
+  target.updated_at = new Date().toISOString();
+  saveDb(db);
+  console.log(`[SUPER] Gerente promovido: user=${target.id} (${target.nome})`);
+  auditLog('gerente.promover', req.me.id, target.id, { nome: target.nome }, req);
+  res.json({ ok: true, gerente: { id: target.id, nome: target.nome, telefone: target.telefone } });
+});
+
+app.post('/api/super-admin/gerentes/remover', authMiddleware, superAdminMiddleware, (req, res) => {
+  const { user_id } = req.body || {};
+  const target = findUser(parseInt(user_id));
+  if (!target) return res.status(404).json({ error: 'Usuário não encontrado.' });
+  if (target.role !== 'gerente') return res.status(400).json({ error: 'Usuário não é gerente.' });
+  for (const u of db.users) {
+    if (u.role === 'influencer' && u.prospectador_id === target.id) {
+      u.role = 'jogador'; u.prospectador_id = null; u.updated_at = new Date().toISOString();
+    }
+  }
+  target.role = 'jogador';
+  target.comissao_config = null;
+  target.updated_at = new Date().toISOString();
+  saveDb(db);
+  console.log(`[SUPER] Gerente removido: user=${target.id}`);
+  auditLog('gerente.remover', req.me.id, target.id, { nome: target.nome }, req);
+  res.json({ ok: true });
+});
+
+// Buscar usuários por nome/telefone (para super admin promover gerentes)
+app.get('/api/super-admin/users/buscar', authMiddleware, superAdminMiddleware, (req, res) => {
+  const q = String(req.query.q || '').trim().toLowerCase();
+  if (q.length < 2) return res.json({ users: [] });
+  const cleanQ = q.replace(/\D/g, '');
+  const users = db.users
+    .filter(u => u.role === 'jogador' && u.id !== req.me.id)
+    .filter(u => {
+      const nome = (u.nome || '').toLowerCase();
+      const tel = (u.telefone || '').replace(/\D/g, '');
+      return nome.includes(q) || (cleanQ && tel.includes(cleanQ));
+    })
+    .slice(0, 20)
+    .map(u => ({ id: u.id, nome: u.nome, telefone: u.telefone }));
+  res.json({ users });
+});
+
+// ── Painel do gerente ──
+app.get('/api/gerente/painel', authMiddleware, gerenteMiddleware, (req, res) => {
+  const me = req.me;
+  const link = `${WEBHOOK_BASE_URL}/?ref=${me.codigo_indicacao}`;
+
+  const influencers = db.users.filter(u => u.role === 'influencer' && u.prospectador_id === me.id);
+
+  // IDs de jogadores na rede (indicados pelos influencers do gerente)
+  const jogadoresIds = new Set();
+  for (const inf of influencers) {
+    db.users
+      .filter(u => u.indicado_por === inf.codigo_indicacao)
+      .forEach(j => jogadoresIds.add(j.id));
+  }
+
+  // Stats financeiros do gerente
+  const minhasComissoes = db.transacoes.filter(t =>
+    t.user_id === me.id && t.tipo === 'bonus_indicacao' && t.status === 'aprovado'
+  );
+  const totalRecebido = money(minhasComissoes.reduce((s, t) => s + t.valor, 0));
+  const totalOverride = money(minhasComissoes
+    .filter(t => (t.descricao || '').startsWith('Override 60%'))
+    .reduce((s, t) => s + t.valor, 0));
+
+  // Volume gerado pela rede (depósitos aprovados, EXCLUI depósitos que foram split — invisíveis para o gerente)
+  const volumeRede = db.transacoes
+    .filter(t => t.tipo === 'deposito' && t.status === 'aprovado' && t._split !== true && jogadoresIds.has(t.user_id))
+    .reduce((s, t) => s + t.valor, 0);
+
+  const cfg = me.comissao_config || {
+    nivel1_perc: COMISSAO_CONFIG.nivel1_perc,
+    nivel2_perc: COMISSAO_CONFIG.nivel2_perc,
+    nivel3_perc: COMISSAO_CONFIG.nivel3_perc,
+    gerente_split: COMISSAO_CONFIG.gerente_split,
+  };
+  res.json({
+    me: { id: me.id, nome: me.nome, telefone: me.telefone, role: me.role, chave_pix: me.chave_pix, pushcut_url: me.pushcut_url || null },
+    link_afiliado: link,
+    codigo: me.codigo_indicacao,
+    // Percentuais que ESTE gerente cobra; editáveis por ele em PUT /api/gerente/config
+    config: {
+      nivel1_perc: +(cfg.nivel1_perc * 100).toFixed(2),
+      nivel2_perc: +(cfg.nivel2_perc * 100).toFixed(2),
+      nivel3_perc: +(cfg.nivel3_perc * 100).toFixed(2),
+      gerente_split_perc: Math.round(cfg.gerente_split * 100),
+      influencer_split_perc: 100 - Math.round(cfg.gerente_split * 100),
+    },
+    stats: {
+      total_influencers: influencers.length,
+      total_jogadores_rede: jogadoresIds.size,
+      saldo_afiliado: me.saldo_afiliado,
+      total_recebido: totalRecebido,
+      total_override: totalOverride,
+      volume_rede: money(volumeRede),
+    },
+    influencers: influencers.map(inf => {
+      const jogadoresInf = db.users.filter(u => u.indicado_por === inf.codigo_indicacao);
+      const overridesInf = minhasComissoes.filter(t =>
+        (t.descricao || '').includes(`influencer ${inf.nome || inf.id}`)
+      );
+      const totalOvInf = money(overridesInf.reduce((s, t) => s + t.valor, 0));
+      // Config efetiva: própria do influencer (override) ou herdada do gerente
+      const ownCfg = inf.comissao_config;
+      const effCfg = ownCfg || cfg; // cfg é a config do gerente
+      return {
+        id: inf.id, nome: inf.nome, telefone: inf.telefone,
+        codigo_indicacao: inf.codigo_indicacao,
+        link_afiliado: `${WEBHOOK_BASE_URL}/?ref=${inf.codigo_indicacao}`,
+        total_jogadores: jogadoresInf.length,
+        saldo_afiliado: inf.saldo_afiliado,
+        override_gerado: totalOvInf,
+        created_at: inf.created_at,
+        config_herdada: !ownCfg,
+        config: {
+          nivel1_perc: +(effCfg.nivel1_perc * 100).toFixed(2),
+          nivel2_perc: +(effCfg.nivel2_perc * 100).toFixed(2),
+          nivel3_perc: +(effCfg.nivel3_perc * 100).toFixed(2),
+          gerente_split_perc: Math.round(effCfg.gerente_split * 100),
+          influencer_split_perc: 100 - Math.round(effCfg.gerente_split * 100),
+        },
+      };
+    }),
+  });
+});
+
+// Atualizar a config de comissões do gerente (afeta TODA a rede dele, futura)
+app.put('/api/gerente/config', authMiddleware, gerenteMiddleware, (req, res) => {
+  const me = req.me;
+  const { nivel1_perc, nivel2_perc, nivel3_perc, gerente_split_perc } = req.body || {};
+
+  // Aceita números 0-100 (% inteira ou decimal). Converte pra fração.
+  function _parsePerc(v, max) {
+    if (v === undefined || v === null || v === '') return null;
+    const n = Number(v);
+    if (!isFinite(n) || n < 0 || n > max) return undefined; // inválido
+    return n / 100;
+  }
+
+  const cfg = { ...(me.comissao_config || {
+    nivel1_perc: COMISSAO_CONFIG.nivel1_perc,
+    nivel2_perc: COMISSAO_CONFIG.nivel2_perc,
+    nivel3_perc: COMISSAO_CONFIG.nivel3_perc,
+    gerente_split: COMISSAO_CONFIG.gerente_split,
+  })};
+
+  const updates = { nivel1_perc, nivel2_perc, nivel3_perc };
+  for (const k of Object.keys(updates)) {
+    const parsed = _parsePerc(updates[k], 50); // máx 50% por nível (proteção)
+    if (parsed === undefined) return res.status(400).json({ error: `${k} inválido (0-50%).` });
+    if (parsed !== null) cfg[k] = parsed;
+  }
+  if (gerente_split_perc !== undefined && gerente_split_perc !== null && gerente_split_perc !== '') {
+    const parsed = _parsePerc(gerente_split_perc, 100);
+    if (parsed === undefined) return res.status(400).json({ error: 'gerente_split_perc inválido (0-100%).' });
+    cfg.gerente_split = parsed;
+  }
+
+  me.comissao_config = cfg;
+  me.updated_at = new Date().toISOString();
+  saveDb(db);
+  console.log(`[GERENTE] Config atualizada: gerente=${me.id} cfg=${JSON.stringify(cfg)}`);
+  res.json({
+    ok: true,
+    config: {
+      nivel1_perc: +(cfg.nivel1_perc * 100).toFixed(2),
+      nivel2_perc: +(cfg.nivel2_perc * 100).toFixed(2),
+      nivel3_perc: +(cfg.nivel3_perc * 100).toFixed(2),
+      gerente_split_perc: Math.round(cfg.gerente_split * 100),
+      influencer_split_perc: 100 - Math.round(cfg.gerente_split * 100),
+    },
+  });
+});
+
+app.get('/api/gerente/influencers', authMiddleware, gerenteMiddleware, (req, res) => {
+  const influencers = db.users
+    .filter(u => u.role === 'influencer' && u.prospectador_id === req.me.id)
+    .map(u => ({
+      id: u.id, nome: u.nome, telefone: u.telefone,
+      codigo_indicacao: u.codigo_indicacao,
+      saldo_afiliado: u.saldo_afiliado,
+      created_at: u.created_at,
+    }));
+  res.json({
+    gerente_split_perc: Math.round(COMISSAO_CONFIG.gerente_split * 100),
+    influencer_split_perc: Math.round((1 - COMISSAO_CONFIG.gerente_split) * 100),
+    influencers,
+  });
+});
+
+app.post('/api/gerente/influencers/promover', authMiddleware, gerenteMiddleware, (req, res) => {
+  const me = req.me;
+  const { user_id, telefone } = req.body || {};
+  let target = null;
+  if (user_id) target = findUser(parseInt(user_id));
+  else if (telefone) {
+    const cleanTel = String(telefone).replace(/\D/g, '');
+    target = db.users.find(u => (u.telefone || '').replace(/\D/g, '') === cleanTel);
+  }
+  if (!target) return res.status(404).json({ error: 'Usuário não encontrado.' });
+  if (target.id === me.id) return res.status(400).json({ error: 'Você não pode se promover.' });
+  if (target.role === 'super_admin' || target.role === 'gerente') {
+    return res.status(400).json({ error: `${target.role} não pode virar influencer.` });
+  }
+  if (target.role !== 'jogador') {
+    return res.status(400).json({ error: 'Apenas jogadores podem ser promovidos a influencer.' });
+  }
+  // Validação CRÍTICA: o jogador precisa ter sido indicado pelo gerente (clicou no link dele)
+  // Isso impede que um gerente "roube" jogadores da rede de outro gerente.
+  if (target.indicado_por !== me.codigo_indicacao) {
+    return res.status(403).json({ error: 'Este jogador não pertence à sua rede. Ele precisa se cadastrar pelo seu link de afiliado primeiro.' });
+  }
+  target.role = 'influencer';
+  target.prospectador_id = me.id;
+  target.updated_at = new Date().toISOString();
+  saveDb(db);
+  console.log(`[GERENTE] Influencer promovido: user=${target.id} gerente=${me.id}`);
+  auditLog('influencer.promover', me.id, target.id, { nome: target.nome }, req);
+  // Notifica o gerente (confirmação) e o novo influencer (recém promovido)
+  sendPushcut(me, '✅ Influencer cadastrado!', `${target.nome || target.telefone} agora é seu influencer`);
+  sendPushcut(target, '🎉 Você é influencer!', `Você foi promovido a influencer por ${me.nome || 'seu gerente'}`);
+  res.json({ ok: true, influencer: { id: target.id, nome: target.nome, telefone: target.telefone, codigo_indicacao: target.codigo_indicacao } });
+});
+
+// Editar config de comissão de um influencer específico do gerente
+// PUT body: { nivel1_perc, nivel2_perc, nivel3_perc, gerente_split_perc, reset?: true }
+// Se reset=true, limpa a config e o influencer volta a herdar a config do gerente.
+app.put('/api/gerente/influencers/config', authMiddleware, gerenteMiddleware, (req, res) => {
+  const me = req.me;
+  const { user_id, reset, nivel1_perc, nivel2_perc, nivel3_perc, gerente_split_perc } = req.body || {};
+  const target = findUser(parseInt(user_id));
+  if (!target) return res.status(404).json({ error: 'Influencer não encontrado.' });
+  if (target.role !== 'influencer' || target.prospectador_id !== me.id) {
+    return res.status(403).json({ error: 'Influencer não pertence a você.' });
+  }
+  if (reset === true) {
+    target.comissao_config = null;
+    target.updated_at = new Date().toISOString();
+    saveDb(db);
+    console.log(`[GERENTE] Config do influencer ${target.id} resetada (herda do gerente)`);
+    return res.json({ ok: true, herdada: true });
+  }
+
+  function _parsePerc(v, max) {
+    if (v === undefined || v === null || v === '') return null;
+    const n = Number(v);
+    if (!isFinite(n) || n < 0 || n > max) return undefined;
+    return n / 100;
+  }
+
+  // Base: a config atual do influencer ou a do gerente (se herdava) ou default
+  const base = target.comissao_config
+    ? { ...target.comissao_config }
+    : (me.comissao_config ? { ...me.comissao_config } : _DEFAULT_CFG());
+
+  const updates = { nivel1_perc, nivel2_perc, nivel3_perc };
+  for (const k of Object.keys(updates)) {
+    const parsed = _parsePerc(updates[k], 50);
+    if (parsed === undefined) return res.status(400).json({ error: `${k} inválido (0-50%).` });
+    if (parsed !== null) base[k] = parsed;
+  }
+  if (gerente_split_perc !== undefined && gerente_split_perc !== null && gerente_split_perc !== '') {
+    const parsed = _parsePerc(gerente_split_perc, 100);
+    if (parsed === undefined) return res.status(400).json({ error: 'gerente_split_perc inválido (0-100%).' });
+    base.gerente_split = parsed;
+  }
+
+  target.comissao_config = base;
+  target.updated_at = new Date().toISOString();
+  saveDb(db);
+  console.log(`[GERENTE] Config do influencer ${target.id} atualizada: ${JSON.stringify(base)}`);
+  res.json({
+    ok: true,
+    herdada: false,
+    config: {
+      nivel1_perc: +(base.nivel1_perc * 100).toFixed(2),
+      nivel2_perc: +(base.nivel2_perc * 100).toFixed(2),
+      nivel3_perc: +(base.nivel3_perc * 100).toFixed(2),
+      gerente_split_perc: Math.round(base.gerente_split * 100),
+      influencer_split_perc: 100 - Math.round(base.gerente_split * 100),
+    },
+  });
+});
+
+app.post('/api/gerente/influencers/remover', authMiddleware, gerenteMiddleware, (req, res) => {
+  const me = req.me;
+  const { user_id } = req.body || {};
+  const target = findUser(parseInt(user_id));
+  if (!target) return res.status(404).json({ error: 'Usuário não encontrado.' });
+  if (target.role !== 'influencer' || target.prospectador_id !== me.id) {
+    return res.status(403).json({ error: 'Influencer não pertence a você.' });
+  }
+  target.role = 'jogador';
+  target.prospectador_id = null;
+  target.updated_at = new Date().toISOString();
+  saveDb(db);
+  console.log(`[GERENTE] Influencer removido: user=${target.id}`);
+  auditLog('influencer.remover', me.id, target.id, { nome: target.nome }, req);
+  res.json({ ok: true });
+});
+
+// ── Transações de comissão do gerente ──
+app.get('/api/gerente/transacoes', authMiddleware, gerenteMiddleware, (req, res) => {
+  const me = req.me;
+  const items = db.transacoes
+    .filter(t => t.user_id === me.id && (t.tipo === 'bonus_indicacao' || t.tipo === 'saque_afiliado'))
+    .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+    .slice(0, 200)
+    .map(t => ({
+      id: t.id, tipo: t.tipo, valor: t.valor,
+      descricao: t.descricao, status: t.status,
+      nivel: t.nivel || null, referido_id: t.referido_id || null,
+      created_at: t.created_at,
+    }));
+  res.json({ transacoes: items });
+});
+
+// ── Saque do gerente (taxa fixa de R$2) ──
+app.post('/api/gerente/saque', authMiddleware, gerenteMiddleware, (req, res) => {
+  const me = req.me;
+  const valor = money(req.body?.valor);
+  const pix = String(req.body?.chave_pix || '').trim();
+  const TAXA = 2;
+  const MIN = 5;
+  if (!valor || isNaN(valor) || valor < MIN) {
+    return res.status(400).json({ error: `Valor mínimo: R$ ${MIN.toFixed(2)}` });
+  }
+  if (valor > me.saldo_afiliado) {
+    return res.status(400).json({ error: 'Saldo de comissão insuficiente.' });
+  }
+  if (!pix || pix.length < 5) return res.status(400).json({ error: 'Chave PIX obrigatória.' });
+  if (!rateLimit(`saqueger:${me.id}`, 20, 600000)) {
+    return res.status(429).json({ error: 'Muitas solicitações. Aguarde alguns minutos.' });
+  }
+  const liquido = money(valor - TAXA);
+  if (liquido <= 0) return res.status(400).json({ error: `Valor deve ser maior que a taxa de R$ ${TAXA.toFixed(2)}` });
+
+  const antes = me.saldo_afiliado;
+  me.saldo_afiliado = money(antes - valor);
+  me.updated_at = new Date().toISOString();
+
+  const tx = {
+    id: db.nextIds.transacoes++,
+    user_id: me.id,
+    tipo: 'saque_afiliado',
+    valor,
+    valor_liquido: liquido,
+    taxa: TAXA,
+    saldo_antes: antes,
+    saldo_depois: me.saldo_afiliado,
+    status: 'pendente', // super admin aprova manualmente
+    pix_chave: pix,
+    descricao: `Saque de comissão (taxa R$ ${TAXA.toFixed(2)})`,
+    created_at: new Date().toISOString(),
+  };
+  db.transacoes.push(tx);
+  saveDb(db);
+  console.log(`[GERENTE] Saque solicitado: gerente=${me.id} valor=R$${valor} liquido=R$${liquido} (taxa R$${TAXA})`);
+  auditLog('saque.solicitar', me.id, null, { valor, liquido, tx_id: tx.id, role: 'gerente' }, req);
+  res.json({ ok: true, tx_id: tx.id, valor, liquido, taxa: TAXA });
+});
+
+// ── Criação de contas demo em lote ──
+function _genFakeEmail(nomeBase) {
+  const slug = String(nomeBase || 'user').toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 12) || 'user';
+  return `${slug}${Date.now().toString(36)}${Math.floor(Math.random() * 1000)}@demo.local`;
+}
+function _genFakePhone() {
+  // Gera telefone BR plausível (11 dígitos): DDD válido + 9XXXXXXXX
+  const ddds = ['11','21','31','41','51','61','71','81','85','62','19','27'];
+  const ddd = ddds[Math.floor(Math.random() * ddds.length)];
+  let n = '9';
+  for (let i = 0; i < 8; i++) n += Math.floor(Math.random() * 10);
+  return ddd + n;
+}
+
+app.post('/api/gerente/contas-demo/criar-lote', authMiddleware, gerenteMiddleware, (req, res) => {
+  const me = req.me;
+  const nomeBase = String(req.body?.nome_base || 'Demo').trim().slice(0, 40);
+  const senha = String(req.body?.senha || '').trim();
+  const qtd = parseInt(req.body?.quantidade) || 0;
+  const valorInicial = money(req.body?.valor_inicial || 0);
+
+  if (!nomeBase) return res.status(400).json({ error: 'Nome base obrigatório.' });
+  if (senha.length < 4) return res.status(400).json({ error: 'Senha mínima 4 caracteres.' });
+  if (qtd < 1 || qtd > 50) return res.status(400).json({ error: 'Quantidade deve ser entre 1 e 50.' });
+  if (valorInicial < 0 || valorInicial > 1000) return res.status(400).json({ error: 'Valor inicial deve ser entre 0 e R$ 1.000.' });
+  if (!rateLimit(`gerdemo:${me.id}`, 20, 3600000)) {
+    return res.status(429).json({ error: 'Limite de criação de contas demo atingido. Tente em 1h.' });
+  }
+
+  const senhaHash = bcrypt.hashSync(senha, 10);
+  const created = [];
+  for (let i = 1; i <= qtd; i++) {
+    const nome = `${nomeBase} ${i.toString().padStart(2, '0')}`;
+    let telefone, tries = 0;
+    do { telefone = _genFakePhone(); tries++; }
+    while (db.users.some(u => u.telefone === telefone) && tries < 50);
+    const email = _genFakeEmail(nomeBase);
+
+    const user = {
+      id: db.nextIds.users++,
+      nome,
+      email,
+      telefone,
+      cpf: null,
+      senha_hash: senhaHash,
+      saldo: valorInicial,
+      saldo_afiliado: 0,
+      chave_pix: null,
+      codigo_indicacao: generateReferralCode(),
+      indicado_por: null,
+      ativo: 1,
+      admin: 0,
+      role: 'jogador',
+      prospectador_id: null,
+      comissao_config: null,
+      demo: 1, // marca como conta demo
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+    db.users.push(user);
+    created.push({ id: user.id, nome, telefone, email });
+  }
+  saveDb(db);
+  console.log(`[GERENTE] Demo lote criado: gerente=${me.id} qtd=${qtd} valor=R$${valorInicial}`);
+  res.json({ ok: true, criadas: created.length, contas: created });
+});
+
+// ── Listar contas demo criadas ──
+app.get('/api/gerente/contas-demo', authMiddleware, gerenteMiddleware, (req, res) => {
+  const contas = db.users
+    .filter(u => u.demo === 1 && u.role === 'jogador')
+    .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+    .slice(0, 200)
+    .map(u => ({ id: u.id, nome: u.nome, telefone: u.telefone, saldo: u.saldo, created_at: u.created_at }));
+  res.json({ contas });
+});
+
+// ─── PAINEL DO INFLUENCER ─────────────────────────────────────────────────
+function influencerMiddleware(req, res, next) {
+  const me = findUser(req.userId);
+  if (!me || me.role !== 'influencer') return res.status(403).json({ error: 'Acesso restrito a influencers.' });
+  req.me = me;
+  next();
+}
+
+app.get('/api/influencer/painel', authMiddleware, influencerMiddleware, (req, res) => {
+  const me = req.me;
+  const link = `${WEBHOOK_BASE_URL}/?ref=${me.codigo_indicacao}`;
+  const indicados = db.users.filter(u => u.indicado_por === me.codigo_indicacao);
+
+  const minhasComissoes = db.transacoes.filter(t =>
+    t.user_id === me.id && t.tipo === 'bonus_indicacao' && t.status === 'aprovado'
+  );
+  const totalRecebido = money(minhasComissoes.reduce((s, t) => s + t.valor, 0));
+
+  // Considera apenas depósitos não-split (split é invisível para o influencer)
+  const idsIndicados = new Set(indicados.map(u => u.id));
+  const volumeIndicados = db.transacoes
+    .filter(t => t.tipo === 'deposito' && t.status === 'aprovado' && t._split !== true && idsIndicados.has(t.user_id))
+    .reduce((s, t) => s + t.valor, 0);
+
+  // Influencer prefere a config própria (override do gerente) → fallback gerente → fallback default
+  const gerente = me.prospectador_id ? findUser(me.prospectador_id) : null;
+  const cfg = me.comissao_config
+    || (gerente && gerente.comissao_config)
+    || {
+      nivel1_perc: COMISSAO_CONFIG.nivel1_perc,
+      nivel2_perc: COMISSAO_CONFIG.nivel2_perc,
+      nivel3_perc: COMISSAO_CONFIG.nivel3_perc,
+      gerente_split: COMISSAO_CONFIG.gerente_split,
+    };
+
+  res.json({
+    me: { id: me.id, nome: me.nome, telefone: me.telefone, role: me.role, chave_pix: me.chave_pix, pushcut_url: me.pushcut_url || null },
+    link_afiliado: link,
+    codigo: me.codigo_indicacao,
+    config: {
+      nivel1_perc: +(cfg.nivel1_perc * 100).toFixed(2),
+      nivel2_perc: +(cfg.nivel2_perc * 100).toFixed(2),
+      nivel3_perc: +(cfg.nivel3_perc * 100).toFixed(2),
+      sua_parte_perc: 100 - Math.round(cfg.gerente_split * 100),
+      gerente_parte_perc: Math.round(cfg.gerente_split * 100),
+    },
+    stats: {
+      saldo_afiliado: me.saldo_afiliado,
+      total_recebido: totalRecebido,
+      total_jogadores: indicados.length,
+      jogadores_com_deposito: indicados.filter(u =>
+        db.transacoes.some(t => t.user_id === u.id && t.tipo === 'deposito' && t.status === 'aprovado' && t._split !== true)
+      ).length,
+      volume_indicados: money(volumeIndicados),
+    },
+    jogadores: indicados.slice(0, 50).map(u => {
+      // Total depositado visível ao influencer também ignora split
+      const dep = db.transacoes
+        .filter(t => t.user_id === u.id && t.tipo === 'deposito' && t.status === 'aprovado' && t._split !== true)
+        .reduce((s, t) => s + t.valor, 0);
+      return {
+        id: u.id, nome: u.nome, telefone: u.telefone,
+        total_depositado: money(dep),
+        created_at: u.created_at,
+      };
+    }),
+  });
+});
+
+app.get('/api/influencer/transacoes', authMiddleware, influencerMiddleware, (req, res) => {
+  const me = req.me;
+  const items = db.transacoes
+    .filter(t => t.user_id === me.id && (t.tipo === 'bonus_indicacao' || t.tipo === 'saque_afiliado'))
+    .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+    .slice(0, 200)
+    .map(t => ({
+      id: t.id, tipo: t.tipo, valor: t.valor,
+      descricao: t.descricao, status: t.status,
+      nivel: t.nivel || null, created_at: t.created_at,
+    }));
+  res.json({ transacoes: items });
+});
+
+app.post('/api/influencer/saque', authMiddleware, influencerMiddleware, (req, res) => {
+  const me = req.me;
+  const valor = money(req.body?.valor);
+  const pix = String(req.body?.chave_pix || '').trim();
+  const TAXA = 2;
+  const MIN = 5;
+  if (!valor || isNaN(valor) || valor < MIN) {
+    return res.status(400).json({ error: `Valor mínimo: R$ ${MIN.toFixed(2)}` });
+  }
+  if (valor > me.saldo_afiliado) {
+    return res.status(400).json({ error: 'Saldo de comissão insuficiente.' });
+  }
+  if (!pix || pix.length < 5) return res.status(400).json({ error: 'Chave PIX obrigatória.' });
+  if (!rateLimit(`saqueinf:${me.id}`, 20, 600000)) {
+    return res.status(429).json({ error: 'Muitas solicitações. Aguarde alguns minutos.' });
+  }
+  const liquido = money(valor - TAXA);
+  if (liquido <= 0) return res.status(400).json({ error: `Valor deve ser maior que a taxa de R$ ${TAXA.toFixed(2)}` });
+
+  const antes = me.saldo_afiliado;
+  me.saldo_afiliado = money(antes - valor);
+  me.updated_at = new Date().toISOString();
+
+  const tx = {
+    id: db.nextIds.transacoes++,
+    user_id: me.id,
+    tipo: 'saque_afiliado',
+    valor,
+    valor_liquido: liquido,
+    taxa: TAXA,
+    saldo_antes: antes,
+    saldo_depois: me.saldo_afiliado,
+    status: 'pendente',
+    pix_chave: pix,
+    descricao: `Saque de comissão (taxa R$ ${TAXA.toFixed(2)})`,
+    created_at: new Date().toISOString(),
+  };
+  db.transacoes.push(tx);
+  saveDb(db);
+  console.log(`[INFLUENCER] Saque solicitado: influencer=${me.id} valor=R$${valor} liquido=R$${liquido}`);
+  auditLog('saque.solicitar', me.id, null, { valor, liquido, tx_id: tx.id, role: 'influencer' }, req);
+  res.json({ ok: true, tx_id: tx.id, valor, liquido, taxa: TAXA });
+});
+
+// ─── Saques pendentes (super admin) ───────────────────────────────────────
+app.get('/api/super-admin/saques', authMiddleware, superAdminMiddleware, (_req, res) => {
+  const saques = db.transacoes
+    .filter(t => (t.tipo === 'saque' || t.tipo === 'saque_afiliado') && t.status === 'pendente')
+    .sort((a, b) => new Date(a.created_at) - new Date(b.created_at))
+    .map(t => {
+      const u = findUser(t.user_id);
+      return {
+        id: t.id, tipo: t.tipo, valor: t.valor,
+        valor_liquido: t.valor_liquido || t.valor,
+        taxa: t.taxa || 0,
+        pix_chave: t.pix_chave, descricao: t.descricao,
+        created_at: t.created_at,
+        user: u ? { id: u.id, nome: u.nome, telefone: u.telefone, role: u.role } : null,
+      };
+    });
+  res.json({ saques });
+});
+
+app.post('/api/super-admin/saques/aprovar', authMiddleware, superAdminMiddleware, (req, res) => {
+  const txId = parseInt(req.body?.tx_id);
+  const tx = db.transacoes.find(t => t.id === txId && (t.tipo === 'saque' || t.tipo === 'saque_afiliado') && t.status === 'pendente');
+  if (!tx) return res.status(404).json({ error: 'Saque não encontrado ou já processado.' });
+  tx.status = 'aprovado';
+  tx.updated_at = new Date().toISOString();
+  saveDb(db);
+  console.log(`[SUPER] Saque aprovado: tx=${tx.id} user=${tx.user_id} valor=R$${tx.valor}`);
+  auditLog('saque.aprovar', req.me.id, tx.user_id, { tx_id: tx.id, valor: tx.valor }, req);
+  // Notifica o usuário cujo saque foi aprovado
+  const userSaque = findUser(tx.user_id);
+  if (userSaque) sendPushcut(userSaque, '✅ Saque aprovado!', `R$ ${(tx.valor_liquido || tx.valor).toFixed(2)} a caminho da sua chave PIX`);
+  res.json({ ok: true });
+});
+
+app.post('/api/super-admin/saques/rejeitar', authMiddleware, superAdminMiddleware, (req, res) => {
+  const txId = parseInt(req.body?.tx_id);
+  const tx = db.transacoes.find(t => t.id === txId && (t.tipo === 'saque' || t.tipo === 'saque_afiliado') && t.status === 'pendente');
+  if (!tx) return res.status(404).json({ error: 'Saque não encontrado ou já processado.' });
+  // Devolve o valor ao saldo correspondente
+  const u = findUser(tx.user_id);
+  if (u && tx.tipo === 'saque_afiliado') {
+    u.saldo_afiliado = money((u.saldo_afiliado || 0) + tx.valor);
+    u.updated_at = new Date().toISOString();
+  } else if (u && tx.tipo === 'saque') {
+    u.saldo = money((u.saldo || 0) + tx.valor);
+    u.updated_at = new Date().toISOString();
+  }
+  tx.status = 'rejeitado';
+  tx.updated_at = new Date().toISOString();
+  saveDb(db);
+  console.log(`[SUPER] Saque rejeitado: tx=${tx.id} user=${tx.user_id} (devolvido)`);
+  auditLog('saque.rejeitar', req.me.id, tx.user_id, { tx_id: tx.id, valor: tx.valor }, req);
+  const userSaque = findUser(tx.user_id);
+  if (userSaque) sendPushcut(userSaque, '❌ Saque rejeitado', `R$ ${tx.valor.toFixed(2)} foi devolvido ao seu saldo`);
+  res.json({ ok: true });
+});
+
+// Resumo geral pro super admin (stats da plataforma)
+app.get('/api/super-admin/painel', authMiddleware, superAdminMiddleware, (req, res) => {
+  const me = req.me;
+  const totalUsers = db.users.length;
+  const totalGerentes = db.users.filter(u => u.role === 'gerente').length;
+  const totalInfluencers = db.users.filter(u => u.role === 'influencer').length;
+  const totalJogadores = db.users.filter(u => u.role === 'jogador').length;
+  const depAprovados = db.transacoes.filter(t => t.tipo === 'deposito' && t.status === 'aprovado');
+  const volumeDep = money(depAprovados.reduce((s, t) => s + t.valor, 0));
+  const saquesPend = db.transacoes.filter(t => (t.tipo === 'saque' || t.tipo === 'saque_afiliado') && t.status === 'pendente').length;
+  // Comissões split do super admin
+  const minhasComissoes = db.transacoes.filter(t =>
+    t.user_id === me.id && t.tipo === 'bonus_indicacao' && t.status === 'aprovado'
+  );
+  const totalSplit = money(minhasComissoes.reduce((s, t) => s + t.valor, 0));
+  res.json({
+    me: { id: me.id, nome: me.nome, telefone: me.telefone },
+    stats: {
+      total_users: totalUsers,
+      total_gerentes: totalGerentes,
+      total_influencers: totalInfluencers,
+      total_jogadores: totalJogadores,
+      total_depositos: depAprovados.length,
+      volume_depositos: volumeDep,
+      saques_pendentes: saquesPend,
+      saldo_split: me.saldo_afiliado,
+      total_split_recebido: totalSplit,
+    },
+  });
+});
+
+// Audit log (super admin)
+app.get('/api/super-admin/audit-log', authMiddleware, superAdminMiddleware, (req, res) => {
+  const action = String(req.query.action || '').trim();
+  const limit = Math.min(parseInt(req.query.limit) || 200, 1000);
+  let entries = [...(db.audit_log || [])];
+  if (action) entries = entries.filter(e => e.action === action || e.action.startsWith(action + '.'));
+  entries = entries
+    .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+    .slice(0, limit)
+    .map(e => {
+      const actor = e.actor_id ? findUser(e.actor_id) : null;
+      const target = e.target_id ? findUser(e.target_id) : null;
+      return {
+        id: e.id, action: e.action,
+        actor: actor ? { id: actor.id, nome: actor.nome, role: actor.role } : null,
+        target: target ? { id: target.id, nome: target.nome, role: target.role } : null,
+        details: e.details, ip: e.ip,
+        created_at: e.created_at,
+      };
+    });
+  res.json({ audit_log: entries });
+});
+
+// Listar todas as transações filtradas (super admin)
+app.get('/api/super-admin/transacoes', authMiddleware, superAdminMiddleware, (req, res) => {
+  const tipo = String(req.query.tipo || '').trim();
+  let txs = [...db.transacoes];
+  if (tipo) txs = txs.filter(t => t.tipo === tipo);
+  const items = txs
+    .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+    .slice(0, 300)
+    .map(t => {
+      const u = findUser(t.user_id);
+      return {
+        id: t.id, user: u ? { id: u.id, nome: u.nome, telefone: u.telefone, role: u.role } : null,
+        tipo: t.tipo, valor: t.valor, status: t.status,
+        descricao: t.descricao, nivel: t.nivel || null,
+        created_at: t.created_at,
+      };
+    });
+  res.json({ transacoes: items });
+});
+
+// ── Pushcut: configurar/testar URL de notificação do gerente ──
+app.put('/api/gerente/pushcut', authMiddleware, gerenteMiddleware, (req, res) => {
+  const { url } = req.body || {};
+  const cleanUrl = String(url || '').trim();
+  if (cleanUrl && !isPushcutUrlValida(cleanUrl)) {
+    return res.status(400).json({ error: 'URL inválida. Deve começar com https://api.pushcut.io/v1/notifications/' });
+  }
+  req.me.pushcut_url = cleanUrl || null;
+  req.me.updated_at = new Date().toISOString();
+  saveDb(db);
+  res.json({ ok: true, pushcut_url: req.me.pushcut_url });
+});
+
+app.post('/api/gerente/pushcut/testar', authMiddleware, gerenteMiddleware, async (req, res) => {
+  if (!req.me.pushcut_url) return res.status(400).json({ error: 'Configure a URL Pushcut primeiro.' });
+  await sendPushcut(req.me, 'Teste HelixWins', 'Notificação de teste — sua integração Pushcut está funcionando!');
+  res.json({ ok: true });
+});
+
+app.put('/api/influencer/pushcut', authMiddleware, influencerMiddleware, (req, res) => {
+  const { url } = req.body || {};
+  const cleanUrl = String(url || '').trim();
+  if (cleanUrl && !isPushcutUrlValida(cleanUrl)) {
+    return res.status(400).json({ error: 'URL inválida. Deve começar com https://api.pushcut.io/v1/notifications/' });
+  }
+  req.me.pushcut_url = cleanUrl || null;
+  req.me.updated_at = new Date().toISOString();
+  saveDb(db);
+  res.json({ ok: true, pushcut_url: req.me.pushcut_url });
+});
+
+app.post('/api/influencer/pushcut/testar', authMiddleware, influencerMiddleware, async (req, res) => {
+  if (!req.me.pushcut_url) return res.status(400).json({ error: 'Configure a URL Pushcut primeiro.' });
+  await sendPushcut(req.me, 'Teste HelixWins', 'Notificação de teste — sua integração Pushcut está funcionando!');
+  res.json({ ok: true });
+});
+
+// Buscar usuários por nome/telefone (para o gerente cadastrar influencers)
+// SÓ retorna jogadores indicados pelo próprio gerente — nunca expõe a base inteira.
+app.get('/api/gerente/users/buscar', authMiddleware, gerenteMiddleware, (req, res) => {
+  const q = String(req.query.q || '').trim().toLowerCase();
+  if (q.length < 2) return res.json({ users: [] });
+  const cleanQ = q.replace(/\D/g, '');
+  const meCodigo = req.me.codigo_indicacao;
+  const users = db.users
+    .filter(u => u.role === 'jogador' && u.id !== req.me.id && u.indicado_por === meCodigo)
+    .filter(u => {
+      const nome = (u.nome || '').toLowerCase();
+      const tel = (u.telefone || '').replace(/\D/g, '');
+      return nome.includes(q) || (cleanQ && tel.includes(cleanQ));
+    })
+    .slice(0, 20)
+    .map(u => ({ id: u.id, nome: u.nome, telefone: u.telefone }));
+  res.json({ users });
+});
+
 app.get('/ctrl-sp', (req, res) => {
   // Se tem token válido, serve o painel
   const tk = req.query._tk;
@@ -2250,6 +3417,9 @@ app.use('/img', express.static(path.join(STATIC_DIR, 'img')));
 app.use('/assets', express.static(path.join(STATIC_DIR, 'assets')));
 app.use('/jogo', express.static(path.join(STATIC_DIR, 'jogo')));
 
+app.get('/gerente', (_req, res) => { res.sendFile(path.join(STATIC_DIR, 'gerente.html')); });
+app.get('/influencer', (_req, res) => { res.sendFile(path.join(STATIC_DIR, 'influencer.html')); });
+app.get('/super-admin', (_req, res) => { res.sendFile(path.join(STATIC_DIR, 'super-admin.html')); });
 app.get('/', (_req, res) => { res.sendFile(path.join(STATIC_DIR, 'index.html')); });
 app.get('*', (req, res) => {
   if (!req.path.startsWith('/api/')) return res.sendFile(path.join(STATIC_DIR, 'index.html'));

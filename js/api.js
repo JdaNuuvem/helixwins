@@ -21,17 +21,27 @@ const API = (() => {
   function saveUser(u) {
     // Armazenar apenas dados não-sensíveis para UI
     if (u) {
-      const { id, nome, email, telefone, saldo, saldo_afiliado, chave_pix, codigo_indicacao, created_at, admin } = u;
-      localStorage.setItem('hw_user', JSON.stringify({ id, nome, email, telefone, saldo, saldo_afiliado, chave_pix, codigo_indicacao, created_at, admin: !!admin }));
+      const { id, nome, email, telefone, saldo, saldo_afiliado, chave_pix, codigo_indicacao, created_at, admin, role, prospectador_id } = u;
+      localStorage.setItem('hw_user', JSON.stringify({ id, nome, email, telefone, saldo, saldo_afiliado, chave_pix, codigo_indicacao, created_at, admin: !!admin, role: role || (admin ? 'super_admin' : 'jogador'), prospectador_id: prospectador_id || null }));
     }
   }
   function getUser() {
     try { return JSON.parse(localStorage.getItem('hw_user') || 'null'); } catch { return null; }
   }
 
+  function getCsrfToken() {
+    const m = document.cookie.match(/(?:^|; )_csrf=([^;]+)/);
+    return m ? decodeURIComponent(m[1]) : '';
+  }
+
   async function request(method, path, body = null, auth = true) {
     const headers = { 'Content-Type': 'application/json' };
     // Cookie httpOnly é enviado automaticamente pelo browser (credentials: 'same-origin')
+    // CSRF token: lê o cookie _csrf e ecoa no header (double-submit pattern)
+    if (['POST', 'PUT', 'DELETE', 'PATCH'].includes(method)) {
+      const csrf = getCsrfToken();
+      if (csrf) headers['X-CSRF-Token'] = csrf;
+    }
 
     const opts = { method, headers, credentials: 'same-origin' };
     if (body && method !== 'GET') opts.body = JSON.stringify(body);
