@@ -847,41 +847,6 @@ function renderPainel(el) {
       </div>
     </div>
 
-    <!-- ══ MODAL RANKING ═══════════════════════════════════════════════ -->
-    <div class="pnl-modal-bg hidden" id="modal-ranking">
-      <div class="pnl-modal" style="max-width:420px">
-        <div class="pnl-modal-header">
-          <span class="pnl-modal-title">🏅 Ranking Semanal</span>
-          <button class="pnl-modal-close" id="close-ranking">✕</button>
-        </div>
-        <div id="ranking-lista">
-          <div style="text-align:center;color:#9980aa;padding:30px;font-size:13px">Carregando...</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- ══ MODAL PRESENTE ═════════════════════════════════════════════ -->
-    <div class="pnl-modal-bg hidden" id="modal-presente">
-      <div class="pnl-modal" style="max-width:400px">
-        <div class="pnl-modal-header">
-          <span class="pnl-modal-title">🎁 Enviar Presente</span>
-          <button class="pnl-modal-close" id="close-presente">✕</button>
-        </div>
-        <p style="font-size:13px;color:#5a4a6e;margin-bottom:16px;line-height:1.5">Envie saldo para um amigo. Ele precisa ter conta na plataforma.</p>
-        <div style="margin-bottom:14px">
-          <label style="font-size:11px;color:#9980aa;text-transform:uppercase;letter-spacing:.5px;font-weight:600;display:block;margin-bottom:6px">Telefone do amigo</label>
-          <div class="pnl-input-wrap" style="margin-bottom:0">
-            <input id="presente-tel" class="pnl-input" type="tel" placeholder="(00) 00000-0000" style="background:transparent" />
-          </div>
-        </div>
-        <div style="margin-bottom:18px">
-          <label style="font-size:11px;color:#9980aa;text-transform:uppercase;letter-spacing:.5px;font-weight:600;display:block;margin-bottom:8px">Valor</label>
-          <div id="presente-valores" style="display:flex;gap:8px"></div>
-        </div>
-        <button id="btn-enviar-presente" class="pnl-play-btn" style="width:100%;font-size:14px;padding:13px" disabled>ENVIAR PRESENTE</button>
-      </div>
-    </div>
-
     <!-- ══ MODAL AJUSTE DE SALDO (Admin) ═══════════════════════════════ -->
     <div class="pnl-modal-bg hidden" id="modal-ajuste">
       <div class="pnl-modal" style="max-width:420px">
@@ -978,6 +943,41 @@ function renderPainel(el) {
       </div>
     </div>
     ` : ''}
+
+    <!-- ══ MODAL RANKING (todos os usuários) ═══════════════════════════ -->
+    <div class="pnl-modal-bg hidden" id="modal-ranking">
+      <div class="pnl-modal" style="max-width:420px">
+        <div class="pnl-modal-header">
+          <span class="pnl-modal-title">🏅 Ranking Semanal</span>
+          <button class="pnl-modal-close" id="close-ranking">✕</button>
+        </div>
+        <div id="ranking-lista">
+          <div style="text-align:center;color:#9980aa;padding:30px;font-size:13px">Carregando...</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ MODAL PRESENTE (todos os usuários) ══════════════════════════ -->
+    <div class="pnl-modal-bg hidden" id="modal-presente">
+      <div class="pnl-modal" style="max-width:400px">
+        <div class="pnl-modal-header">
+          <span class="pnl-modal-title">🎁 Enviar Presente</span>
+          <button class="pnl-modal-close" id="close-presente">✕</button>
+        </div>
+        <p style="font-size:13px;color:#5a4a6e;margin-bottom:16px;line-height:1.5">Envie saldo para um amigo. Ele precisa ter conta na plataforma.</p>
+        <div style="margin-bottom:14px">
+          <label style="font-size:11px;color:#9980aa;text-transform:uppercase;letter-spacing:.5px;font-weight:600;display:block;margin-bottom:6px">Telefone do amigo</label>
+          <div class="pnl-input-wrap" style="margin-bottom:0">
+            <input id="presente-tel" class="pnl-input" type="tel" placeholder="(00) 00000-0000" style="background:transparent" />
+          </div>
+        </div>
+        <div style="margin-bottom:18px">
+          <label style="font-size:11px;color:#9980aa;text-transform:uppercase;letter-spacing:.5px;font-weight:600;display:block;margin-bottom:8px">Valor</label>
+          <div id="presente-valores" style="display:flex;gap:8px"></div>
+        </div>
+        <button id="btn-enviar-presente" class="pnl-play-btn" style="width:100%;font-size:14px;padding:13px" disabled>ENVIAR PRESENTE</button>
+      </div>
+    </div>
 
     <style>
       /* ── Root & layout ─────────────────────────────────────────── */
