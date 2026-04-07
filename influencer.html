@@ -180,7 +180,7 @@
       <div style="margin-top:18px;padding:14px;background:rgba(255,255,255,.04);border-radius:10px;font-size:12px;color:rgba(255,255,255,.6);line-height:1.7">
         <strong style="color:#fff">Eventos que disparam notificação:</strong><br>
         💸 Nova comissão recebida (cada depósito de jogador seu)<br>
-        ✅ Saque aprovado pelo super admin<br>
+        ✅ Saque aprovado<br>
         ❌ Saque rejeitado (saldo devolvido)<br>
         🎉 Promovido a influencer (uma vez)
       </div>
@@ -287,14 +287,12 @@ async function loadPainel() {
     const d = await api('/api/influencer/painel');
     document.getElementById('link-influencer').textContent = d.link_afiliado;
     const cf = d.config;
-    document.getElementById('cfg-info').textContent = `você fica com ${cf.sua_parte_perc}% — gerente fica com ${cf.gerente_parte_perc}%`;
+    document.getElementById('cfg-info').textContent = `${cf.sua_parte_perc}% sobre cada depósito dos seus jogadores`;
     // Pushcut URL
     const pcEl = document.getElementById('pushcut-url');
     if (pcEl) pcEl.value = d.me.pushcut_url || '';
     document.getElementById('cfg-detalhes').innerHTML = `
-      Quando um jogador seu deposita, a comissão é calculada assim:<br>
-      <strong style="color:#fff">N1 = ${cf.nivel1_perc}%</strong> do depósito (você é o N1 dos seus jogadores diretos)<br>
-      Desse valor, <strong style="color:#86efac">${cf.sua_parte_perc}%</strong> é seu e <strong style="color:#fde68a">${cf.gerente_parte_perc}%</strong> vai pro gerente.<br>
+      Você ganha <strong style="color:#86efac">${cf.sua_parte_perc}%</strong> sobre cada depósito dos seus jogadores diretos.<br>
       <span style="color:rgba(255,255,255,.5);font-size:12px">Bônus de 1º depósito (R$ 2) vai 100% pra você.</span>
     `;
 
