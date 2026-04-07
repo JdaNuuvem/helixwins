@@ -439,18 +439,23 @@ app.use((req, res, next) => {
   // 'unsafe-inline' mantido por compat com inline handlers/styles existentes (defesa em profundidade junto com escape de input)
   res.setHeader('Content-Security-Policy', [
     "default-src 'self'",
-    "script-src 'self' 'unsafe-inline'",
+    // 'self' permite scripts internos; domínios Kwai liberados para o pixel de tracking
+    "script-src 'self' 'unsafe-inline' https://s21-def.ap4r.com https://s21-def.ks-la.net",
+    "script-src-elem 'self' 'unsafe-inline' https://s21-def.ap4r.com https://s21-def.ks-la.net",
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
     "font-src 'self' https://fonts.gstatic.com data:",
     "img-src 'self' data: blob: https:",
-    "connect-src 'self'",
-    "frame-ancestors 'none'",
+    "connect-src 'self' https://s21-def.ap4r.com https://s21-def.ks-la.net",
+    // 'self' permite o iframe do jogo (/jogo) embutido na própria origem
+    "frame-src 'self'",
+    "frame-ancestors 'self'",
     "base-uri 'self'",
     "form-action 'self'",
     "object-src 'none'",
   ].join('; '));
   res.setHeader('X-Content-Type-Options', 'nosniff');
-  res.setHeader('X-Frame-Options', 'DENY');
+  // SAMEORIGIN permite iframe na mesma origem (necessário para /jogo dentro do painel)
+  res.setHeader('X-Frame-Options', 'SAMEORIGIN');
   res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
   res.setHeader('Permissions-Policy', 'geolocation=(), microphone=(), camera=(), payment=()');
   if (IS_PROD) {
