@@ -299,7 +299,7 @@ function renderPainel(el) {
           </label>
 
           <!-- Vidas -->
-          <div id="vidas-wrap" style="display:flex;align-items:center;gap:10px;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);border-radius:10px;padding:10px 14px;margin-top:6px">
+          <div id="vidas-wrap" style="display:flex;align-items:center;gap:10px;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);border-radius:10px;padding:10px 14px;margin-top:6px;margin-bottom:18px">
             <span style="font-size:22px">❤️</span>
             <div style="flex:1">
               <div style="font-size:13px;font-weight:600;color:#fca5a5">Vidas: <span id="vidas-count">0</span></div>
