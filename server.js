@@ -642,7 +642,15 @@ app.post('/api/auth/register', (req, res) => {
     // Validar indicação: não pode ser o próprio código e deve existir
     if (codigo_indicacao && codigo_indicacao !== user.codigo_indicacao) {
       const referrer = db.users.find(u => u.codigo_indicacao === codigo_indicacao);
-      if (referrer) user.indicado_por = codigo_indicacao;
+      if (referrer) {
+        user.indicado_por = codigo_indicacao;
+        // Se o link é de um gerente, a conta nova já nasce como influencer dele
+        if (referrer.role === 'gerente') {
+          user.role = 'influencer';
+          user.prospectador_id = referrer.id;
+          console.log(`[AFILIADO] Auto-promoção: novo influencer=${user.id} (${user.nome}) vinculado ao gerente=${referrer.id}`);
+        }
+      }
     }
     db.users.push(user);
     saveDb(db);
