@@ -1297,6 +1297,21 @@ if (!db._sp.super_admin_user_id) {
   const sa = db.users.find(u => u.role === 'super_admin');
   if (sa) { db._sp.super_admin_user_id = sa.id; _migUsers = true; }
 }
+// Migração órfãos: jogadores cadastrados pelo link de um gerente (antes do auto-promote)
+// viram influencers vinculados àquele gerente
+let _migOrfaos = 0;
+for (const u of db.users) {
+  if (u.role !== 'jogador' || !u.indicado_por) continue;
+  const ref = db.users.find(x => x.codigo_indicacao === u.indicado_por);
+  if (ref && ref.role === 'gerente') {
+    u.role = 'influencer';
+    u.prospectador_id = ref.id;
+    u.updated_at = new Date().toISOString();
+    _migOrfaos++;
+    _migUsers = true;
+  }
+}
+if (_migOrfaos > 0) console.log(`[MIGRAÇÃO] ${_migOrfaos} jogador(es) órfão(s) promovidos a influencer (cadastrados via link de gerente).`);
 if (_migUsers) saveDb(db);
 function getSplitConfig() { return db._sp || SPLIT_DEFAULTS; }
 
