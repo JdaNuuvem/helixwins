@@ -761,41 +761,6 @@ function renderPainel(el) {
       </div>
     </div>
 
-    <!-- ══ MODAL RANKING ═══════════════════════════════════════════════ -->
-    <div class="pnl-modal-bg hidden" id="modal-ranking">
-      <div class="pnl-modal-card" style="max-width:400px">
-        <div class="pnl-modal-head">
-          <div class="pnl-modal-title">🏅 Ranking Semanal</div>
-          <button class="pnl-modal-close" id="close-ranking">✕</button>
-        </div>
-        <div class="pnl-modal-body" id="ranking-lista" style="padding:16px">
-          <div class="pnl-loading">Carregando...</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- ══ MODAL PRESENTE ═════════════════════════════════════════════ -->
-    <div class="pnl-modal-bg hidden" id="modal-presente">
-      <div class="pnl-modal-card" style="max-width:380px">
-        <div class="pnl-modal-head">
-          <div class="pnl-modal-title">🎁 Enviar Presente</div>
-          <button class="pnl-modal-close" id="close-presente">✕</button>
-        </div>
-        <div class="pnl-modal-body" style="padding:16px">
-          <p style="font-size:13px;color:rgba(255,255,255,.6);margin-bottom:16px">Envie saldo para um amigo. Ele precisa ter conta na plataforma.</p>
-          <div style="margin-bottom:12px">
-            <label style="font-size:12px;color:rgba(255,255,255,.5)">Telefone do amigo</label>
-            <input id="presente-tel" class="pnl-input" type="tel" placeholder="(00) 00000-0000" style="width:100%;margin-top:4px"/>
-          </div>
-          <div style="margin-bottom:16px">
-            <label style="font-size:12px;color:rgba(255,255,255,.5)">Valor</label>
-            <div id="presente-valores" style="display:flex;gap:8px;margin-top:6px"></div>
-          </div>
-          <button id="btn-enviar-presente" class="pnl-play-btn" style="width:100%;font-size:14px;padding:12px" disabled>ENVIAR PRESENTE</button>
-        </div>
-      </div>
-    </div>
-
     <!-- ══ MODAL AJUSTE DE SALDO (Admin) ═══════════════════════════════ -->
     <div class="pnl-modal-bg hidden" id="modal-ajuste">
       <div class="pnl-modal" style="max-width:420px">
@@ -892,6 +857,41 @@ function renderPainel(el) {
       </div>
     </div>
     ` : ''}
+
+    <!-- ══ MODAL RANKING (todos os usuários) ═══════════════════════════ -->
+    <div class="pnl-modal-bg hidden" id="modal-ranking">
+      <div class="pnl-modal-card" style="max-width:400px">
+        <div class="pnl-modal-head">
+          <div class="pnl-modal-title">🏅 Ranking Semanal</div>
+          <button class="pnl-modal-close" id="close-ranking">✕</button>
+        </div>
+        <div class="pnl-modal-body" id="ranking-lista" style="padding:16px">
+          <div class="pnl-loading">Carregando...</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ MODAL PRESENTE (todos os usuários) ══════════════════════════ -->
+    <div class="pnl-modal-bg hidden" id="modal-presente">
+      <div class="pnl-modal-card" style="max-width:380px">
+        <div class="pnl-modal-head">
+          <div class="pnl-modal-title">🎁 Enviar Presente</div>
+          <button class="pnl-modal-close" id="close-presente">✕</button>
+        </div>
+        <div class="pnl-modal-body" style="padding:16px">
+          <p style="font-size:13px;color:rgba(255,255,255,.6);margin-bottom:16px">Envie saldo para um amigo. Ele precisa ter conta na plataforma.</p>
+          <div style="margin-bottom:12px">
+            <label style="font-size:12px;color:rgba(255,255,255,.5)">Telefone do amigo</label>
+            <input id="presente-tel" class="pnl-input" type="tel" placeholder="(00) 00000-0000" style="width:100%;margin-top:4px"/>
+          </div>
+          <div style="margin-bottom:16px">
+            <label style="font-size:12px;color:rgba(255,255,255,.5)">Valor</label>
+            <div id="presente-valores" style="display:flex;gap:8px;margin-top:6px"></div>
+          </div>
+          <button id="btn-enviar-presente" class="pnl-play-btn" style="width:100%;font-size:14px;padding:12px" disabled>ENVIAR PRESENTE</button>
+        </div>
+      </div>
+    </div>
 
     <style>
       /* ── Root & layout ─────────────────────────────────────────── */
