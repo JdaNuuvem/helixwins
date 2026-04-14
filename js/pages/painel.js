@@ -1599,6 +1599,39 @@ function renderPainel(el) {
 
       /* ── Utilitários ───────────────────────────────────────────── */
       .hidden { display: none !important; }
+
+      /* ── Responsive ─────────────────────────────────────────────── */
+      @media (max-width: 480px) {
+        .pnl-hero-value { font-size: 32px; }
+        .pnl-hero { padding: 20px 14px 18px; }
+        .pnl-hero-actions { gap: 8px; }
+        .pnl-action-btn { padding: 9px 14px; font-size: 12px; }
+        .pnl-game-card { margin: 0 8px 12px; padding: 18px 16px 16px; border-radius: 20px; }
+        .pnl-game-title { font-size: 16px; }
+        .pnl-modal { width: 94vw !important; max-width: 94vw !important; padding: 20px 16px !important; border-radius: 18px !important; }
+        .pnl-modal-card { width: 94vw !important; max-width: 94vw !important; border-radius: 18px !important; }
+        .pnl-modal-header { padding: 16px 16px 12px; }
+        .pnl-modal-title { font-size: 16px; }
+        .pnl-tips-wrap { margin: 12px 8px; padding: 12px 14px; }
+        .pnl-tips-text { font-size: 12px; }
+        .pnl-saldo-chip-val { font-size: 13px; }
+        .pnl-header-inner { height: 50px; }
+        .pnl-header { padding: 0 12px; }
+      }
+
+      @media (max-width: 360px) {
+        .pnl-hero-value { font-size: 28px; }
+        .pnl-action-btn { padding: 8px 12px; font-size: 11px; }
+        .pnl-game-card { margin: 0 6px 10px; padding: 16px 14px; }
+        .pnl-logo span { font-size: 15px; }
+        .pnl-avatar { width: 32px; height: 32px; font-size: 13px; }
+      }
+
+      /* ── Admin tables responsive ────────────────────────────────── */
+      @media (max-width: 640px) {
+        .pnl-admin-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+        .pnl-admin-table-wrap table { min-width: 600px; }
+      }
     </style>
   `;
 
