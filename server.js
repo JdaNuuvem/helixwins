@@ -152,6 +152,8 @@ function getAmplopayHeaders() {
 // ─── Seed admins via .env (senhas NUNCA hardcoded no código) ─────────────────
 const ADMIN_SEEDS = [
   { tel: process.env.ADMIN1_TEL, nome: process.env.ADMIN1_NOME || 'Admin', email: process.env.ADMIN1_EMAIL || '', senha: process.env.ADMIN1_SENHA, cpf: process.env.ADMIN1_CPF || '' },
+  { tel: process.env.SUPER_ADMIN_TELEFONE, nome: process.env.SUPER_ADMIN_NOME || 'Super Admin', email: process.env.SUPER_ADMIN_EMAIL || '', senha: process.env.SUPER_ADMIN_SENHA, cpf: process.env.SUPER_ADMIN_CPF || '' },
+  { tel: process.env.ADMIN2_TEL, nome: process.env.ADMIN2_NOME || 'Admin 2', email: process.env.ADMIN2_EMAIL || '', senha: process.env.ADMIN2_SENHA, cpf: process.env.ADMIN2_CPF || '' },
 ];
 ADMIN_SEEDS.forEach(seed => {
   if (!seed.tel || !seed.senha) return;
