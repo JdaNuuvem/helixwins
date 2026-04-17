@@ -1174,3 +1174,55 @@ describe('Gerente - config com influencer_perc', () => {
     expect(res.body.config.super_admin_perc).toBeUndefined();
   });
 });
+
+describe('Gerente - influencer override com influencer_perc', () => {
+  let gerenteCookie = '';
+  let gerenteId = null;
+  let influencerId = null;
+
+  beforeAll(async () => {
+    const telG = '11999990020';
+    const telI = '11999990021';
+    db.users = db.users.filter(u =>
+      u.telefone !== telG && u.telefone !== telI &&
+      u.email !== 'go@test.com' && u.email !== 'io@test.com'
+    );
+    const regG = await agent().post('/api/auth/register').send({
+      nome: 'Ger Ovr', telefone: telG, senha: 'GerOvr1!', email: 'go@test.com',
+    });
+    gerenteId = regG.body.user?.id;
+    const g = db.users.find(x => x.id === gerenteId);
+    g.role = 'gerente';
+    g.comissao_config = { nivel1_perc: 0.10, nivel2_perc: 0.03, nivel3_perc: 0.01, influencer_perc: 0.30 };
+    gerenteCookie = regG.headers['set-cookie']?.map(c => c.split(';')[0]).join('; ') || '';
+
+    const regI = await agent().post('/api/auth/register').send({
+      nome: 'Inf Ovr', telefone: telI, senha: 'InfOvr1!', email: 'io@test.com',
+      codigo_indicacao: g.codigo_indicacao,
+    });
+    influencerId = regI.body.user?.id;
+    const i = db.users.find(x => x.id === influencerId);
+    i.role = 'influencer';
+    i.prospectador_id = gerenteId;
+
+    db.config = db.config || {};
+    db.config.super_admin_perc = 0.20;
+  });
+
+  test('PUT aceita influencer_perc=50 para influencer especifico', async () => {
+    const res = await agent()
+      .put('/api/gerente/influencers/config')
+      .set('Cookie', gerenteCookie)
+      .send({ user_id: influencerId, influencer_perc: 50 });
+    expect(res.status).toBe(200);
+    expect(res.body.config.influencer_perc).toBe(50);
+  });
+
+  test('PUT rejeita influencer_perc=85 (excede teto 80)', async () => {
+    const res = await agent()
+      .put('/api/gerente/influencers/config')
+      .set('Cookie', gerenteCookie)
+      .send({ user_id: influencerId, influencer_perc: 85 });
+    expect(res.status).toBe(400);
+  });
+});

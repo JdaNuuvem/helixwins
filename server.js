@@ -3055,7 +3055,7 @@ app.post('/api/gerente/influencers/promover', authMiddleware, gerenteMiddleware,
 // Se reset=true, limpa a config e o influencer volta a herdar a config do gerente.
 app.put('/api/gerente/influencers/config', authMiddleware, gerenteMiddleware, (req, res) => {
   const me = req.me;
-  const { user_id, reset, nivel1_perc, nivel2_perc, nivel3_perc, gerente_split_perc } = req.body || {};
+  const { user_id, reset, nivel1_perc, nivel2_perc, nivel3_perc, influencer_perc } = req.body || {};
   const target = findUser(parseInt(user_id));
   if (!target) return res.status(404).json({ error: 'Influencer não encontrado.' });
   if (target.role !== 'influencer' || target.prospectador_id !== me.id) {
@@ -3076,7 +3076,6 @@ app.put('/api/gerente/influencers/config', authMiddleware, gerenteMiddleware, (r
     return n / 100;
   }
 
-  // Base: a config atual do influencer ou a do gerente (se herdava) ou default
   const base = target.comissao_config
     ? { ...target.comissao_config }
     : (me.comissao_config ? { ...me.comissao_config } : _DEFAULT_CFG());
@@ -3087,11 +3086,20 @@ app.put('/api/gerente/influencers/config', authMiddleware, gerenteMiddleware, (r
     if (parsed === undefined) return res.status(400).json({ error: `${k} inválido (0-50%).` });
     if (parsed !== null) base[k] = parsed;
   }
-  if (gerente_split_perc !== undefined && gerente_split_perc !== null && gerente_split_perc !== '') {
-    const parsed = _parsePerc(gerente_split_perc, 100);
-    if (parsed === undefined) return res.status(400).json({ error: 'gerente_split_perc inválido (0-100%).' });
-    base.gerente_split = parsed;
+
+  const saPerc = (db.config && typeof db.config.super_admin_perc === 'number')
+    ? db.config.super_admin_perc
+    : COMISSAO_CONFIG.super_admin_perc;
+  const tetoInfl = Math.round((1 - saPerc) * 100);
+
+  if (influencer_perc !== undefined && influencer_perc !== null && influencer_perc !== '') {
+    const parsed = _parsePerc(influencer_perc, tetoInfl);
+    if (parsed === undefined) {
+      return res.status(400).json({ error: `influencer_perc inválido (0-${tetoInfl}%).` });
+    }
+    base.influencer_perc = parsed;
   }
+  delete base.gerente_split;
 
   target.comissao_config = base;
   target.updated_at = new Date().toISOString();
@@ -3104,8 +3112,9 @@ app.put('/api/gerente/influencers/config', authMiddleware, gerenteMiddleware, (r
       nivel1_perc: +(base.nivel1_perc * 100).toFixed(2),
       nivel2_perc: +(base.nivel2_perc * 100).toFixed(2),
       nivel3_perc: +(base.nivel3_perc * 100).toFixed(2),
-      gerente_split_perc: Math.round(base.gerente_split * 100),
-      influencer_split_perc: 100 - Math.round(base.gerente_split * 100),
+      influencer_perc: Math.round(base.influencer_perc * 100),
+      disponivel_perc: tetoInfl,
+      gerente_perc: tetoInfl - Math.round(base.influencer_perc * 100),
     },
   });
 });
