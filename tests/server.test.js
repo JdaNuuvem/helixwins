@@ -622,8 +622,15 @@ describe('Afiliados', () => {
     db.transacoes.push(tx);
     creditarComissao(tx, db.users.find(u => u.id === newIndId));
 
-    // Deve ter recebido comissão (10% de 30 = 3) + bônus primeiro dep (2) = 5
-    const esperado = money(30 * COMISSAO_CONFIG.nivel1_perc) + COMISSAO_CONFIG.bonus_primeiro_deposito;
+    // Comissão N1 sofre corte do SA (saPerc = db.config.super_admin_perc ou COMISSAO_CONFIG.super_admin_perc)
+    // ref1 recebe (1 - saPerc) da comissão N1 + bônus primeiro depósito integral
+    const saPerc = (db.config && typeof db.config.super_admin_perc === 'number')
+      ? db.config.super_admin_perc : COMISSAO_CONFIG.super_admin_perc;
+    const comissaoN1 = money(30 * COMISSAO_CONFIG.nivel1_perc);
+    // Só aplica corte SA se houver um super_admin configurado
+    const saUser = db._sp && db._sp.super_admin_user_id ? db.users.find(u => u.id === db._sp.super_admin_user_id) : null;
+    const parteRef = saUser ? money(comissaoN1 * (1 - saPerc)) : comissaoN1;
+    const esperado = parteRef + COMISSAO_CONFIG.bonus_primeiro_deposito;
     expect(ref1.saldo_afiliado - saldoAntes).toBeCloseTo(esperado, 2);
   });
 
@@ -950,5 +957,127 @@ describe('Segurança - hardening', () => {
     expect(res.status).toBe(200);
     const jog2 = db.users.find(x => x.id === jog.id);
     expect(jog2.role).toBe('influencer');
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// SPLIT PIRAMIDE (SA + GERENTE + INFLUENCER) — N1
+// ═══════════════════════════════════════════════════════════════════════════
+describe('Split piramide N1', () => {
+  // Limpa usuários e estado de SA após cada teste para não poluir outros testes
+  afterEach(() => {
+    db.users = db.users.filter(u =>
+      !['sa_p','ge_p','in_p','jo_p','sa_q','in_q','jo_q','sa_r','jo_r'].includes(u.codigo_indicacao)
+    );
+    if (db._sp) db._sp.super_admin_user_id = null;
+  });
+
+  function setupCadeia({ saPerc = 0.20, inflPerc = 0.30 } = {}) {
+    db.users = db.users.filter(u => !['sa_p', 'ge_p', 'in_p', 'jo_p'].includes(u.codigo_indicacao));
+    const sa = {
+      id: 90001, nome: 'SA Piramide', telefone: '11000000001', senha_hash: 'x',
+      role: 'super_admin', codigo_indicacao: 'sa_p', indicado_por: null,
+      prospectador_id: null, saldo: 0, saldo_afiliado: 0, ativo: 1, comissao_config: null,
+      created_at: new Date().toISOString(),
+    };
+    const ger = {
+      id: 90002, nome: 'Gerente Piramide', telefone: '11000000002', senha_hash: 'x',
+      role: 'gerente', codigo_indicacao: 'ge_p', indicado_por: null,
+      prospectador_id: null, saldo: 0, saldo_afiliado: 0, ativo: 1,
+      comissao_config: { nivel1_perc: 0.10, nivel2_perc: 0.03, nivel3_perc: 0.01, influencer_perc: inflPerc },
+      created_at: new Date().toISOString(),
+    };
+    const inf = {
+      id: 90003, nome: 'Influencer Piramide', telefone: '11000000003', senha_hash: 'x',
+      role: 'influencer', codigo_indicacao: 'in_p', indicado_por: 'ge_p',
+      prospectador_id: ger.id, saldo: 0, saldo_afiliado: 0, ativo: 1, comissao_config: null,
+      created_at: new Date().toISOString(),
+    };
+    const jog = {
+      id: 90004, nome: 'Jogador Piramide', telefone: '11000000004', senha_hash: 'x',
+      role: 'jogador', codigo_indicacao: 'jo_p', indicado_por: 'in_p',
+      prospectador_id: null, saldo: 0, saldo_afiliado: 0, ativo: 1, comissao_config: null,
+      created_at: new Date().toISOString(),
+    };
+    db.users.push(sa, ger, inf, jog);
+    db.config = db.config || {};
+    db.config.super_admin_perc = saPerc;
+    db._sp = db._sp || {};
+    db._sp.super_admin_user_id = sa.id;
+    return { sa, ger, inf, jog };
+  }
+
+  test('SA=20%, inflPerc=30% → SA R$2, gerente R$5, influencer R$3 em dep R$100', () => {
+    const { sa, ger, inf, jog } = setupCadeia({ saPerc: 0.20, inflPerc: 0.30 });
+    const tx = { id: 999001, user_id: jog.id, tipo: 'deposito', valor: 100, status: 'aprovado', created_at: new Date().toISOString() };
+    db.transacoes.push(tx);
+    const { creditarComissao } = require('../server');
+    creditarComissao(tx, jog);
+    expect(sa.saldo_afiliado).toBeCloseTo(2.00, 2);
+    expect(ger.saldo_afiliado).toBeCloseTo(5.00, 2);
+    expect(inf.saldo_afiliado).toBeCloseTo(3.00, 2);
+  });
+
+  test('SA=10%, inflPerc=40% → SA R$1, gerente R$5, influencer R$4 em dep R$100', () => {
+    const { sa, ger, inf, jog } = setupCadeia({ saPerc: 0.10, inflPerc: 0.40 });
+    const tx = { id: 999002, user_id: jog.id, tipo: 'deposito', valor: 100, status: 'aprovado', created_at: new Date().toISOString() };
+    db.transacoes.push(tx);
+    require('../server').creditarComissao(tx, jog);
+    expect(sa.saldo_afiliado).toBeCloseTo(1.00, 2);
+    expect(ger.saldo_afiliado).toBeCloseTo(5.00, 2);
+    expect(inf.saldo_afiliado).toBeCloseTo(4.00, 2);
+  });
+
+  test('sem gerente: influencer solto recebe 100% do restante pós-SA', () => {
+    db.users = db.users.filter(u => !['sa_q', 'in_q', 'jo_q'].includes(u.codigo_indicacao));
+    const sa = {
+      id: 90101, nome: 'SA Q', telefone: '11000001001', senha_hash: 'x',
+      role: 'super_admin', codigo_indicacao: 'sa_q', indicado_por: null,
+      prospectador_id: null, saldo: 0, saldo_afiliado: 0, ativo: 1, comissao_config: null,
+      created_at: new Date().toISOString(),
+    };
+    const inf = {
+      id: 90102, nome: 'Inf solto', telefone: '11000001002', senha_hash: 'x',
+      role: 'influencer', codigo_indicacao: 'in_q', indicado_por: null,
+      prospectador_id: null, saldo: 0, saldo_afiliado: 0, ativo: 1, comissao_config: null,
+      created_at: new Date().toISOString(),
+    };
+    const jog = {
+      id: 90103, nome: 'Jog Q', telefone: '11000001003', senha_hash: 'x',
+      role: 'jogador', codigo_indicacao: 'jo_q', indicado_por: 'in_q',
+      prospectador_id: null, saldo: 0, saldo_afiliado: 0, ativo: 1, comissao_config: null,
+      created_at: new Date().toISOString(),
+    };
+    db.users.push(sa, inf, jog);
+    db.config.super_admin_perc = 0.20;
+    db._sp.super_admin_user_id = sa.id;
+    const tx = { id: 999003, user_id: jog.id, tipo: 'deposito', valor: 100, status: 'aprovado', created_at: new Date().toISOString() };
+    db.transacoes.push(tx);
+    require('../server').creditarComissao(tx, jog);
+    expect(sa.saldo_afiliado).toBeCloseTo(2.00, 2);
+    expect(inf.saldo_afiliado).toBeCloseTo(8.00, 2);
+  });
+
+  test('referrer é o proprio SA: SA recebe 100% da comissao N1', () => {
+    db.users = db.users.filter(u => !['sa_r', 'jo_r'].includes(u.codigo_indicacao));
+    const sa = {
+      id: 90201, nome: 'SA R', telefone: '11000002001', senha_hash: 'x',
+      role: 'super_admin', codigo_indicacao: 'sa_r', indicado_por: null,
+      prospectador_id: null, saldo: 0, saldo_afiliado: 0, ativo: 1, comissao_config: null,
+      created_at: new Date().toISOString(),
+    };
+    const jog = {
+      id: 90202, nome: 'Jog R', telefone: '11000002002', senha_hash: 'x',
+      role: 'jogador', codigo_indicacao: 'jo_r', indicado_por: 'sa_r',
+      prospectador_id: null, saldo: 0, saldo_afiliado: 0, ativo: 1, comissao_config: null,
+      created_at: new Date().toISOString(),
+    };
+    db.users.push(sa, jog);
+    db.config.super_admin_perc = 0.20;
+    db._sp.super_admin_user_id = sa.id;
+    const tx = { id: 999004, user_id: jog.id, tipo: 'deposito', valor: 100, status: 'aprovado', created_at: new Date().toISOString() };
+    db.transacoes.push(tx);
+    require('../server').creditarComissao(tx, jog);
+    expect(sa.saldo_afiliado).toBeCloseTo(10.00, 2);
   });
 });

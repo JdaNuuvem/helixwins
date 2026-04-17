@@ -1873,43 +1873,107 @@ function _comissaoConfigEfetiva(depositante) {
   return { ..._DEFAULT_CFG(), super_admin_perc: saPerc, _origem: 'default' };
 }
 
-// Aplica regra split do gerente: se o referrer é influencer vinculado a um gerente,
-// divide a comissão (influencer / gerente conforme config do gerente). Caso contrário credita 100% no referrer.
-function _creditarComComissaoSplit(referrer, valorComissao, depositante, nivel, splitGerente) {
+// Aplica split N1 em 3 vias: SA global + gerente + influencer.
+// Para N2/N3 o comportamento é cadeia normal (100% para o referrer).
+// cfg: objeto completo devolvido por _comissaoConfigEfetiva (inclui super_admin_perc + influencer_perc).
+function _creditarComComissaoSplit(referrer, valorComissao, depositante, nivel, cfg) {
   if (valorComissao <= 0) return;
-  if (referrer.role === 'influencer' && referrer.prospectador_id) {
-    const gerente = findUser(referrer.prospectador_id);
-    if (gerente && gerente.role === 'gerente') {
-      const splitG = (typeof splitGerente === 'number') ? splitGerente : COMISSAO_CONFIG.gerente_split;
-      const valorGer = money(valorComissao * splitG);
-      const valorInfl = money(valorComissao - valorGer);
-      const percG = Math.round(splitG * 100);
-      const percI = 100 - percG;
-      _creditarBonusIndicacao(
-        referrer, valorInfl,
-        `Comissão nível ${nivel} (${percI}%) — depósito de ${depositante.nome || 'indicado'}`,
-        depositante, nivel
-      );
-      _creditarBonusIndicacao(
-        gerente, valorGer,
-        `Override ${percG}% — influencer ${referrer.nome || referrer.id} (nível ${nivel})`,
-        depositante, nivel
-      );
-      console.log(`[AFILIADO] N${nivel} ${percG}/${percI}: influencer=${referrer.id} +R$${valorInfl} | gerente=${gerente.id} +R$${valorGer}`);
-      sendPushcut(referrer, '💸 Nova comissão!', `+R$ ${valorInfl.toFixed(2)} de ${depositante.nome || 'jogador'} (N${nivel})`);
-      sendPushcut(gerente, '💎 Override!', `+R$ ${valorGer.toFixed(2)} via ${referrer.nome || 'influencer'} (N${nivel})`);
-      return;
+
+  // N2/N3: cadeia normal — 100% referrer (sem SA nem split)
+  if (nivel !== 1) {
+    _creditarBonusIndicacao(
+      referrer, valorComissao,
+      `Comissão nível ${nivel} — depósito de ${depositante.nome || 'indicado'}`,
+      depositante, nivel
+    );
+    console.log(`[AFILIADO] N${nivel}: user=${referrer.id} +R$${valorComissao}`);
+    if (referrer.role === 'gerente' || referrer.role === 'influencer' || referrer.role === 'super_admin') {
+      sendPushcut(referrer, '💸 Nova comissão!', `+R$ ${valorComissao.toFixed(2)} de ${depositante.nome || 'jogador'} (N${nivel})`);
     }
+    return;
   }
+
+  // ── N1: pirâmide SA → Gerente → Influencer ──
+  const saPerc = (cfg && typeof cfg.super_admin_perc === 'number') ? cfg.super_admin_perc : COMISSAO_CONFIG.super_admin_perc;
+  const inflPerc = (cfg && typeof cfg.influencer_perc === 'number') ? cfg.influencer_perc : COMISSAO_CONFIG.influencer_perc;
+
+  const sp = db._sp || {};
+  const superAdmin = sp.super_admin_user_id ? findUser(sp.super_admin_user_id) : null;
+
+  // Caso especial: o próprio referrer é o SA → recebe 100%, sem auto-fatiar
+  if (referrer.role === 'super_admin') {
+    _creditarBonusIndicacao(
+      referrer, valorComissao,
+      `Comissão nível ${nivel} — depósito de ${depositante.nome || 'indicado'}`,
+      depositante, nivel
+    );
+    console.log(`[AFILIADO] N${nivel} SA-direto: user=${referrer.id} +R$${valorComissao}`);
+    sendPushcut(referrer, '💸 Nova comissão!', `+R$ ${valorComissao.toFixed(2)} de ${depositante.nome || 'jogador'} (N${nivel})`);
+    return;
+  }
+
+  // Só aplica o corte do SA quando há um super_admin configurado; senão o restante é 100%
+  const parteSa = superAdmin ? money(valorComissao * saPerc) : 0;
+  const restante = money(valorComissao - parteSa);
+
+  // Credita SA (se existir).
+  if (superAdmin) {
+    _creditarBonusIndicacao(
+      superAdmin, parteSa,
+      `Comissão pirâmide N1 (${Math.round(saPerc * 100)}%) — depósito de ${depositante.nome || 'indicado'}`,
+      depositante, nivel
+    );
+    console.log(`[AFILIADO] N1 piramide SA=${Math.round(saPerc * 100)}%: super_admin=${superAdmin.id} +R$${parteSa}`);
+    sendPushcut(superAdmin, '💎 Comissão pirâmide!', `+R$ ${parteSa.toFixed(2)} de ${depositante.nome || 'jogador'} (N1)`);
+  }
+
+  // Sem gerente: referrer direto leva o restante (100% do pós-SA)
+  if (referrer.role !== 'influencer' || !referrer.prospectador_id) {
+    _creditarBonusIndicacao(
+      referrer, restante,
+      `Comissão nível ${nivel} — depósito de ${depositante.nome || 'indicado'}`,
+      depositante, nivel
+    );
+    console.log(`[AFILIADO] N1 sem-gerente: user=${referrer.id} +R$${restante}`);
+    if (referrer.role === 'gerente' || referrer.role === 'influencer') {
+      sendPushcut(referrer, '💸 Nova comissão!', `+R$ ${restante.toFixed(2)} de ${depositante.nome || 'jogador'} (N1)`);
+    }
+    return;
+  }
+
+  // Com gerente: divide o restante entre gerente e influencer conforme influencer_perc
+  const gerente = findUser(referrer.prospectador_id);
+  if (!gerente || gerente.role !== 'gerente') {
+    _creditarBonusIndicacao(
+      referrer, restante,
+      `Comissão nível ${nivel} — depósito de ${depositante.nome || 'indicado'}`,
+      depositante, nivel
+    );
+    console.warn(`[AFILIADO] N1 gerente inválido (ref=${referrer.id}): +R$${restante} pro referrer`);
+    return;
+  }
+
+  const parteInfl = money(valorComissao * inflPerc);
+  const parteGer = money(restante - parteInfl);
+  const percSA = Math.round(saPerc * 100);
+  const percInfl = Math.round(inflPerc * 100);
+  const percGer = 100 - percSA - percInfl;
+
   _creditarBonusIndicacao(
-    referrer, valorComissao,
-    `Comissão nível ${nivel} — depósito de ${depositante.nome || 'indicado'}`,
+    referrer, parteInfl,
+    `Comissão nível ${nivel} (${percInfl}%) — depósito de ${depositante.nome || 'indicado'}`,
     depositante, nivel
   );
-  console.log(`[AFILIADO] N${nivel}: user=${referrer.id} +R$${valorComissao}`);
-  if (referrer.role === 'gerente' || referrer.role === 'influencer' || referrer.role === 'super_admin') {
-    sendPushcut(referrer, '💸 Nova comissão!', `+R$ ${valorComissao.toFixed(2)} de ${depositante.nome || 'jogador'} (N${nivel})`);
-  }
+  _creditarBonusIndicacao(
+    gerente, parteGer,
+    `Override ${percGer}% — influencer ${referrer.nome || referrer.id} (nível ${nivel})`,
+    depositante, nivel
+  );
+  console.log(`[AFILIADO] N1 piramide ${percSA}/${percGer}/${percInfl}: SA=${superAdmin?.id} +R$${parteSa} | gerente=${gerente.id} +R$${parteGer} | influencer=${referrer.id} +R$${parteInfl}`);
+  sendPushcut(referrer, '💸 Nova comissão!', `+R$ ${parteInfl.toFixed(2)} de ${depositante.nome || 'jogador'} (N1)`);
+  sendPushcut(gerente, '💎 Override!', `+R$ ${parteGer.toFixed(2)} via ${referrer.nome || 'influencer'} (N1)`);
+  // Retorna o gerente que recebeu split para que o loop pule o N2 desse gerente
+  return gerente;
 }
 
 function creditarComissao(tx, depositante) {
@@ -1947,7 +2011,8 @@ function creditarComissao(tx, depositante) {
     const referrer = db.users.find(u => u.codigo_indicacao === current.indicado_por);
     if (!referrer) break;
 
-    _creditarComComissaoSplit(referrer, comissoes[nivel - 1], depositante, nivel, cfg.gerente_split);
+    // Retorna o gerente do split 3-way N1 (se houver) para avançar current além dele
+    const splitGerente = _creditarComComissaoSplit(referrer, comissoes[nivel - 1], depositante, nivel, cfg);
 
     // Bônus 1º depósito — só no N1 direto, fora do split, sempre 100% pro referrer
     if (nivel === 1) {
@@ -1968,7 +2033,13 @@ function creditarComissao(tx, depositante) {
       }
     }
 
-    current = referrer;
+    // Se N1 fez split 3-way com gerente, avança current para o gerente
+    // (pula N2 do gerente que já foi compensado no split)
+    if (splitGerente) {
+      current = splitGerente;
+    } else {
+      current = referrer;
+    }
   }
 
   saveDb(db);
