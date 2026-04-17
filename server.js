@@ -1850,7 +1850,7 @@ const _DEFAULT_CFG = () => ({
   nivel1_perc: COMISSAO_CONFIG.nivel1_perc,
   nivel2_perc: COMISSAO_CONFIG.nivel2_perc,
   nivel3_perc: COMISSAO_CONFIG.nivel3_perc,
-  gerente_split: COMISSAO_CONFIG.gerente_split,
+  influencer_perc: COMISSAO_CONFIG.influencer_perc,
 });
 
 // Pega config efetiva (precedência):
@@ -1858,15 +1858,19 @@ const _DEFAULT_CFG = () => ({
 //   2) gerente da cadeia
 //   3) default global
 function _comissaoConfigEfetiva(depositante) {
+  const saPerc = (db.config && typeof db.config.super_admin_perc === 'number')
+    ? db.config.super_admin_perc
+    : COMISSAO_CONFIG.super_admin_perc;
+
   const inflN1 = _acharInfluencerN1(depositante);
   if (inflN1 && inflN1.comissao_config) {
-    return { ...inflN1.comissao_config, _origem: 'influencer', _influencer: inflN1 };
+    return { ...inflN1.comissao_config, super_admin_perc: saPerc, _origem: 'influencer', _influencer: inflN1 };
   }
   const gerente = _acharGerenteDaCadeia(depositante);
   if (gerente && gerente.comissao_config) {
-    return { ...gerente.comissao_config, _origem: 'gerente', _gerente: gerente };
+    return { ...gerente.comissao_config, super_admin_perc: saPerc, _origem: 'gerente', _gerente: gerente };
   }
-  return { ..._DEFAULT_CFG(), _origem: 'default' };
+  return { ..._DEFAULT_CFG(), super_admin_perc: saPerc, _origem: 'default' };
 }
 
 // Aplica regra split do gerente: se o referrer é influencer vinculado a um gerente,
