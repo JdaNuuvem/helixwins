@@ -35,14 +35,13 @@ Os três percentuais são **absolutos sobre o total da comissão N1** e sempre s
 
 ### 2.2 UI do painel do gerente
 
-O gerente **não precisa se preocupar com a matemática de 3 partes**. A UI mostra:
+O painel do gerente **não menciona o Super Admin**. O gerente vê apenas o bolo disponível para ele distribuir. A UI mostra:
 
-- "Super admin leva **20%** (R$2 de R$10)"
-- "Sobram **80%** (R$8) para você distribuir"
-- Input: "Quanto % vai para o influencer?" → gerente digita 30
-- Display derivado em tempo real: "Você (gerente) fica com **50%** (R$5)"
+- "Você tem **80%** (R$8 de cada R$10 de comissão) para distribuir entre você e seu influencer"
+- Input: "Quanto % vai para o influencer?" → gerente digita 30 (limite: 0 a 80)
+- Display derivado em tempo real: "Você fica com **50%** (R$5)"
 
-O valor salvo em `influencer_perc` é **absoluto sobre o total** (0.30 no exemplo). O slider do influencer tem `max = 100 − SA%` dinâmico.
+O valor salvo em `influencer_perc` é **absoluto sobre o total** (0.30 no exemplo). O slider do influencer tem `max = 100 − SA%` dinâmico (mas a UI apresenta esse teto como "80% disponíveis", sem expor que há uma fatia do SA).
 
 ### 2.3 Efeito quando SA muda
 
@@ -176,15 +175,17 @@ Response 400: valor fora do range
 - Exibir preview: "A cada R$10 de comissão N1, você recebe R$X".
 
 ### 7.2 `gerente.html`
-- Trocar label "Gerente fica com (%)" por **"Influencer recebe (%)"** (absoluto sobre o total).
-- Novo display somente-leitura no topo: "Super Admin leva **X%** (R$ Y de cada R$10 de comissão)".
-- Display "Sobram **Z%** (R$ W) para você distribuir" onde `Z = 100 − SA%`.
-- Slider/input do influencer com `max = 100 − SA%` (dinâmico).
-- Display calculado em tempo real: "Você (gerente) fica com **Y%** (R$ V)" onde `Y = 100 − SA − Influencer`.
-- Atualizar o visual do funil para mostrar 3 caixas: SA → Gerente → Influencer.
+**Importante:** O painel do gerente **nunca menciona a existência do Super Admin** nem expõe a `super_admin_perc`. O gerente só vê "seu bolo disponível" e o split interno dele.
+
+- Trocar label "Gerente fica com (%)" por **"Influencer recebe (%)"**.
+- Exibição principal: "Você tem **Z%** (R$ W de cada R$10 de comissão) para distribuir entre você e seu influencer", onde `Z = 100 − super_admin_perc` (lido internamente, não exposto como "SA leva X%").
+- Slider/input do influencer com `max = Z` (dinâmico).
+- Display derivado em tempo real: "Você fica com **Y%** (R$ V)" onde `Y = Z − influencer_perc`.
+- Atualizar o visual do funil para mostrar apenas **Gerente → Influencer** (sem SA visível no funil do painel do gerente).
 
 ### 7.3 `influencer.html`
-- Atualizar texto explicativo do funil para mencionar os 3 níveis.
+- Atualizar a exibição do percentual de comissão do influencer para refletir `influencer_perc` (substitui o cálculo antigo baseado em `gerente_split`).
+- O painel do influencer também **não menciona o Super Admin** — ele vê só "sua % de comissão" e os valores recebidos nas transações.
 
 ## 8. Testes (`tests/server.test.js`)
 
