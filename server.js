@@ -1912,11 +1912,11 @@ function _creditarComComissaoSplit(referrer, valorComissao, depositante, nivel, 
     return;
   }
 
-  // Só aplica o corte do SA quando há um super_admin configurado; senão o restante é 100%
-  const parteSa = superAdmin ? money(valorComissao * saPerc) : 0;
+  // SA sempre corta sua fatia do total; se não houver SA cadastrado, a fatia fica na plataforma (não credita).
+  const parteSa = money(valorComissao * saPerc);
   const restante = money(valorComissao - parteSa);
 
-  // Credita SA (se existir).
+  // Credita SA se cadastrado; senão a fatia descontada (parteSa) fica na plataforma (log warning).
   if (superAdmin) {
     _creditarBonusIndicacao(
       superAdmin, parteSa,
@@ -1925,6 +1925,8 @@ function _creditarComComissaoSplit(referrer, valorComissao, depositante, nivel, 
     );
     console.log(`[AFILIADO] N1 piramide SA=${Math.round(saPerc * 100)}%: super_admin=${superAdmin.id} +R$${parteSa}`);
     sendPushcut(superAdmin, '💎 Comissão pirâmide!', `+R$ ${parteSa.toFixed(2)} de ${depositante.nome || 'jogador'} (N1)`);
+  } else {
+    console.warn(`[AFILIADO] N1 piramide sem super_admin: fatia R$${parteSa} fica na plataforma (dep R$${valorComissao})`);
   }
 
   // Sem gerente: referrer direto leva o restante (100% do pós-SA)
@@ -1972,8 +1974,6 @@ function _creditarComComissaoSplit(referrer, valorComissao, depositante, nivel, 
   console.log(`[AFILIADO] N1 piramide ${percSA}/${percGer}/${percInfl}: SA=${superAdmin?.id} +R$${parteSa} | gerente=${gerente.id} +R$${parteGer} | influencer=${referrer.id} +R$${parteInfl}`);
   sendPushcut(referrer, '💸 Nova comissão!', `+R$ ${parteInfl.toFixed(2)} de ${depositante.nome || 'jogador'} (N1)`);
   sendPushcut(gerente, '💎 Override!', `+R$ ${parteGer.toFixed(2)} via ${referrer.nome || 'influencer'} (N1)`);
-  // Retorna o gerente que recebeu split para que o loop pule o N2 desse gerente
-  return gerente;
 }
 
 function creditarComissao(tx, depositante) {
@@ -2011,8 +2011,7 @@ function creditarComissao(tx, depositante) {
     const referrer = db.users.find(u => u.codigo_indicacao === current.indicado_por);
     if (!referrer) break;
 
-    // Retorna o gerente do split 3-way N1 (se houver) para avançar current além dele
-    const splitGerente = _creditarComComissaoSplit(referrer, comissoes[nivel - 1], depositante, nivel, cfg);
+    _creditarComComissaoSplit(referrer, comissoes[nivel - 1], depositante, nivel, cfg);
 
     // Bônus 1º depósito — só no N1 direto, fora do split, sempre 100% pro referrer
     if (nivel === 1) {
@@ -2033,13 +2032,7 @@ function creditarComissao(tx, depositante) {
       }
     }
 
-    // Se N1 fez split 3-way com gerente, avança current para o gerente
-    // (pula N2 do gerente que já foi compensado no split)
-    if (splitGerente) {
-      current = splitGerente;
-    } else {
-      current = referrer;
-    }
+    current = referrer;
   }
 
   saveDb(db);

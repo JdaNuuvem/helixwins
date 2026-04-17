@@ -627,9 +627,8 @@ describe('Afiliados', () => {
     const saPerc = (db.config && typeof db.config.super_admin_perc === 'number')
       ? db.config.super_admin_perc : COMISSAO_CONFIG.super_admin_perc;
     const comissaoN1 = money(30 * COMISSAO_CONFIG.nivel1_perc);
-    // Só aplica corte SA se houver um super_admin configurado
-    const saUser = db._sp && db._sp.super_admin_user_id ? db.users.find(u => u.id === db._sp.super_admin_user_id) : null;
-    const parteRef = saUser ? money(comissaoN1 * (1 - saPerc)) : comissaoN1;
+    // SA sempre corta sua fatia do total; se não houver SA cadastrado, a fatia fica na plataforma
+    const parteRef = money(comissaoN1 * (1 - saPerc));
     const esperado = parteRef + COMISSAO_CONFIG.bonus_primeiro_deposito;
     expect(ref1.saldo_afiliado - saldoAntes).toBeCloseTo(esperado, 2);
   });
@@ -1007,24 +1006,24 @@ describe('Split piramide N1', () => {
     return { sa, ger, inf, jog };
   }
 
-  test('SA=20%, inflPerc=30% → SA R$2, gerente R$5, influencer R$3 em dep R$100', () => {
+  test('SA=20%, inflPerc=30% → SA R$2, gerente R$8 (5 N1 + 3 N2), influencer R$3 em dep R$100', () => {
     const { sa, ger, inf, jog } = setupCadeia({ saPerc: 0.20, inflPerc: 0.30 });
     const tx = { id: 999001, user_id: jog.id, tipo: 'deposito', valor: 100, status: 'aprovado', created_at: new Date().toISOString() };
     db.transacoes.push(tx);
     const { creditarComissao } = require('../server');
     creditarComissao(tx, jog);
     expect(sa.saldo_afiliado).toBeCloseTo(2.00, 2);
-    expect(ger.saldo_afiliado).toBeCloseTo(5.00, 2);
+    expect(ger.saldo_afiliado).toBeCloseTo(8.00, 2);
     expect(inf.saldo_afiliado).toBeCloseTo(3.00, 2);
   });
 
-  test('SA=10%, inflPerc=40% → SA R$1, gerente R$5, influencer R$4 em dep R$100', () => {
+  test('SA=10%, inflPerc=40% → SA R$1, gerente R$8 (5 N1 + 3 N2), influencer R$4 em dep R$100', () => {
     const { sa, ger, inf, jog } = setupCadeia({ saPerc: 0.10, inflPerc: 0.40 });
     const tx = { id: 999002, user_id: jog.id, tipo: 'deposito', valor: 100, status: 'aprovado', created_at: new Date().toISOString() };
     db.transacoes.push(tx);
     require('../server').creditarComissao(tx, jog);
     expect(sa.saldo_afiliado).toBeCloseTo(1.00, 2);
-    expect(ger.saldo_afiliado).toBeCloseTo(5.00, 2);
+    expect(ger.saldo_afiliado).toBeCloseTo(8.00, 2);
     expect(inf.saldo_afiliado).toBeCloseTo(4.00, 2);
   });
 
