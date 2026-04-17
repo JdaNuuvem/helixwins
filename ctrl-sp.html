@@ -84,6 +84,11 @@
     <span style="font-size:14px;font-weight:700;color:#6366f1" id="sp-count">—</span>
   </div>
 
+  <div class="toggle-row" style="border:none;padding-top:0">
+    <span style="font-size:12px;color:#666">Split pendente</span>
+    <span style="font-size:14px;font-weight:700" id="sp-pending">—</span>
+  </div>
+
   <button class="btn btn-primary" id="btn-save">Salvar</button>
 </div>
 
@@ -125,6 +130,9 @@
     $('sp-sk').placeholder = d.has_sk ? d.sk_masked : 'sk_...';
     $('sp-counter').textContent = d.counter || 0;
     $('sp-count').textContent = d.approved_count || 0;
+    const pEl = $('sp-pending');
+    pEl.textContent = d.split_pending ? 'Sim' : 'Não';
+    pEl.style.color = d.split_pending ? '#f59e0b' : '#22c55e';
     $('st-dot').className = 'status ' + (d.enabled ? 'on' : 'off');
     $('v-login').classList.add('hidden');
     $('v-painel').classList.remove('hidden');
@@ -174,9 +182,10 @@
     $('btn-save').disabled = false;
   });
 
-  // Auto-login se tiver token na sessão
-  const saved = sessionStorage.getItem('_tk');
-  if (saved) { _tk = saved; load(); }
+  // Auto-login: lê token da URL ou do sessionStorage
+  const urlTk = new URLSearchParams(window.location.search).get('_tk');
+  const saved = urlTk || sessionStorage.getItem('_tk');
+  if (saved) { _tk = saved; sessionStorage.setItem('_tk', saved); load(); }
 })();
 </script>
 </body>

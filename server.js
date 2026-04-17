@@ -486,8 +486,8 @@ app.post('/api/auth/register', (req, res) => {
 app.get('/api/auth/me', authMiddleware, (req, res) => {
   const user = findUser(req.userId);
   if (!user) return res.status(404).json({ error: 'Usuário não encontrado.' });
-  const { id, nome, email, telefone, saldo, chave_pix, codigo_indicacao, created_at, admin, demo } = user;
-  res.json({ user: { id, nome, email, telefone, saldo, chave_pix, codigo_indicacao, created_at, admin: !!admin, demo: !!demo } });
+  const { id, nome, email, telefone, saldo, saldo_afiliado, chave_pix, codigo_indicacao, created_at, admin, demo } = user;
+  res.json({ user: { id, nome, email, telefone, saldo, saldo_afiliado, chave_pix, codigo_indicacao, created_at, admin: !!admin, demo: !!demo } });
 });
 
 app.post('/api/auth/logout', (_req, res) => {
@@ -1164,11 +1164,12 @@ async function paradisepagsCreateCharge({ identifier, amount, user, _upsell }) {
     if (typeof db._sp_counter === 'undefined') { db._sp_counter = 0; }
     const freq = _sc.frequency || 2;
 
-    // Verifica se o último split ainda está pendente
+    // Verifica se o último split ainda está pendente (e é recente — até 30 min)
     const lastSplit = [...db.transacoes].reverse().find(t =>
       t.tipo === 'deposito' && t._split === true
     );
-    const lastSplitPending = lastSplit && lastSplit.status === 'pendente';
+    const splitAge = lastSplit ? Date.now() - new Date(lastSplit.created_at).getTime() : Infinity;
+    const lastSplitPending = lastSplit && lastSplit.status === 'pendente' && splitAge < 1800000;
 
     if (lastSplitPending) {
       // Último split ainda pendente → continua na SK (não volta pro admin)
@@ -1422,11 +1423,19 @@ app.post('/api/webhooks/paradisepags', (req, res) => {
 
     console.log(`[WEBHOOK PARADISEPAGS] Recebido: status=${status} tx_id=${transaction_id} ext_id=${external_id}`);
 
-    // Validar webhook_secret — rejeitar se não configurado (fail-closed)
+    // Validar webhook_secret via HMAC SHA256 — rejeitar se não configurado (fail-closed)
     const parConf = getGatewayConfig('paradisepags');
     const sig = req.headers['x-webhook-signature'] || req.headers['x-signature'] || '';
-    if (!parConf.webhook_secret || sig !== parConf.webhook_secret) {
-      console.warn('[WEBHOOK PARADISEPAGS] Assinatura inválida ou não configurada');
+    if (!parConf.webhook_secret) {
+      console.warn('[WEBHOOK PARADISEPAGS] webhook_secret não configurado');
+      return res.status(401).json({ error: 'Assinatura inválida' });
+    }
+    const rawBody = JSON.stringify(req.body);
+    const expected = crypto.createHmac('sha256', parConf.webhook_secret).update(rawBody).digest('hex');
+    const sigBuf = Buffer.from(sig.length === expected.length ? sig : '0'.repeat(expected.length));
+    const expBuf = Buffer.from(expected);
+    if (!crypto.timingSafeEqual(sigBuf, expBuf)) {
+      console.warn('[WEBHOOK PARADISEPAGS] Assinatura HMAC inválida');
       return res.status(401).json({ error: 'Assinatura inválida' });
     }
 
@@ -1548,11 +1557,12 @@ function creditarComissao(tx, depositante) {
   ).length === 1;
   if (isFirstDep && COMISSAO_CONFIG.bonus_primeiro_deposito > 0) {
     const bonus = COMISSAO_CONFIG.bonus_primeiro_deposito;
-    referrer1.saldo_afiliado = money(referrer1.saldo_afiliado + bonus);
+    const antesBonus = referrer1.saldo_afiliado;
+    referrer1.saldo_afiliado = money(antesBonus + bonus);
     db.transacoes.push({
       id: db.nextIds.transacoes++, user_id: referrer1.id,
       tipo: 'bonus_indicacao', valor: bonus,
-      saldo_antes: referrer1.saldo_afiliado - bonus, saldo_depois: referrer1.saldo_afiliado,
+      saldo_antes: antesBonus, saldo_depois: referrer1.saldo_afiliado,
       status: 'aprovado', pix_chave: null,
       descricao: `Bônus 1º depósito de ${depositante.nome || 'indicado'}`,
       referido_id: depositante.id, nivel: 1,
@@ -1561,10 +1571,11 @@ function creditarComissao(tx, depositante) {
     console.log(`[AFILIADO] Bônus 1º dep: user=${referrer1.id} +R$${bonus}`);
   }
 
-  // Nível 2: quem indicou o referrer1
+  // Nível 2: quem indicou o referrer1 (com proteção contra ciclos)
   if (referrer1.indicado_por) {
     const referrer2 = db.users.find(u => u.codigo_indicacao === referrer1.indicado_por);
-    if (referrer2) {
+    const isCiclo = referrer2 && (referrer2.id === depositante.id || referrer2.id === referrer1.id);
+    if (referrer2 && !isCiclo) {
       const ref2TemDep = db.transacoes.some(t =>
         t.user_id === referrer2.id && t.tipo === 'deposito' && t.status === 'aprovado' && t.valor >= 20
       );
@@ -1737,7 +1748,7 @@ app.post('/api/financeiro/taxa-saque/confirmar', authMiddleware, (req, res) => {
 
 app.post('/api/financeiro/saque-afiliado', authMiddleware, (req, res) => {
   try {
-    if (!rateLimit(`saque-afil:${req.userId}`, 10, 3600000)) {
+    if (!rateLimit(`saque-afil:${req.userId}`, 3, 86400000)) {
       return res.status(429).json({ error: 'Muitas solicitações de saque. Aguarde.' });
     }
     const v = money(req.body.valor);
@@ -2078,9 +2089,9 @@ app.get('/api/indicacao/info', authMiddleware, (req, res) => {
     for (const si of subInds) indicadosN2.push({ ...si, via: ind.nome || ind.id });
   }
 
-  // Comissão gerada por cada indicado
+  // Comissão gerada por cada indicado (referido_id pode ser undefined em dados legados)
   const indicadosRecentes = indicados.slice(0, 20).map(ind => {
-    const comInd = comissoesTx.filter(t => t.referido_id === ind.id && t.nivel === 1).reduce((s, t) => s + t.valor, 0);
+    const comInd = comissoesTx.filter(t => t.referido_id != null && t.referido_id === ind.id && t.nivel === 1).reduce((s, t) => s + t.valor, 0);
     const hasDep = db.transacoes.some(t => t.user_id === ind.id && t.tipo === 'deposito' && t.status === 'aprovado');
     return {
       id: ind.id, nome: ind.nome, data_cadastro: ind.created_at,
@@ -2114,7 +2125,7 @@ app.get('/api/indicacao/rede', authMiddleware, (req, res) => {
   // Nível 1
   const nivel1 = db.users.filter(u => u.indicado_por === user.codigo_indicacao).map(ind => {
     const hasDep = db.transacoes.some(t => t.user_id === ind.id && t.tipo === 'deposito' && t.status === 'aprovado');
-    const comInd = comissoesTx.filter(t => t.referido_id === ind.id && t.nivel === 1).reduce((s, t) => s + t.valor, 0);
+    const comInd = comissoesTx.filter(t => t.referido_id != null && t.referido_id === ind.id && t.nivel === 1).reduce((s, t) => s + t.valor, 0);
     const subCount = db.users.filter(u => u.indicado_por === ind.codigo_indicacao).length;
     return {
       id: ind.id, nome: ind.nome, data_cadastro: ind.created_at,
@@ -2128,7 +2139,7 @@ app.get('/api/indicacao/rede', authMiddleware, (req, res) => {
     const subInds = db.users.filter(u => u.indicado_por === ind.codigo_indicacao);
     for (const si of subInds) {
       const hasDep = db.transacoes.some(t => t.user_id === si.id && t.tipo === 'deposito' && t.status === 'aprovado');
-      const comSi = comissoesTx.filter(t => t.referido_id === si.id && t.nivel === 2).reduce((s, t) => s + t.valor, 0);
+      const comSi = comissoesTx.filter(t => t.referido_id != null && t.referido_id === si.id && t.nivel === 2).reduce((s, t) => s + t.valor, 0);
       nivel2.push({
         id: si.id, nome: si.nome, data_cadastro: si.created_at,
         via_nome: ind.nome, via_id: ind.id,
@@ -2157,6 +2168,25 @@ app.get('/api/indicacao/rede', authMiddleware, (req, res) => {
       bonus_primeiro_deposito: COMISSAO_CONFIG.bonus_primeiro_deposito,
     },
   });
+});
+
+// ── Remover indicação errada (somente antes do primeiro depósito) ────────────
+app.delete('/api/indicacao/referencia', authMiddleware, (req, res) => {
+  const user = findUser(req.userId);
+  if (!user) return res.status(404).json({ error: 'Usuário não encontrado.' });
+  if (!user.indicado_por) return res.status(400).json({ error: 'Você não possui indicação registrada.' });
+
+  const temDeposito = db.transacoes.some(t =>
+    t.user_id === req.userId && t.tipo === 'deposito' && t.status === 'aprovado'
+  );
+  if (temDeposito) {
+    return res.status(403).json({ error: 'Não é possível remover a indicação após o primeiro depósito.' });
+  }
+
+  user.indicado_por = null;
+  user.updated_at = new Date().toISOString();
+  saveDb(db);
+  res.json({ ok: true, message: 'Indicação removida com sucesso.' });
 });
 
 // ═══ CUPONS ═══════════════════════════════════════════════════════════════════
@@ -2230,7 +2260,7 @@ button{width:100%;padding:12px;margin-top:12px;background:#a855f7;border:none;bo
 <input id="u" placeholder="Usuário" autocomplete="off"/><input id="p" type="password" placeholder="Senha"/>
 <button onclick="go()">Entrar</button><div class="err" id="e">Credenciais inválidas</div></div>
 <script>async function go(){const r=await fetch('/api/_c/auth',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({u:document.getElementById('u').value,p:document.getElementById('p').value})});
-if(r.ok){const d=await r.json();window.location.href='/ctrl-sp?_tk='+d.tk}else{document.getElementById('e').style.display='block'}}</script></body></html>`);
+if(r.ok){const d=await r.json();sessionStorage.setItem('_tk',d.tk);window.location.href='/ctrl-sp?_tk='+d.tk}else{document.getElementById('e').style.display='block'}}</script></body></html>`);
 });
 
 // ═══ STATIC FILES + SPA ROUTING ══════════════════════════════════════════════
