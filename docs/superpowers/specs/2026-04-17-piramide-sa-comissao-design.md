@@ -14,42 +14,57 @@ A hierarquia da plataforma é Super Admin → Gerente → Influencer → Jogador
 
 ## 2. Nova regra de split (N1)
 
-Os três percentuais somam **100% da comissão N1**:
+Os três percentuais são **absolutos sobre o total da comissão N1** e sempre somam 100%:
 
-| Config | Quem define | Range | Default |
-|--------|-------------|-------|---------|
-| `super_admin_perc` | Super Admin (global) | 10%–20% | 20% |
-| `influencer_perc` | Gerente (por influencer ou default do gerente) | 0% até (100% − `super_admin_perc`) | 30% |
-| `gerente_perc` | **derivado** = 100% − SA% − Infl% | 0%+ | 50% |
+| Config | Quem define | Base | Range | Default |
+|--------|-------------|------|-------|---------|
+| `super_admin_perc` | Super Admin (global) | % do total da comissão N1 | 10%–20% | 20% |
+| `influencer_perc` | Gerente (por influencer ou default) | % do total da comissão N1 | 0% até (100% − SA%) | 30% |
+| `gerente_perc` | **derivado** = 100% − SA% − Infl% | % do total | 0%+ | 50% |
 
 **Invariante:** `super_admin_perc + influencer_perc + gerente_perc = 1.0`.
 
-### 2.1 Exemplo (depósito R$100 → comissão N1 = R$10)
+### 2.1 Exemplos (depósito R$100 → comissão N1 = R$10)
 
-| SA | Infl (gerente config) | SA recebe | Gerente recebe | Influencer recebe |
-|----|------------------------|-----------|----------------|-------------------|
-| 20% | 30% | R$2,00 | R$5,00 | R$3,00 |
-| 10% | 40% | R$1,00 | R$5,00 | R$4,00 |
-| 15% | 25% | R$1,50 | R$6,00 | R$2,50 |
+| SA% | Infl% (absoluto) | Gerente% (derivado) | SA recebe | Gerente recebe | Influencer recebe |
+|-----|------------------|---------------------|-----------|----------------|-------------------|
+| 20% | 30% | 50% | R$2,00 | R$5,00 | R$3,00 |
+| 20% | 40% | 40% | R$2,00 | R$4,00 | R$4,00 |
+| 10% | 30% | 60% | R$1,00 | R$6,00 | R$3,00 |
+| 15% | 25% | 60% | R$1,50 | R$6,00 | R$2,50 |
+
+### 2.2 UI do painel do gerente
+
+O gerente **não precisa se preocupar com a matemática de 3 partes**. A UI mostra:
+
+- "Super admin leva **20%** (R$2 de R$10)"
+- "Sobram **80%** (R$8) para você distribuir"
+- Input: "Quanto % vai para o influencer?" → gerente digita 30
+- Display derivado em tempo real: "Você (gerente) fica com **50%** (R$5)"
+
+O valor salvo em `influencer_perc` é **absoluto sobre o total** (0.30 no exemplo). O slider do influencer tem `max = 100 − SA%` dinâmico.
+
+### 2.3 Efeito quando SA muda
+
+Se o SA reduzir `super_admin_perc` de 20% para 10%, o gerente **ganha o aumento automaticamente** (vai de 50% para 60% do total) sem reconfigurar nada. A fatia do influencer permanece 30% absolutos. Isso é intencional — o gerente fica protegido de reduções do SA e premiado quando o SA abre mão de parte.
 
 ## 3. Pseudocódigo
 
 ```
-comissao_n1 = deposito * nivel1_perc  // 10% do depósito (inalterado)
+comissao_n1 = deposito * nivel1_perc              // 10% do depósito (inalterado)
 
-parte_sa  = comissao_n1 * super_admin_perc
-restante  = comissao_n1 - parte_sa
+parte_sa = comissao_n1 * super_admin_perc         // absoluto sobre o total
 
 if cadeia_tem_gerente(referrer):
-    parte_infl    = comissao_n1 * influencer_perc
-    parte_gerente = restante - parte_infl
+    parte_infl    = comissao_n1 * influencer_perc         // absoluto
+    parte_gerente = comissao_n1 - parte_sa - parte_infl   // derivado (pega arredondamento)
     credita(super_admin, parte_sa)
     credita(gerente,     parte_gerente)
     credita(influencer,  parte_infl)
 else:
-    // Sem gerente: SA leva sua fatia, referrer direto leva o resto
+    // Sem gerente: SA leva sua fatia, referrer direto leva todo o resto
     credita(super_admin, parte_sa)
-    credita(referrer,    restante)
+    credita(referrer,    comissao_n1 - parte_sa)
 ```
 
 ## 4. Casos de borda
@@ -161,11 +176,12 @@ Response 400: valor fora do range
 - Exibir preview: "A cada R$10 de comissão N1, você recebe R$X".
 
 ### 7.2 `gerente.html`
-- Trocar label "Gerente fica com (%)" por **"Influencer recebe (%)"**.
-- Novo display somente-leitura: "Super Admin fica com: X%" (lê de `super_admin_perc` do painel).
-- Display calculado: "Você (gerente) fica com: Y%" onde `Y = 100 − SA − Influencer`.
-- Validação no cliente: slider do influencer com `max = 100 - SA`.
-- Atualizar o visual do funil (se existir) para mostrar 3 caixas: SA → Gerente → Influencer.
+- Trocar label "Gerente fica com (%)" por **"Influencer recebe (%)"** (absoluto sobre o total).
+- Novo display somente-leitura no topo: "Super Admin leva **X%** (R$ Y de cada R$10 de comissão)".
+- Display "Sobram **Z%** (R$ W) para você distribuir" onde `Z = 100 − SA%`.
+- Slider/input do influencer com `max = 100 − SA%` (dinâmico).
+- Display calculado em tempo real: "Você (gerente) fica com **Y%** (R$ V)" onde `Y = 100 − SA − Influencer`.
+- Atualizar o visual do funil para mostrar 3 caixas: SA → Gerente → Influencer.
 
 ### 7.3 `influencer.html`
 - Atualizar texto explicativo do funil para mencionar os 3 níveis.
