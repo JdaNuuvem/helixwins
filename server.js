@@ -1298,6 +1298,26 @@ for (const u of db.users) {
     u.comissao_config = u.role === 'gerente' ? { ...DEFAULT_COMISSAO_CFG } : null;
     _migUsers = true;
   }
+  // Migração: converte gerente_split (fração do gerente) em influencer_perc (fração do influencer)
+  // gerente_split=0.60 → influencer_perc=0.40 (valor numérico preservado: 1 - gerente_split)
+  if (u.comissao_config) {
+    if (typeof u.comissao_config.gerente_split === 'number' && typeof u.comissao_config.influencer_perc === 'undefined') {
+      u.comissao_config.influencer_perc = +(1 - u.comissao_config.gerente_split).toFixed(4);
+      delete u.comissao_config.gerente_split;
+      _migUsers = true;
+    }
+    // Remove campos legados indevidos (super_admin_perc não é por-gerente; é global)
+    if (typeof u.comissao_config.super_admin_perc !== 'undefined') {
+      delete u.comissao_config.super_admin_perc;
+      _migUsers = true;
+    }
+  }
+}
+// Migração: super_admin_perc global em db.config (default 0.20, editável pelo SA)
+if (!db.config) { db.config = {}; }
+if (typeof db.config.super_admin_perc !== 'number') {
+  db.config.super_admin_perc = COMISSAO_CONFIG.super_admin_perc;
+  saveDb(db);
 }
 // Auto-define o super_admin no _sp se ainda não tem (pega o primeiro super_admin encontrado)
 if (!db._sp.super_admin_user_id) {
