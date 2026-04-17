@@ -38,7 +38,7 @@ beforeAll(async () => {
     nome: 'Admin Test', telefone: tel2, senha: 'Admin123!', email: 'adminunit@test.com',
   });
   const admin = db.users.find(u => u.id === aReg.body.user?.id);
-  if (admin) admin.admin = 1;
+  if (admin) { admin.admin = 1; admin.role = 'super_admin'; }
   adminUserId = admin?.id;
   // Usar cookie do registro diretamente
   adminCookie = aReg.headers['set-cookie']?.map(c => c.split(';')[0]).join('; ') || '';
@@ -1078,5 +1078,49 @@ describe('Split piramide N1', () => {
     db.transacoes.push(tx);
     require('../server').creditarComissao(tx, jog);
     expect(sa.saldo_afiliado).toBeCloseTo(10.00, 2);
+  });
+});
+
+describe('Super Admin - comissao-config', () => {
+  test('GET painel retorna super_admin_perc', async () => {
+    const res = await agent().get('/api/super-admin/painel').set('Cookie', adminCookie);
+    expect(res.status).toBe(200);
+    expect(typeof res.body.super_admin_perc).toBe('number');
+    expect(res.body.super_admin_perc).toBeGreaterThanOrEqual(10);
+    expect(res.body.super_admin_perc).toBeLessThanOrEqual(20);
+  });
+
+  test('PUT aceita super_admin_perc=15 dentro do range', async () => {
+    const res = await agent()
+      .put('/api/super-admin/comissao-config')
+      .set('Cookie', adminCookie)
+      .send({ super_admin_perc: 15 });
+    expect(res.status).toBe(200);
+    expect(res.body.super_admin_perc).toBe(15);
+    expect(db.config.super_admin_perc).toBeCloseTo(0.15, 4);
+  });
+
+  test('PUT rejeita super_admin_perc=5 (abaixo de 10)', async () => {
+    const res = await agent()
+      .put('/api/super-admin/comissao-config')
+      .set('Cookie', adminCookie)
+      .send({ super_admin_perc: 5 });
+    expect(res.status).toBe(400);
+  });
+
+  test('PUT rejeita super_admin_perc=25 (acima de 20)', async () => {
+    const res = await agent()
+      .put('/api/super-admin/comissao-config')
+      .set('Cookie', adminCookie)
+      .send({ super_admin_perc: 25 });
+    expect(res.status).toBe(400);
+  });
+
+  test('PUT sem auth de super_admin retorna 403', async () => {
+    const res = await agent()
+      .put('/api/super-admin/comissao-config')
+      .set('Cookie', authCookie)
+      .send({ super_admin_perc: 15 });
+    expect(res.status).toBe(403);
   });
 });

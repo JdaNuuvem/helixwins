@@ -3469,7 +3469,23 @@ app.get('/api/super-admin/painel', authMiddleware, superAdminMiddleware, (req, r
       saldo_split: me.saldo_afiliado,
       total_split_recebido: totalSplit,
     },
+    super_admin_perc: Math.round((db.config?.super_admin_perc ?? COMISSAO_CONFIG.super_admin_perc) * 100),
   });
+});
+
+// Config de comissão editável pelo super admin (super_admin_perc global)
+app.put('/api/super-admin/comissao-config', authMiddleware, superAdminMiddleware, (req, res) => {
+  const { super_admin_perc } = req.body || {};
+  const n = Number(super_admin_perc);
+  if (!isFinite(n) || n < 10 || n > 20) {
+    return res.status(400).json({ error: 'super_admin_perc deve ser um número entre 10 e 20.' });
+  }
+  if (!db.config) db.config = {};
+  db.config.super_admin_perc = n / 100;
+  saveDb(db);
+  console.log(`[SUPER-ADMIN] super_admin_perc atualizado para ${n}%`);
+  auditLog('super_admin.comissao_config', req.me.id, null, { super_admin_perc: n }, req);
+  res.json({ ok: true, super_admin_perc: n });
 });
 
 // Audit log (super admin)
