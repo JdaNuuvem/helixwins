@@ -1124,3 +1124,53 @@ describe('Super Admin - comissao-config', () => {
     expect(res.status).toBe(403);
   });
 });
+
+describe('Gerente - config com influencer_perc', () => {
+  let gerenteCookie = '';
+  let gerenteId = null;
+
+  beforeAll(async () => {
+    const tel = '11999990010';
+    db.users = db.users.filter(u => u.telefone !== tel);
+    const reg = await agent().post('/api/auth/register').send({
+      nome: 'Gerente Cfg', telefone: tel, senha: 'Ger123!', email: 'ger@test.com',
+    });
+    gerenteId = reg.body.user?.id;
+    const u = db.users.find(x => x.id === gerenteId);
+    u.role = 'gerente';
+    u.comissao_config = { nivel1_perc: 0.10, nivel2_perc: 0.03, nivel3_perc: 0.01, influencer_perc: 0.30 };
+    gerenteCookie = reg.headers['set-cookie']?.map(c => c.split(';')[0]).join('; ') || '';
+    db.config = db.config || {};
+    db.config.super_admin_perc = 0.20;
+  });
+
+  test('PUT aceita influencer_perc=40 (dentro do teto 80 com SA=20)', async () => {
+    const res = await agent()
+      .put('/api/gerente/config')
+      .set('Cookie', gerenteCookie)
+      .send({ influencer_perc: 40 });
+    expect(res.status).toBe(200);
+    expect(res.body.config.influencer_perc).toBe(40);
+    const u = db.users.find(x => x.id === gerenteId);
+    expect(u.comissao_config.influencer_perc).toBeCloseTo(0.40, 4);
+  });
+
+  test('PUT rejeita influencer_perc=85 (excede teto com SA=20 → max 80)', async () => {
+    const res = await agent()
+      .put('/api/gerente/config')
+      .set('Cookie', gerenteCookie)
+      .send({ influencer_perc: 85 });
+    expect(res.status).toBe(400);
+  });
+
+  test('GET painel retorna influencer_perc, disponivel_perc, gerente_perc e NAO expoe super_admin_perc', async () => {
+    const res = await agent().get('/api/gerente/painel').set('Cookie', gerenteCookie);
+    expect(res.status).toBe(200);
+    expect(typeof res.body.config.influencer_perc).toBe('number');
+    expect(typeof res.body.config.disponivel_perc).toBe('number');
+    expect(res.body.config.gerente_perc).toBe(
+      res.body.config.disponivel_perc - res.body.config.influencer_perc
+    );
+    expect(res.body.config.super_admin_perc).toBeUndefined();
+  });
+});

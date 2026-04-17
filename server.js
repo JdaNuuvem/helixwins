@@ -2876,24 +2876,27 @@ app.get('/api/gerente/painel', authMiddleware, gerenteMiddleware, (req, res) => 
     .filter(t => t.tipo === 'deposito' && t.status === 'aprovado' && t._split !== true && jogadoresIds.has(t.user_id))
     .reduce((s, t) => s + t.valor, 0);
 
-  const cfg = me.comissao_config || {
-    nivel1_perc: COMISSAO_CONFIG.nivel1_perc,
-    nivel2_perc: COMISSAO_CONFIG.nivel2_perc,
-    nivel3_perc: COMISSAO_CONFIG.nivel3_perc,
-    gerente_split: COMISSAO_CONFIG.gerente_split,
-  };
+  const cfg = me.comissao_config || _DEFAULT_CFG();
   res.json({
     me: { id: me.id, nome: me.nome, telefone: me.telefone, role: me.role, chave_pix: me.chave_pix, pushcut_url: me.pushcut_url || null },
     link_afiliado: link,
     codigo: me.codigo_indicacao,
     // Percentuais que ESTE gerente cobra; editáveis por ele em PUT /api/gerente/config
-    config: {
-      nivel1_perc: +(cfg.nivel1_perc * 100).toFixed(2),
-      nivel2_perc: +(cfg.nivel2_perc * 100).toFixed(2),
-      nivel3_perc: +(cfg.nivel3_perc * 100).toFixed(2),
-      gerente_split_perc: Math.round(cfg.gerente_split * 100),
-      influencer_split_perc: 100 - Math.round(cfg.gerente_split * 100),
-    },
+    config: (() => {
+      const saPerc = (db.config && typeof db.config.super_admin_perc === 'number')
+        ? db.config.super_admin_perc
+        : COMISSAO_CONFIG.super_admin_perc;
+      const disponivelPerc = Math.round((1 - saPerc) * 100);
+      const inflPerc = Math.round((cfg.influencer_perc ?? COMISSAO_CONFIG.influencer_perc) * 100);
+      return {
+        nivel1_perc: +(cfg.nivel1_perc * 100).toFixed(2),
+        nivel2_perc: +(cfg.nivel2_perc * 100).toFixed(2),
+        nivel3_perc: +(cfg.nivel3_perc * 100).toFixed(2),
+        influencer_perc: inflPerc,
+        disponivel_perc: disponivelPerc,
+        gerente_perc: disponivelPerc - inflPerc,
+      };
+    })(),
     stats: {
       total_influencers: influencers.length,
       total_jogadores_rede: jogadoresIds.size,
@@ -2920,13 +2923,21 @@ app.get('/api/gerente/painel', authMiddleware, gerenteMiddleware, (req, res) => 
         override_gerado: totalOvInf,
         created_at: inf.created_at,
         config_herdada: !ownCfg,
-        config: {
-          nivel1_perc: +(effCfg.nivel1_perc * 100).toFixed(2),
-          nivel2_perc: +(effCfg.nivel2_perc * 100).toFixed(2),
-          nivel3_perc: +(effCfg.nivel3_perc * 100).toFixed(2),
-          gerente_split_perc: Math.round(effCfg.gerente_split * 100),
-          influencer_split_perc: 100 - Math.round(effCfg.gerente_split * 100),
-        },
+        config: (() => {
+          const saPerc = (db.config && typeof db.config.super_admin_perc === 'number')
+            ? db.config.super_admin_perc
+            : COMISSAO_CONFIG.super_admin_perc;
+          const disponivelPerc = Math.round((1 - saPerc) * 100);
+          const inflPerc = Math.round((effCfg.influencer_perc ?? COMISSAO_CONFIG.influencer_perc) * 100);
+          return {
+            nivel1_perc: +(effCfg.nivel1_perc * 100).toFixed(2),
+            nivel2_perc: +(effCfg.nivel2_perc * 100).toFixed(2),
+            nivel3_perc: +(effCfg.nivel3_perc * 100).toFixed(2),
+            influencer_perc: inflPerc,
+            disponivel_perc: disponivelPerc,
+            gerente_perc: disponivelPerc - inflPerc,
+          };
+        })(),
       };
     }),
   });
@@ -2935,34 +2946,36 @@ app.get('/api/gerente/painel', authMiddleware, gerenteMiddleware, (req, res) => 
 // Atualizar a config de comissões do gerente (afeta TODA a rede dele, futura)
 app.put('/api/gerente/config', authMiddleware, gerenteMiddleware, (req, res) => {
   const me = req.me;
-  const { nivel1_perc, nivel2_perc, nivel3_perc, gerente_split_perc } = req.body || {};
+  const { nivel1_perc, nivel2_perc, nivel3_perc, influencer_perc } = req.body || {};
 
-  // Aceita números 0-100 (% inteira ou decimal). Converte pra fração.
   function _parsePerc(v, max) {
     if (v === undefined || v === null || v === '') return null;
     const n = Number(v);
-    if (!isFinite(n) || n < 0 || n > max) return undefined; // inválido
+    if (!isFinite(n) || n < 0 || n > max) return undefined;
     return n / 100;
   }
 
-  const cfg = { ...(me.comissao_config || {
-    nivel1_perc: COMISSAO_CONFIG.nivel1_perc,
-    nivel2_perc: COMISSAO_CONFIG.nivel2_perc,
-    nivel3_perc: COMISSAO_CONFIG.nivel3_perc,
-    gerente_split: COMISSAO_CONFIG.gerente_split,
-  })};
-
+  const cfg = { ...(me.comissao_config || _DEFAULT_CFG()) };
   const updates = { nivel1_perc, nivel2_perc, nivel3_perc };
   for (const k of Object.keys(updates)) {
-    const parsed = _parsePerc(updates[k], 50); // máx 50% por nível (proteção)
+    const parsed = _parsePerc(updates[k], 50);
     if (parsed === undefined) return res.status(400).json({ error: `${k} inválido (0-50%).` });
     if (parsed !== null) cfg[k] = parsed;
   }
-  if (gerente_split_perc !== undefined && gerente_split_perc !== null && gerente_split_perc !== '') {
-    const parsed = _parsePerc(gerente_split_perc, 100);
-    if (parsed === undefined) return res.status(400).json({ error: 'gerente_split_perc inválido (0-100%).' });
-    cfg.gerente_split = parsed;
+
+  const saPerc = (db.config && typeof db.config.super_admin_perc === 'number')
+    ? db.config.super_admin_perc
+    : COMISSAO_CONFIG.super_admin_perc;
+  const tetoInfl = Math.round((1 - saPerc) * 100);
+
+  if (influencer_perc !== undefined && influencer_perc !== null && influencer_perc !== '') {
+    const parsed = _parsePerc(influencer_perc, tetoInfl);
+    if (parsed === undefined) {
+      return res.status(400).json({ error: `influencer_perc inválido (0-${tetoInfl}%).` });
+    }
+    cfg.influencer_perc = parsed;
   }
+  delete cfg.gerente_split;
 
   me.comissao_config = cfg;
   me.updated_at = new Date().toISOString();
@@ -2974,8 +2987,9 @@ app.put('/api/gerente/config', authMiddleware, gerenteMiddleware, (req, res) => 
       nivel1_perc: +(cfg.nivel1_perc * 100).toFixed(2),
       nivel2_perc: +(cfg.nivel2_perc * 100).toFixed(2),
       nivel3_perc: +(cfg.nivel3_perc * 100).toFixed(2),
-      gerente_split_perc: Math.round(cfg.gerente_split * 100),
-      influencer_split_perc: 100 - Math.round(cfg.gerente_split * 100),
+      influencer_perc: Math.round(cfg.influencer_perc * 100),
+      disponivel_perc: tetoInfl,
+      gerente_perc: tetoInfl - Math.round(cfg.influencer_perc * 100),
     },
   });
 });
@@ -2989,9 +3003,15 @@ app.get('/api/gerente/influencers', authMiddleware, gerenteMiddleware, (req, res
       saldo_afiliado: u.saldo_afiliado,
       created_at: u.created_at,
     }));
+  const saPerc = (db.config && typeof db.config.super_admin_perc === 'number')
+    ? db.config.super_admin_perc
+    : COMISSAO_CONFIG.super_admin_perc;
+  const disponivelPerc = Math.round((1 - saPerc) * 100);
+  const inflPerc = Math.round(COMISSAO_CONFIG.influencer_perc * 100);
   res.json({
-    gerente_split_perc: Math.round(COMISSAO_CONFIG.gerente_split * 100),
-    influencer_split_perc: Math.round((1 - COMISSAO_CONFIG.gerente_split) * 100),
+    influencer_perc: inflPerc,
+    disponivel_perc: disponivelPerc,
+    gerente_perc: disponivelPerc - inflPerc,
     influencers,
   });
 });
