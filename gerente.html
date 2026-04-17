@@ -255,8 +255,8 @@
           <input id="cfg-n3" type="number" step="0.5" min="0" max="50" class="fi"/>
         </div>
         <div>
-          <label class="fl">Sua parte (%) — restante vai pro influencer</label>
-          <input id="cfg-split" type="number" step="1" min="0" max="100" class="fi"/>
+          <label class="fl">Influencer recebe (%)</label>
+          <input id="cfg-infl-perc" type="number" step="1" min="0" max="80" class="fi"/>
         </div>
       </div>
       <button class="btn-primary" onclick="salvarConfig()">Salvar configuração</button>
@@ -427,8 +427,8 @@
         <input id="edit-n3" type="number" step="0.5" min="0" max="50" class="fi"/>
       </div>
       <div>
-        <label class="fl">Sua parte (%)</label>
-        <input id="edit-split" type="number" step="1" min="0" max="100" class="fi"/>
+        <label class="fl">Influencer recebe (%)</label>
+        <input id="edit-infl-perc" type="number" step="1" min="0" max="80" class="fi"/>
       </div>
     </div>
     <div style="font-size:11px;color:rgba(255,255,255,.5);margin-top:10px" id="edit-cfg-resumo">—</div>
@@ -525,14 +525,16 @@ async function loadPainel() {
     const d = await api('/api/gerente/painel');
     document.getElementById('link-gerente').textContent = d.link_afiliado;
     const cf = d.config;
-    const hintTxt = `comissões: N1 ${cf.nivel1_perc}% / N2 ${cf.nivel2_perc}% / N3 ${cf.nivel3_perc}% — divisão ${cf.gerente_split_perc}/${cf.influencer_split_perc}`;
+    const hintTxt = `comissões: N1 ${cf.nivel1_perc}% / N2 ${cf.nivel2_perc}% / N3 ${cf.nivel3_perc}% — você tem ${cf.disponivel_perc}% para distribuir (influencer ${cf.influencer_perc}% · você ${cf.gerente_perc}%)`;
     document.getElementById('cfg-hint-2').textContent = hintTxt;
     document.getElementById('cfg-n1').value = cf.nivel1_perc;
     document.getElementById('cfg-n2').value = cf.nivel2_perc;
     document.getElementById('cfg-n3').value = cf.nivel3_perc;
-    document.getElementById('cfg-split').value = cf.gerente_split_perc;
+    const inflEl = document.getElementById('cfg-infl-perc');
+    inflEl.value = cf.influencer_perc;
+    inflEl.max = cf.disponivel_perc;
     document.getElementById('cfg-resumo').textContent =
-      `Você fica com ${cf.gerente_split_perc}% e o influencer com ${cf.influencer_split_perc}% da comissão.`;
+      `Você tem ${cf.disponivel_perc}% da comissão para distribuir. Influencer recebe ${cf.influencer_perc}% e você fica com ${cf.gerente_perc}%.`;
 
     // Pushcut URL
     const pcEl = document.getElementById('pushcut-url');
@@ -544,7 +546,7 @@ async function loadPainel() {
     document.getElementById('stats-grid').innerHTML = `
       <div class="stat-card"><div class="lbl">Saldo de Comissão</div><div class="val">${fmtMoney(s.saldo_afiliado)}</div><div class="sub">disponível</div></div>
       <div class="stat-card"><div class="lbl">Total Recebido</div><div class="val">${fmtMoney(s.total_recebido)}</div><div class="sub">acumulado</div></div>
-      <div class="stat-card"><div class="lbl">Override 60%</div><div class="val">${fmtMoney(s.total_override)}</div><div class="sub">dos influencers</div></div>
+      <div class="stat-card"><div class="lbl">Override</div><div class="val">${fmtMoney(s.total_override)}</div><div class="sub">dos influencers</div></div>
       <div class="stat-card"><div class="lbl">Volume da Rede</div><div class="val">${fmtMoney(s.volume_rede)}</div><div class="sub">depósitos aprovados</div></div>
       <div class="stat-card"><div class="lbl">Influencers</div><div class="val">${s.total_influencers}</div><div class="sub">na sua rede</div></div>
       <div class="stat-card"><div class="lbl">Jogadores</div><div class="val">${s.total_jogadores_rede}</div><div class="sub">indicados</div></div>
@@ -566,7 +568,7 @@ async function loadPainel() {
           : '<span class="tag-custom">custom</span>';
         html += `<tr data-cfg="${inf.config_herdada ? 'herda' : 'custom'}">
           <td><div class="nome">${escapeHtml(inf.nome || '—')}</div><div class="tel">${escapeHtml(inf.telefone || '')}</div></td>
-          <td><div class="tel">${c.nivel1_perc}% / ${c.nivel2_perc}% / ${c.nivel3_perc}% · ${c.gerente_split_perc}/${c.influencer_split_perc} ${tag}</div></td>
+          <td><div class="tel">${c.nivel1_perc}% / ${c.nivel2_perc}% / ${c.nivel3_perc}% · influencer ${c.influencer_perc}% (você ${c.gerente_perc}%) ${tag}</div></td>
           <td>${inf.total_jogadores}</td>
           <td class="right">${fmtMoney(inf.override_gerado)}</td>
           <td class="right">${fmtMoney(inf.saldo_afiliado)}</td>
@@ -648,7 +650,7 @@ async function salvarConfig() {
     nivel1_perc: document.getElementById('cfg-n1').value,
     nivel2_perc: document.getElementById('cfg-n2').value,
     nivel3_perc: document.getElementById('cfg-n3').value,
-    gerente_split_perc: document.getElementById('cfg-split').value,
+    influencer_perc: document.getElementById('cfg-infl-perc').value,
   };
   try {
     await api('/api/gerente/config', { method: 'PUT', body: JSON.stringify(body) });
@@ -709,7 +711,7 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   // Atualizar resumo do modal de edit cfg
-  ['edit-split'].forEach(id => {
+  ['edit-infl-perc'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.addEventListener('input', atualizarResumoEdit);
   });
@@ -805,7 +807,9 @@ function abrirModalCfg(infId) {
   document.getElementById('edit-n1').value = inf.config.nivel1_perc;
   document.getElementById('edit-n2').value = inf.config.nivel2_perc;
   document.getElementById('edit-n3').value = inf.config.nivel3_perc;
-  document.getElementById('edit-split').value = inf.config.gerente_split_perc;
+  const editEl = document.getElementById('edit-infl-perc');
+  editEl.value = inf.config.influencer_perc;
+  editEl.max = inf.config.disponivel_perc;
   atualizarResumoEdit();
   document.getElementById('modal-edit-cfg').classList.add('open');
 }
@@ -816,9 +820,11 @@ function fecharModalCfg() {
 }
 
 function atualizarResumoEdit() {
-  const split = parseFloat(document.getElementById('edit-split').value) || 0;
+  const inflPerc = parseFloat(document.getElementById('edit-infl-perc').value) || 0;
+  const editEl = document.getElementById('edit-infl-perc');
+  const disponivel = parseFloat(editEl.max) || 80;
   document.getElementById('edit-cfg-resumo').textContent =
-    `Você fica com ${split}% e o influencer com ${100 - split}% da comissão dele.`;
+    `Influencer recebe ${inflPerc}% e você fica com ${disponivel - inflPerc}% da comissão.`;
 }
 
 async function salvarConfigInfluencer() {
@@ -828,7 +834,7 @@ async function salvarConfigInfluencer() {
     nivel1_perc: document.getElementById('edit-n1').value,
     nivel2_perc: document.getElementById('edit-n2').value,
     nivel3_perc: document.getElementById('edit-n3').value,
-    gerente_split_perc: document.getElementById('edit-split').value,
+    influencer_perc: document.getElementById('edit-infl-perc').value,
   };
   try {
     await api('/api/gerente/influencers/config', { method: 'PUT', body: JSON.stringify(body) });
