@@ -166,6 +166,21 @@
 
   <div class="tab-content" id="tab-dashboard">
     <div class="stats-grid" id="stats-grid"></div>
+
+    <div class="section" id="sa-cfg-card">
+      <h2>Minha comissão (pirâmide de afiliados) <span class="hint">quanto você recebe sobre a comissão N1 de toda a rede</span></h2>
+      <div style="font-size:12px;color:rgba(255,255,255,.6);margin-bottom:14px;line-height:1.6">
+        Define quanto <strong style="color:#fff">você</strong> recebe sobre os 10% de comissão N1 cobrados de cada depósito em toda a rede de afiliados. Range permitido: <strong style="color:#fff">10% a 20%</strong>.
+      </div>
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:10px">
+        <label for="sa-perc" style="font-size:13px;color:rgba(255,255,255,.7)">Sua % (do total da comissão N1):</label>
+        <input id="sa-perc" type="number" min="10" max="20" step="1"
+          style="width:90px;padding:10px 13px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.15);border-radius:9px;color:#fff;font-size:14px;font-family:inherit" />
+        <button id="sa-perc-save" class="btn-primary" style="padding:10px 20px;font-size:13px">Salvar</button>
+      </div>
+      <div id="sa-perc-preview" style="font-size:12px;color:rgba(255,255,255,.55);min-height:18px"></div>
+    </div>
+
     <div class="section">
       <h2>Resumo da plataforma</h2>
       <div class="info-line">Use a aba <strong>Saques pendentes</strong> para aprovar/rejeitar saques de gerentes, influencers e jogadores.</div>
@@ -416,6 +431,7 @@ async function checkRoleAndLoad() {
     document.getElementById('app').style.display = 'block';
     document.getElementById('user-nome').textContent = me.user.nome || me.user.telefone;
     await loadDashboard();
+    await loadSaPerc();
     await loadGerentes();
   } catch { doLogout(); }
 }
@@ -464,6 +480,37 @@ async function loadGerentes() {
     document.getElementById('ger-table-wrap').innerHTML = html;
   } catch (e) { showToast(e.message, true); }
 }
+
+async function loadSaPerc() {
+  try {
+    const d = await api('/api/super-admin/painel');
+    const el = document.getElementById('sa-perc');
+    if (el && typeof d.super_admin_perc === 'number') el.value = d.super_admin_perc;
+    const pv = document.getElementById('sa-perc-preview');
+    if (pv && typeof d.super_admin_perc === 'number') {
+      pv.textContent = `A cada R$10 de comissão N1 gerada na rede, você recebe R$${(d.super_admin_perc / 10).toFixed(2)}.`;
+    }
+  } catch (e) {
+    console.error('loadSaPerc failed', e);
+  }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('sa-perc-save')?.addEventListener('click', async () => {
+    const v = parseFloat(document.getElementById('sa-perc').value);
+    if (!(v >= 10 && v <= 20)) {
+      showToast('Valor deve estar entre 10 e 20.', true);
+      return;
+    }
+    try {
+      const res = await api('/api/super-admin/comissao-config', { method: 'PUT', body: JSON.stringify({ super_admin_perc: v }) });
+      showToast(`Comissão atualizada para ${res.super_admin_perc}%.`);
+      await loadSaPerc();
+    } catch (err) {
+      showToast('Erro: ' + (err.message || 'falha ao salvar'), true);
+    }
+  });
+});
 
 async function loadSaques() {
   try {
