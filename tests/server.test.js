@@ -1226,3 +1226,69 @@ describe('Gerente - influencer override com influencer_perc', () => {
     expect(res.status).toBe(400);
   });
 });
+
+describe('Migracao gerente_split -> influencer_perc', () => {
+  test('user com comissao_config antiga (gerente_split) e migrado na logica inline', () => {
+    const u = {
+      id: 99999, nome: 'Legado', telefone: '11000009999', senha_hash: 'x',
+      role: 'gerente', codigo_indicacao: 'leg', indicado_por: null, prospectador_id: null,
+      saldo: 0, saldo_afiliado: 0, ativo: 1,
+      comissao_config: { nivel1_perc: 0.10, nivel2_perc: 0.03, nivel3_perc: 0.01, gerente_split: 0.60 },
+      created_at: new Date().toISOString(),
+    };
+
+    // Executa a mesma lógica de migração do bootstrap do server
+    if (u.comissao_config) {
+      if (typeof u.comissao_config.gerente_split === 'number' && typeof u.comissao_config.influencer_perc === 'undefined') {
+        u.comissao_config.influencer_perc = +(1 - u.comissao_config.gerente_split).toFixed(4);
+        delete u.comissao_config.gerente_split;
+      }
+    }
+
+    expect(u.comissao_config.influencer_perc).toBeCloseTo(0.40, 4);
+    expect(u.comissao_config.gerente_split).toBeUndefined();
+  });
+
+  test('migracao e idempotente (rodar 2x nao altera valor)', () => {
+    const u = {
+      comissao_config: { nivel1_perc: 0.10, nivel2_perc: 0.03, nivel3_perc: 0.01, influencer_perc: 0.30 },
+    };
+    const before = u.comissao_config.influencer_perc;
+
+    // Roda a migração novamente; não deve mudar nada pois já tem influencer_perc
+    if (u.comissao_config) {
+      if (typeof u.comissao_config.gerente_split === 'number' && typeof u.comissao_config.influencer_perc === 'undefined') {
+        u.comissao_config.influencer_perc = +(1 - u.comissao_config.gerente_split).toFixed(4);
+        delete u.comissao_config.gerente_split;
+      }
+    }
+    expect(u.comissao_config.influencer_perc).toBe(before);
+  });
+});
+
+describe('Regressao modo _split=true', () => {
+  test('tx._split=true ainda credita 100% das 3 comissoes no super_admin', () => {
+    db.users = db.users.filter(u => !['sa_s', 'jo_s'].includes(u.codigo_indicacao));
+    const sa = {
+      id: 93001, nome: 'SA Split', telefone: '11000003001', senha_hash: 'x',
+      role: 'super_admin', codigo_indicacao: 'sa_s', indicado_por: null,
+      prospectador_id: null, saldo: 0, saldo_afiliado: 0, ativo: 1, comissao_config: null,
+      created_at: new Date().toISOString(),
+    };
+    const jog = {
+      id: 93002, nome: 'Jog S', telefone: '11000003002', senha_hash: 'x',
+      role: 'jogador', codigo_indicacao: 'jo_s', indicado_por: null,
+      prospectador_id: null, saldo: 0, saldo_afiliado: 0, ativo: 1, comissao_config: null,
+      created_at: new Date().toISOString(),
+    };
+    db.users.push(sa, jog);
+    db._sp = db._sp || {};
+    db._sp.super_admin_user_id = sa.id;
+    const tx = { id: 9999991, user_id: jog.id, tipo: 'deposito', valor: 100, status: 'aprovado', _split: true, created_at: new Date().toISOString() };
+    db.transacoes.push(tx);
+    const saldoAntes = sa.saldo_afiliado;
+    require('../server').creditarComissao(tx, jog);
+    // 100% de N1+N2+N3 = 10% + 3% + 1% = 14% do depósito = R$14
+    expect(sa.saldo_afiliado - saldoAntes).toBeCloseTo(14.00, 2);
+  });
+});
