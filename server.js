@@ -255,7 +255,12 @@ const COMISSAO_CONFIG = {
   nivel2_perc: 0.03,  // 3%  do depósito — segundo nível na cadeia (geralmente o gerente)
   nivel3_perc: 0.01,  // 1%  do depósito — terceiro nível na cadeia
   bonus_primeiro_deposito: 2, // R$2 bônus fixo no 1º depósito do indicado (sempre 100% pro N1)
-  gerente_split: 0.60, // % que o gerente leva sobre a comissão dos seus influencers (40% influencer / 60% gerente)
+  // Split N1 (soma com super_admin_perc = 100%):
+  //   parte_sa = comissao_n1 * super_admin_perc      (SA global — lido de db.config)
+  //   parte_infl = comissao_n1 * influencer_perc     (configurável pelo gerente)
+  //   parte_gerente = comissao_n1 - parte_sa - parte_infl  (derivado)
+  influencer_perc: 0.30,  // 30% do total da comissão N1 vai pro influencer (padrão)
+  super_admin_perc: 0.20, // 20% do total da comissão N1 vai pro super admin (padrão; editável)
 };
 
 // Roles (hierarquia):
@@ -1279,7 +1284,7 @@ const DEFAULT_COMISSAO_CFG = {
   nivel1_perc: COMISSAO_CONFIG.nivel1_perc,
   nivel2_perc: COMISSAO_CONFIG.nivel2_perc,
   nivel3_perc: COMISSAO_CONFIG.nivel3_perc,
-  gerente_split: COMISSAO_CONFIG.gerente_split,
+  influencer_perc: COMISSAO_CONFIG.influencer_perc,
 };
 let _migUsers = false;
 for (const u of db.users) {
