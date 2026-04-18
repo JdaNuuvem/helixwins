@@ -1526,12 +1526,6 @@ function creditarComissao(tx, depositante) {
   const referrer1 = db.users.find(u => u.codigo_indicacao === depositante.indicado_por);
   if (!referrer1) return;
 
-  // Referrer1 precisa ter feito depósito >= R$20 para receber comissão
-  const ref1TemDep = db.transacoes.some(t =>
-    t.user_id === referrer1.id && t.tipo === 'deposito' && t.status === 'aprovado' && t.valor >= 20
-  );
-  if (!ref1TemDep) return;
-
   const valorBase = tx.valor; // comissão sobre o valor pago (sem bônus)
   const comissao1 = money(valorBase * COMISSAO_CONFIG.nivel1_perc);
 
@@ -1576,10 +1570,7 @@ function creditarComissao(tx, depositante) {
     const referrer2 = db.users.find(u => u.codigo_indicacao === referrer1.indicado_por);
     const isCiclo = referrer2 && (referrer2.id === depositante.id || referrer2.id === referrer1.id);
     if (referrer2 && !isCiclo) {
-      const ref2TemDep = db.transacoes.some(t =>
-        t.user_id === referrer2.id && t.tipo === 'deposito' && t.status === 'aprovado' && t.valor >= 20
-      );
-      if (ref2TemDep) {
+      {
         const comissao2 = money(valorBase * COMISSAO_CONFIG.nivel2_perc);
         if (comissao2 > 0) {
           const antes2 = referrer2.saldo_afiliado;
@@ -2056,21 +2047,45 @@ app.post('/api/admin/game-config', authMiddleware, adminMiddleware, (req, res) =
   res.json({ ok: true, modo, dificuldade: dif, multiplicador: mult });
 });
 
+app.get('/api/admin/afiliados/:user_id', authMiddleware, adminMiddleware, (req, res) => {
+  const user = findUser(parseInt(req.params.user_id));
+  if (!user) return res.status(404).json({ error: 'Usuário não encontrado.' });
+
+  const comissoesTx = db.transacoes.filter(t => t.user_id === user.id && t.tipo === 'bonus_indicacao' && t.status === 'aprovado');
+
+  const nivel1 = db.users.filter(u => u.indicado_por === user.codigo_indicacao).map(ind => {
+    const hasDep = db.transacoes.some(t => t.user_id === ind.id && t.tipo === 'deposito' && t.status === 'aprovado');
+    const comInd = comissoesTx.filter(t => t.referido_id != null && t.referido_id === ind.id && t.nivel === 1).reduce((s, t) => s + t.valor, 0);
+    const subCount = db.users.filter(u => u.indicado_por === ind.codigo_indicacao).length;
+    return { id: ind.id, nome: ind.nome, data_cadastro: ind.created_at, has_deposited: hasDep, comissao_gerada: money(comInd), sub_indicados: subCount };
+  });
+
+  const nivel2 = [];
+  for (const ind of db.users.filter(u => u.indicado_por === user.codigo_indicacao)) {
+    for (const si of db.users.filter(u => u.indicado_por === ind.codigo_indicacao)) {
+      const hasDep = db.transacoes.some(t => t.user_id === si.id && t.tipo === 'deposito' && t.status === 'aprovado');
+      const comSi = comissoesTx.filter(t => t.referido_id != null && t.referido_id === si.id && t.nivel === 2).reduce((s, t) => s + t.valor, 0);
+      nivel2.push({ id: si.id, nome: si.nome, data_cadastro: si.created_at, via_nome: ind.nome, has_deposited: hasDep, comissao_gerada: money(comSi) });
+    }
+  }
+
+  const totalComissao = comissoesTx.reduce((s, t) => s + t.valor, 0);
+  const totalN1 = comissoesTx.filter(t => t.nivel === 1).reduce((s, t) => s + t.valor, 0);
+  const totalN2 = comissoesTx.filter(t => t.nivel === 2).reduce((s, t) => s + t.valor, 0);
+  const historico = comissoesTx.slice(-50).reverse().map(t => ({ valor: t.valor, nivel: t.nivel, descricao: t.descricao, data: t.created_at }));
+
+  res.json({
+    usuario: { id: user.id, nome: user.nome, telefone: user.telefone, saldo_afiliado: user.saldo_afiliado, codigo_indicacao: user.codigo_indicacao },
+    stats: { total_n1: nivel1.length, total_n2: nivel2.length, total_com_dep: nivel1.filter(u => u.has_deposited).length, total_comissao: money(totalComissao), total_nivel1: money(totalN1), total_nivel2: money(totalN2) },
+    nivel1, nivel2, historico,
+    config: { nivel1_perc: Math.round(COMISSAO_CONFIG.nivel1_perc * 100), nivel2_perc: Math.round(COMISSAO_CONFIG.nivel2_perc * 100) },
+  });
+});
+
 // ═══ INDICAÇÃO ════════════════════════════════════════════════════════════════
 app.get('/api/indicacao/info', authMiddleware, (req, res) => {
   const user = findUser(req.userId);
   if (!user) return res.status(404).json({ error: 'Usuário não encontrado.' });
-
-  // Afiliado só ativa após depósito >= R$20 aprovado
-  const temDeposito = db.transacoes.some(t =>
-    t.user_id === req.userId && t.tipo === 'deposito' && t.status === 'aprovado' && t.valor >= 20
-  );
-  if (!temDeposito) {
-    return res.json({
-      afiliado_ativo: false,
-      mensagem: 'Faca um deposito de pelo menos R$ 20,00 para ativar seu programa de afiliados.',
-    });
-  }
 
   const indicados = db.users.filter(u => u.indicado_por === user.codigo_indicacao);
 

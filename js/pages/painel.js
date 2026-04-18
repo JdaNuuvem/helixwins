@@ -87,6 +87,10 @@ function renderPainel(el) {
                   <span class="ppd-icon" style="color:#22c55e"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></span>
                   <span>Ajustar Saldo</span>
                 </button>
+                <button class="ppd-item" id="ppd-btn-admin-afil">
+                  <span class="ppd-icon" style="color:#a855f7"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg></span>
+                  <span>Rede de Afiliados</span>
+                </button>
                 ` : ''}
                 <div class="ppd-divider"></div>
                 <button class="ppd-item ppd-item-danger" id="ppd-btn-sair">
@@ -573,7 +577,7 @@ function renderPainel(el) {
         </div>
 
         <!-- Tabs -->
-        <div id="ind-tabs" style="display:flex;gap:4px;margin-bottom:14px;background:rgba(0,0,0,.2);border-radius:10px;padding:4px">
+        <div id="ind-tabs" style="display:flex;gap:4px;margin-bottom:14px;background:#ede9fe;border-radius:10px;padding:4px">
           <button class="ind-tab ind-tab-active" data-tab="resumo" style="flex:1;padding:10px 8px;border:none;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;transition:all .2s">Resumo</button>
           <button class="ind-tab" data-tab="rede" style="flex:1;padding:10px 8px;border:none;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;transition:all .2s">Minha Rede</button>
           <button class="ind-tab" data-tab="historico" style="flex:1;padding:10px 8px;border:none;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;transition:all .2s">Histórico</button>
@@ -854,6 +858,80 @@ function renderPainel(el) {
             Aplicar Ajuste
           </button>
         </div>
+      </div>
+    </div>
+
+    <!-- ══ MODAL: REDE DE AFILIADOS (Admin) ════════════════════════════ -->
+    <div class="pnl-modal-bg hidden" id="modal-admin-afil">
+      <div class="pnl-modal" style="max-width:500px">
+        <div class="pnl-modal-header">
+          <span class="pnl-modal-title">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#a855f7" stroke-width="2" width="20" height="20"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            Rede de Afiliados
+          </span>
+          <button class="pnl-modal-close" id="close-admin-afil">✕</button>
+        </div>
+
+        <!-- Busca de usuário -->
+        <div class="gw-field" id="aafil-busca-wrap">
+          <label class="gw-label">Buscar usuário</label>
+          <input id="aafil-busca" class="pnl-input-modal" type="text" placeholder="Telefone ou nome..." autocomplete="off" />
+        </div>
+        <div id="aafil-results" style="max-height:140px;overflow-y:auto;margin-bottom:12px"></div>
+
+        <!-- Conteúdo após seleção -->
+        <div id="aafil-content" style="display:none">
+          <!-- Cabeçalho do usuário selecionado -->
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:#f5f0ff;border-radius:10px;margin-bottom:14px">
+            <div>
+              <div style="font-size:14px;font-weight:700;color:#2d0040" id="aafil-nome">—</div>
+              <div style="font-size:12px;color:#9980aa" id="aafil-tel">—</div>
+            </div>
+            <div style="text-align:right">
+              <div style="font-size:11px;color:#9980aa">Saldo afiliado</div>
+              <div style="font-size:16px;font-weight:800;color:#7c3aed" id="aafil-saldo">R$ 0,00</div>
+            </div>
+          </div>
+
+          <!-- Stats -->
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px">
+            <div class="pnl-mini-stat">
+              <div class="pnl-mini-val" id="aafil-st-n1">0</div>
+              <div class="pnl-mini-lbl">Nível 1</div>
+            </div>
+            <div class="pnl-mini-stat">
+              <div class="pnl-mini-val" id="aafil-st-n2">0</div>
+              <div class="pnl-mini-lbl">Nível 2</div>
+            </div>
+            <div class="pnl-mini-stat">
+              <div class="pnl-mini-val" id="aafil-st-dep">0</div>
+              <div class="pnl-mini-lbl">Com depósito</div>
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px">
+            <div style="background:rgba(168,85,247,.1);border:1px solid rgba(168,85,247,.25);border-radius:10px;padding:12px;text-align:center">
+              <div style="font-size:15px;font-weight:700;color:#6d28d9" id="aafil-com-n1">R$ 0,00</div>
+              <div style="font-size:11px;color:#5b3990;font-weight:600;margin-top:2px">Comissão N1</div>
+            </div>
+            <div style="background:rgba(168,85,247,.06);border:1px solid rgba(168,85,247,.2);border-radius:10px;padding:12px;text-align:center">
+              <div style="font-size:15px;font-weight:700;color:#5b21b6" id="aafil-com-n2">R$ 0,00</div>
+              <div style="font-size:11px;color:#5b3990;font-weight:600;margin-top:2px">Comissão N2</div>
+            </div>
+          </div>
+
+          <!-- Tabs -->
+          <div id="aafil-tabs" style="display:flex;gap:4px;margin-bottom:14px;background:#ede9fe;border-radius:10px;padding:4px">
+            <button class="aafil-tab aafil-tab-active" data-tab="n1" style="flex:1;padding:8px 6px;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;transition:all .2s">Nível 1</button>
+            <button class="aafil-tab" data-tab="n2" style="flex:1;padding:8px 6px;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;transition:all .2s">Nível 2</button>
+            <button class="aafil-tab" data-tab="hist" style="flex:1;padding:8px 6px;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;transition:all .2s">Histórico</button>
+          </div>
+
+          <div id="aafil-tab-n1"></div>
+          <div id="aafil-tab-n2" style="display:none"></div>
+          <div id="aafil-tab-hist" style="display:none"></div>
+        </div>
+
+        <div id="aafil-loading" style="display:none;text-align:center;padding:24px;color:#9980aa;font-size:13px">Carregando...</div>
       </div>
     </div>
     ` : ''}
@@ -1824,7 +1902,7 @@ function renderPainel(el) {
     document.getElementById(id).classList.add('hidden');
   }
 
-  ['modal-deposito','modal-dep-confirmado','modal-saque','modal-desbloqueio','modal-taxa-saque','modal-saque-sucesso','modal-saque-afiliado','modal-indicacao','modal-perfil','modal-suporte','modal-ajuste','modal-ranking','modal-presente'].forEach(id => {
+  ['modal-deposito','modal-dep-confirmado','modal-saque','modal-desbloqueio','modal-taxa-saque','modal-saque-sucesso','modal-saque-afiliado','modal-indicacao','modal-perfil','modal-suporte','modal-ajuste','modal-admin-afil','modal-ranking','modal-presente'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.addEventListener('click', e => {
       if (e.target.id === id) {
@@ -2327,6 +2405,153 @@ function renderPainel(el) {
       } catch (err) {
         showToast(err.message || 'Erro ao alterar isenção.', 'error');
       } finally { btn.disabled = false; }
+    });
+  }
+
+  // ── Rede de Afiliados Admin ──────────────────────────────────────────────
+  if (user.admin && document.getElementById('ppd-btn-admin-afil')) {
+    let _aafilUsers = [];
+
+    document.getElementById('ppd-btn-admin-afil').addEventListener('click', () => {
+      closeProfileDrop();
+      openModal('modal-admin-afil');
+      _aafilReset();
+      _aafilCarregarUsuarios();
+    });
+
+    document.getElementById('close-admin-afil').addEventListener('click', () => closeModal('modal-admin-afil'));
+    document.getElementById('modal-admin-afil').addEventListener('click', e => {
+      if (e.target.id === 'modal-admin-afil') closeModal('modal-admin-afil');
+    });
+
+    async function _aafilCarregarUsuarios() {
+      try { _aafilUsers = await API.listarUsuarios(); } catch { _aafilUsers = []; }
+    }
+
+    function _aafilReset() {
+      document.getElementById('aafil-busca').value = '';
+      document.getElementById('aafil-results').innerHTML = '';
+      document.getElementById('aafil-content').style.display = 'none';
+      document.getElementById('aafil-loading').style.display = 'none';
+    }
+
+    document.getElementById('aafil-busca').addEventListener('input', () => {
+      const q = document.getElementById('aafil-busca').value.trim().toLowerCase();
+      const box = document.getElementById('aafil-results');
+      if (q.length < 2) { box.innerHTML = ''; return; }
+      const filtered = _aafilUsers.filter(u => u.nome.toLowerCase().includes(q) || u.telefone.includes(q)).slice(0, 8);
+      box.innerHTML = filtered.map(u => `
+        <div class="aafil-user-row" data-id="${u.id}" style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;margin-bottom:4px;background:#f5f0ff;border-radius:8px;cursor:pointer;transition:.15s">
+          <div><div style="font-size:13px;font-weight:600;color:#2d0040">${u.nome}</div><div style="font-size:11px;color:#9980aa">${u.telefone}</div></div>
+          <div style="font-size:12px;font-weight:700;color:#7c3aed">Ver rede →</div>
+        </div>
+      `).join('');
+      box.querySelectorAll('.aafil-user-row').forEach(row => {
+        row.addEventListener('click', () => _aafilCarregarRede(parseInt(row.dataset.id)));
+        row.addEventListener('mouseenter', () => { row.style.background = '#ede9fe'; });
+        row.addEventListener('mouseleave', () => { row.style.background = '#f5f0ff'; });
+      });
+    });
+
+    async function _aafilCarregarRede(userId) {
+      document.getElementById('aafil-results').innerHTML = '';
+      document.getElementById('aafil-busca').value = '';
+      document.getElementById('aafil-content').style.display = 'none';
+      document.getElementById('aafil-loading').style.display = 'block';
+      try {
+        const data = await fetch(`/api/admin/afiliados/${userId}`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }).then(r => r.json());
+        _aafilRenderizar(data);
+      } catch {
+        showToast('Erro ao carregar rede.', 'error');
+        document.getElementById('aafil-loading').style.display = 'none';
+      }
+    }
+
+    function _aafilRenderizar(data) {
+      document.getElementById('aafil-loading').style.display = 'none';
+      document.getElementById('aafil-nome').textContent = data.usuario.nome;
+      document.getElementById('aafil-tel').textContent = data.usuario.telefone;
+      document.getElementById('aafil-saldo').textContent = formatMoney(data.usuario.saldo_afiliado);
+      document.getElementById('aafil-st-n1').textContent = data.stats.total_n1;
+      document.getElementById('aafil-st-n2').textContent = data.stats.total_n2;
+      document.getElementById('aafil-st-dep').textContent = data.stats.total_com_dep;
+      document.getElementById('aafil-com-n1').textContent = formatMoney(data.stats.total_nivel1);
+      document.getElementById('aafil-com-n2').textContent = formatMoney(data.stats.total_nivel2);
+
+      // Nível 1
+      const n1El = document.getElementById('aafil-tab-n1');
+      if (data.nivel1.length) {
+        n1El.innerHTML = '<div class="pnl-tx-list">' + data.nivel1.map(u => `
+          <div class="pnl-tx-item" style="padding:10px 0">
+            <div class="pnl-tx-ico" style="background:linear-gradient(135deg,#7c3aed,#a855f7);color:#fff;font-size:13px;width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0">1</div>
+            <div class="pnl-tx-body" style="flex:1;min-width:0">
+              <div class="pnl-tx-desc">${u.nome}${u.sub_indicados > 0 ? ` <span style="color:#9d74c5;font-size:11px">(+${u.sub_indicados} sub)</span>` : ''}</div>
+              <div class="pnl-tx-date">${formatDate(u.data_cadastro)} · Comissão: R$ ${u.comissao_gerada.toFixed(2)}</div>
+            </div>
+            <span class="pnl-badge ${u.has_deposited ? 'pnl-badge-green' : 'pnl-badge-orange'}" style="font-size:11px;flex-shrink:0">${u.has_deposited ? 'Ativo' : 'Pendente'}</span>
+          </div>`).join('') + '</div>';
+      } else {
+        n1El.innerHTML = '<div style="text-align:center;color:#9980aa;padding:20px;font-size:13px">Nenhum indicado nível 1.</div>';
+      }
+
+      // Nível 2
+      const n2El = document.getElementById('aafil-tab-n2');
+      if (data.nivel2.length) {
+        n2El.innerHTML = '<div class="pnl-tx-list">' + data.nivel2.map(u => `
+          <div class="pnl-tx-item" style="padding:10px 0">
+            <div class="pnl-tx-ico" style="background:linear-gradient(135deg,#6d28d9,#8b5cf6);color:#fff;font-size:13px;width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0">2</div>
+            <div class="pnl-tx-body" style="flex:1;min-width:0">
+              <div class="pnl-tx-desc">${u.nome} <span style="color:#9d74c5;font-size:11px">via ${u.via_nome}</span></div>
+              <div class="pnl-tx-date">${formatDate(u.data_cadastro)} · Comissão: R$ ${u.comissao_gerada.toFixed(2)}</div>
+            </div>
+            <span class="pnl-badge ${u.has_deposited ? 'pnl-badge-green' : 'pnl-badge-orange'}" style="font-size:11px;flex-shrink:0">${u.has_deposited ? 'Ativo' : 'Pendente'}</span>
+          </div>`).join('') + '</div>';
+      } else {
+        n2El.innerHTML = '<div style="text-align:center;color:#9980aa;padding:20px;font-size:13px">Nenhum indicado nível 2.</div>';
+      }
+
+      // Histórico
+      const histEl = document.getElementById('aafil-tab-hist');
+      if (data.historico.length) {
+        histEl.innerHTML = '<div class="pnl-tx-list">' + data.historico.map(h => `
+          <div class="pnl-tx-item" style="padding:10px 0">
+            <div class="pnl-tx-ico" style="background:${h.nivel === 1 ? 'linear-gradient(135deg,#7c3aed,#a855f7)' : 'linear-gradient(135deg,#6d28d9,#8b5cf6)'};color:#fff;font-size:11px;width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0">N${h.nivel}</div>
+            <div class="pnl-tx-body" style="flex:1;min-width:0">
+              <div class="pnl-tx-desc">${h.descricao}</div>
+              <div class="pnl-tx-date">${formatDate(h.data)}</div>
+            </div>
+            <div style="color:#15803d;font-weight:700;font-size:14px;flex-shrink:0">+R$ ${h.valor.toFixed(2)}</div>
+          </div>`).join('') + '</div>';
+      } else {
+        histEl.innerHTML = '<div style="text-align:center;color:#9980aa;padding:20px;font-size:13px">Nenhuma comissão registrada.</div>';
+      }
+
+      // Inicializar tabs
+      _aafilInitTabs();
+      document.getElementById('aafil-content').style.display = '';
+    }
+
+    function _aafilInitTabs() {
+      const active = 'linear-gradient(135deg,#7c3aed,#a855f7)';
+      document.querySelectorAll('.aafil-tab').forEach(btn => {
+        btn.style.background = 'transparent';
+        btn.style.color = '#5b3990';
+      });
+      const first = document.querySelector('.aafil-tab[data-tab="n1"]');
+      if (first) { first.style.background = active; first.style.color = '#fff'; }
+    }
+
+    document.getElementById('aafil-tabs')?.addEventListener('click', e => {
+      const btn = e.target.closest('.aafil-tab');
+      if (!btn) return;
+      const active = 'linear-gradient(135deg,#7c3aed,#a855f7)';
+      document.querySelectorAll('.aafil-tab').forEach(b => { b.style.background = 'transparent'; b.style.color = '#5b3990'; });
+      btn.style.background = active;
+      btn.style.color = '#fff';
+      ['n1', 'n2', 'hist'].forEach(t => {
+        const el = document.getElementById('aafil-tab-' + t);
+        if (el) el.style.display = t === btn.dataset.tab ? '' : 'none';
+      });
     });
   }
 
@@ -2881,7 +3106,7 @@ function renderPainel(el) {
     // Estilizar tab ativa inicialmente
     const activeTab = document.querySelector('.ind-tab-active');
     if (activeTab) { activeTab.style.background = 'linear-gradient(135deg,#7c3aed,#a855f7)'; activeTab.style.color = '#fff'; }
-    document.querySelectorAll('.ind-tab:not(.ind-tab-active)').forEach(b => { b.style.background = 'transparent'; b.style.color = '#9980aa'; });
+    document.querySelectorAll('.ind-tab:not(.ind-tab-active)').forEach(b => { b.style.background = 'transparent'; b.style.color = '#5b3990'; b.style.fontWeight = '600'; });
   }
 
   async function loadIndicacao() {
@@ -2891,7 +3116,7 @@ function renderPainel(el) {
     // Reset para tab resumo
     document.querySelectorAll('.ind-tab').forEach(b => {
       b.classList.remove('ind-tab-active');
-      b.style.background = 'transparent'; b.style.color = '#9980aa';
+      b.style.background = 'transparent'; b.style.color = '#5b3990';
     });
     const firstTab = document.querySelector('.ind-tab[data-tab="resumo"]');
     if (firstTab) { firstTab.classList.add('ind-tab-active'); firstTab.style.background = 'linear-gradient(135deg,#7c3aed,#a855f7)'; firstTab.style.color = '#fff'; }
@@ -2907,38 +3132,6 @@ function renderPainel(el) {
       document.getElementById('ind-comissao-perc').textContent = percN1 + '%';
       const n2El = document.getElementById('ind-comissao-n2');
       if (n2El) n2El.textContent = percN2 + '%';
-
-      // Afiliado inativo
-      if (data.afiliado_ativo === false) {
-        const tabsEl = document.getElementById('ind-tabs');
-        const resumoEl = document.getElementById('ind-tab-resumo');
-        if (tabsEl) tabsEl.style.display = 'none';
-        if (resumoEl) resumoEl.innerHTML = `
-          <div style="text-align:center;padding:32px 16px;">
-            <div style="font-size:48px;margin-bottom:16px">🔒</div>
-            <h3 style="color:#e9d5ff;font-size:18px;margin-bottom:12px">Programa de Afiliados</h3>
-            <p style="color:rgba(255,255,255,.6);font-size:14px;margin-bottom:20px;line-height:1.6">
-              Para ativar, faca um deposito de pelo menos <strong style="color:#c084fc">R$ 20,00</strong>.<br>
-              Apos o deposito, voce ganha:
-            </p>
-            <div style="display:flex;gap:12px;justify-content:center;margin-bottom:20px;flex-wrap:wrap">
-              <div style="background:rgba(168,85,247,.12);border:1px solid rgba(168,85,247,.3);border-radius:10px;padding:12px 16px;flex:1;min-width:120px">
-                <div style="font-size:24px;font-weight:800;color:#c084fc">${percN1}%</div>
-                <div style="font-size:11px;color:#9d74c5">Nível 1</div>
-              </div>
-              <div style="background:rgba(168,85,247,.08);border:1px solid rgba(168,85,247,.2);border-radius:10px;padding:12px 16px;flex:1;min-width:120px">
-                <div style="font-size:24px;font-weight:800;color:#a78bfa">${percN2}%</div>
-                <div style="font-size:11px;color:#9d74c5">Nível 2</div>
-              </div>
-              <div style="background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.25);border-radius:10px;padding:12px 16px;flex:1;min-width:120px">
-                <div style="font-size:24px;font-weight:800;color:#4ade80">R$ ${data.bonus_primeiro_deposito || 2}</div>
-                <div style="font-size:11px;color:#86efac">1º depósito</div>
-              </div>
-            </div>
-            <button onclick="document.getElementById('close-indicacao').click();document.getElementById('btn-depositar').click();" style="background:linear-gradient(135deg,#a855f7,#7c3aed);color:#fff;border:none;border-radius:10px;padding:12px 24px;font-size:14px;font-weight:600;cursor:pointer;width:100%">DEPOSITAR R$ 20,00</button>
-          </div>`;
-        return;
-      }
 
       // Afiliado ativo — preencher dados
       const tabsEl = document.getElementById('ind-tabs');
@@ -2989,19 +3182,19 @@ function renderPainel(el) {
       // Resumo da rede
       redeHTML += `
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px">
-          <div style="background:rgba(168,85,247,.1);border:1px solid rgba(168,85,247,.2);border-radius:10px;padding:14px;text-align:center">
-            <div style="font-size:20px;font-weight:700;color:#c084fc">${formatMoney(data.total_nivel1)}</div>
-            <div style="font-size:11px;color:#9d74c5;margin-top:4px">Comissão Nível 1 (${data.config.nivel1_perc}%)</div>
+          <div style="background:rgba(168,85,247,.12);border:1px solid rgba(168,85,247,.35);border-radius:10px;padding:14px;text-align:center">
+            <div style="font-size:20px;font-weight:700;color:#6d28d9">${formatMoney(data.total_nivel1)}</div>
+            <div style="font-size:11px;color:#5b3990;font-weight:600;margin-top:4px">Comissão Nível 1 (${data.config.nivel1_perc}%)</div>
           </div>
-          <div style="background:rgba(168,85,247,.06);border:1px solid rgba(168,85,247,.15);border-radius:10px;padding:14px;text-align:center">
-            <div style="font-size:20px;font-weight:700;color:#a78bfa">${formatMoney(data.total_nivel2)}</div>
-            <div style="font-size:11px;color:#9d74c5;margin-top:4px">Comissão Nível 2 (${data.config.nivel2_perc}%)</div>
+          <div style="background:rgba(168,85,247,.08);border:1px solid rgba(168,85,247,.25);border-radius:10px;padding:14px;text-align:center">
+            <div style="font-size:20px;font-weight:700;color:#5b21b6">${formatMoney(data.total_nivel2)}</div>
+            <div style="font-size:11px;color:#5b3990;font-weight:600;margin-top:4px">Comissão Nível 2 (${data.config.nivel2_perc}%)</div>
           </div>
         </div>`;
 
       // Nível 1
       if (data.nivel1.length) {
-        redeHTML += '<div style="font-size:12px;color:#c084fc;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;font-weight:600">Nível 1 — Indicados diretos</div>';
+        redeHTML += '<div style="font-size:12px;color:#6d28d9;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;font-weight:600">Nível 1 — Indicados diretos</div>';
         redeHTML += '<div class="pnl-tx-list" style="margin-bottom:16px">';
         for (const u of data.nivel1) {
           redeHTML += `
@@ -3021,7 +3214,7 @@ function renderPainel(el) {
 
       // Nível 2
       if (data.nivel2.length) {
-        redeHTML += '<div style="font-size:12px;color:#a78bfa;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;font-weight:600">Nível 2 — Sub-indicados</div>';
+        redeHTML += '<div style="font-size:12px;color:#5b21b6;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;font-weight:600">Nível 2 — Sub-indicados</div>';
         redeHTML += '<div class="pnl-tx-list" style="margin-bottom:16px">';
         for (const u of data.nivel2) {
           redeHTML += `
@@ -3060,7 +3253,7 @@ function renderPainel(el) {
                 <div class="pnl-tx-desc" style="font-size:13px">${h.descricao}</div>
                 <div class="pnl-tx-date">${formatDate(h.data)}</div>
               </div>
-              <div style="color:#4ade80;font-weight:700;font-size:14px">+R$ ${h.valor.toFixed(2)}</div>
+              <div style="color:#15803d;font-weight:700;font-size:14px">+R$ ${h.valor.toFixed(2)}</div>
             </div>`;
         }
         histHTML += '</div>';

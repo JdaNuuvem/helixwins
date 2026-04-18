@@ -254,7 +254,7 @@ function renderLanding(el) {
               <div style="font-size:12px;color:#86efac;margin-top:6px">de comissao em cima do<br><strong>ganho</strong> de cada indicado</div>
             </div>
           </div>
-          <p style="font-size:13px;color:rgba(255,255,255,.5);margin-bottom:20px">Cadastre-se e faca um deposito minimo de <strong style="color:#e9d5ff">R$ 20,00</strong> para ativar seu programa de afiliados. Depois disso, compartilhe seu link e ganhe comissao automatica sobre cada partida dos seus indicados. Saque via PIX a qualquer momento.</p>
+          <p style="font-size:13px;color:rgba(255,255,255,.5);margin-bottom:20px">Cadastre-se, compartilhe seu link e ganhe comissao automatica sobre cada deposito dos seus indicados. Saque via PIX a qualquer momento.</p>
           <button class="lnd-cta-btn" onclick="navigate('#cadastro')" style="width:100%;justify-content:center">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="18" height="18">
               <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
