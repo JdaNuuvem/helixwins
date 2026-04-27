@@ -130,6 +130,17 @@
     .section { padding: 14px; border-radius: 10px; }
     .toast { font-size: 12px; padding: 10px 16px; left: 12px; right: 12px; transform: none; }
   }
+
+  /* ── Tutorial colapsável ────────────────────────────────────── */
+  .tut-card { background: linear-gradient(135deg,rgba(124,58,237,.1),rgba(168,85,247,.04)); border: 1px solid rgba(168,85,247,.28); border-radius: 12px; padding: 13px 18px; margin-bottom: 16px; }
+  .tut-card summary { cursor: pointer; font-size: 13px; font-weight: 700; color: #c4b5fd; list-style: none; display: flex; align-items: center; gap: 8px; user-select: none; }
+  .tut-card summary::-webkit-details-marker { display: none; }
+  .tut-card summary::after { content: '▼'; margin-left: auto; font-size: 10px; opacity: .7; transition: transform .2s; }
+  .tut-card[open] summary::after { transform: rotate(180deg); }
+  .tut-body { margin-top: 12px; font-size: 13px; color: rgba(255,255,255,.75); line-height: 1.85; padding-top: 10px; border-top: 1px solid rgba(168,85,247,.15); }
+  .tut-body ol { padding-left: 18px; }
+  .tut-body li { margin-bottom: 7px; }
+  .tut-body .tut-tip { margin-top: 10px; background: rgba(168,85,247,.1); border-radius: 8px; padding: 9px 12px; font-size: 12px; color: #c4b5fd; }
 </style>
 </head>
 <body>
@@ -173,7 +184,7 @@
         <div style="display:flex;flex-direction:column;gap:8px">
           <div style="display:flex;gap:10px;align-items:flex-start">
             <span style="background:linear-gradient(135deg,#7c3aed,#a855f7);color:#fff;font-weight:800;font-size:12px;min-width:26px;height:26px;display:flex;align-items:center;justify-content:center;border-radius:50%;flex-shrink:0">1</span>
-            <span><strong>Compartilhe seu link</strong> — Envie o seu link de afiliado (abaixo) para as pessoas que você quer recrutar como influencers. Quem se cadastrar pelo seu link já entra automaticamente na sua rede.</span>
+            <span><strong>Compartilhe seu link</strong> — Copie o link de afiliado abaixo e envie para quem você quer como influencer. <strong>Quem se cadastrar pelo seu link já vira seu influencer automaticamente</strong> — sem precisar fazer mais nada.</span>
           </div>
           <div style="display:flex;gap:10px;align-items:flex-start">
             <span style="background:linear-gradient(135deg,#7c3aed,#a855f7);color:#fff;font-weight:800;font-size:12px;min-width:26px;height:26px;display:flex;align-items:center;justify-content:center;border-radius:50%;flex-shrink:0">2</span>
@@ -213,13 +224,28 @@
 
   <!-- INFLUENCERS -->
   <div class="tab-content" id="tab-influencers" style="display:none">
+    <div class="section" style="background:linear-gradient(135deg,rgba(124,58,237,.1),rgba(168,85,247,.04));border-color:rgba(168,85,247,.28);margin-bottom:16px">
+      <div style="font-size:13px;color:rgba(255,255,255,.8);line-height:1.85">
+        <div style="font-size:14px;font-weight:700;color:#c4b5fd;margin-bottom:10px">🚀 Como conseguir novos influencers?</div>
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <div style="display:flex;gap:10px;align-items:flex-start">
+            <span style="background:linear-gradient(135deg,#7c3aed,#a855f7);color:#fff;font-weight:800;font-size:12px;min-width:24px;height:24px;display:flex;align-items:center;justify-content:center;border-radius:50%;flex-shrink:0">1</span>
+            <span><strong>Caminho automático (recomendado)</strong> — Volte para o Dashboard, copie seu link de afiliado e envie para as pessoas que quer como influencers. Quem se cadastrar pelo seu link <strong>já vira seu influencer automaticamente</strong>, sem precisar fazer mais nada.</span>
+          </div>
+          <div style="display:flex;gap:10px;align-items:flex-start">
+            <span style="background:linear-gradient(135deg,#7c3aed,#a855f7);color:#fff;font-weight:800;font-size:12px;min-width:24px;height:24px;display:flex;align-items:center;justify-content:center;border-radius:50%;flex-shrink:0">2</span>
+            <span><strong>Promoção manual (jogadores já cadastrados)</strong> — Se alguém se cadastrou no site sem usar seu link, você pode promovê-los aqui: busque pelo nome ou telefone abaixo → clique no nome → confirme. <em>Só funciona se a pessoa tiver se cadastrado pelo seu link de afiliado.</em></span>
+          </div>
+        </div>
+      </div>
+    </div>
     <div class="section">
       <h2>Cadastrar novo influencer <span class="hint" id="cfg-hint-2">—</span></h2>
       <div class="add-row">
         <input id="search-input" type="text" placeholder="Buscar usuário por nome ou telefone..." autocomplete="off" class="fi" />
         <div class="search-results" id="search-results"></div>
       </div>
-      <div style="font-size:11px;color:rgba(255,255,255,.45)">Apenas jogadores existentes podem ser promovidos.</div>
+      <div style="font-size:11px;color:rgba(255,255,255,.45)">Apenas jogadores que se cadastraram pelo seu link podem ser promovidos.</div>
     </div>
     <div class="section">
       <h2><span>Meus influencers (<span id="inf-count">0</span>)</span></h2>
@@ -239,24 +265,33 @@
 
   <!-- CONFIG -->
   <div class="tab-content" id="tab-config" style="display:none">
+    <div class="section" style="background:linear-gradient(135deg,rgba(124,58,237,.08),rgba(168,85,247,.03));border-color:rgba(168,85,247,.2);margin-bottom:16px">
+      <div style="font-size:13px;color:rgba(255,255,255,.75);line-height:1.8">
+        💡 <strong style="color:#c4b5fd">O que cada campo significa:</strong><br>
+        • <strong>Nível 1</strong> = % que você recebe quando um <em>jogador direto</em> deposita (ex: 10% de R$100 = R$10)<br>
+        • <strong>Nível 2</strong> = % de depósitos de jogadores indicados pelos seus influencers (ex: 3% de R$100 = R$3)<br>
+        • <strong>Nível 3</strong> = % de depósitos de 3 níveis abaixo de você<br>
+        • <strong>Influencer recebe (%)</strong> = de cada R$10 gerados no nível 1, quanto vai pro influencer. O restante é seu.
+      </div>
+    </div>
     <div class="section">
       <h2>Configuração de comissões <span class="hint">define quanto a sua rede paga e a divisão com seus influencers</span></h2>
       <div class="grid-2" style="margin-bottom:14px">
         <div>
-          <label class="fl">Nível 1 — % do depósito</label>
-          <input id="cfg-n1" type="number" step="0.5" min="0" max="50" class="fi"/>
+          <label class="fl">Nível 1 — % do depósito <span style="color:rgba(255,255,255,.4);font-weight:400">(jogadores diretos)</span></label>
+          <input id="cfg-n1" type="number" step="0.5" min="0" max="50" class="fi" placeholder="ex: 10"/>
         </div>
         <div>
-          <label class="fl">Nível 2 — % do depósito</label>
-          <input id="cfg-n2" type="number" step="0.5" min="0" max="50" class="fi"/>
+          <label class="fl">Nível 2 — % do depósito <span style="color:rgba(255,255,255,.4);font-weight:400">(rede dos influencers)</span></label>
+          <input id="cfg-n2" type="number" step="0.5" min="0" max="50" class="fi" placeholder="ex: 3"/>
         </div>
         <div>
-          <label class="fl">Nível 3 — % do depósito</label>
-          <input id="cfg-n3" type="number" step="0.5" min="0" max="50" class="fi"/>
+          <label class="fl">Nível 3 — % do depósito <span style="color:rgba(255,255,255,.4);font-weight:400">(terceiro nível)</span></label>
+          <input id="cfg-n3" type="number" step="0.5" min="0" max="50" class="fi" placeholder="ex: 1"/>
         </div>
         <div>
-          <label class="fl">Influencer recebe (%)</label>
-          <input id="cfg-infl-perc" type="number" step="1" min="0" max="80" class="fi"/>
+          <label class="fl">Influencer recebe (%) <span style="color:rgba(255,255,255,.4);font-weight:400">(do total N1; restante é seu)</span></label>
+          <input id="cfg-infl-perc" type="number" step="1" min="0" max="80" class="fi" placeholder="ex: 30"/>
         </div>
       </div>
       <button class="btn-primary" onclick="salvarConfig()">Salvar configuração</button>
@@ -266,6 +301,18 @@
 
   <!-- SAQUE -->
   <div class="tab-content" id="tab-saque" style="display:none">
+    <details class="tut-card">
+      <summary>📖 Como fazer o saque? (clique para ver)</summary>
+      <div class="tut-body">
+        <ol>
+          <li>Confira o <strong>saldo disponível</strong> no card acima — esse é o valor que você pode sacar agora.</li>
+          <li>Digite o <strong>valor que quer sacar</strong> (mínimo R$ 5,00). O líquido já desconta R$ 2,00 de taxa.</li>
+          <li>Informe sua <strong>chave PIX</strong> — pode ser CPF, e-mail ou número de celular.</li>
+          <li>Clique em <strong>"Solicitar saque"</strong>. O pedido fica pendente até ser aprovado pelo administrador (até 24h úteis).</li>
+        </ol>
+        <div class="tut-tip">⚡ <strong>Quer receber mais rápido?</strong> Configure sua conta no gateway de pagamento abaixo e seus saques serão processados antes de 24h.</div>
+      </div>
+    </details>
     <div class="section">
       <h2>Sacar comissão via PIX <span class="hint">taxa fixa de R$ 2,00 por saque</span></h2>
       <div class="stat-card" style="margin-bottom:18px">
@@ -319,6 +366,11 @@
 
   <!-- DEMO -->
   <div class="tab-content" id="tab-demo" style="display:none">
+    <div class="section" style="background:linear-gradient(135deg,rgba(124,58,237,.08),rgba(168,85,247,.03));border-color:rgba(168,85,247,.2);margin-bottom:16px">
+      <div style="font-size:13px;color:rgba(255,255,255,.75);line-height:1.7">
+        💡 <strong style="color:#c4b5fd">Para que servem as contas demo?</strong> São contas fictícias para você testar o sistema, demonstrar para clientes ou treinar influencers — sem gastar dinheiro real. Crie quantas quiser (máx. 50 por vez) e apague depois.
+      </div>
+    </div>
     <div class="section">
       <h2>Criar contas demo em lote <span class="hint">e-mails e telefones gerados automaticamente</span></h2>
       <div class="grid-2" style="margin-bottom:14px">
@@ -385,6 +437,20 @@
 
   <!-- TRANSAÇÕES -->
   <div class="tab-content" id="tab-transacoes" style="display:none">
+    <details class="tut-card">
+      <summary>📖 Como ler o histórico de transações? (clique para ver)</summary>
+      <div class="tut-body">
+        <ol>
+          <li><strong>Comissão</strong> — dinheiro que entrou automaticamente quando alguém da sua rede fez um depósito. O valor já está no seu saldo.</li>
+          <li><strong>Saque</strong> — pedidos de retirada que você fez. O status mostra se já foi processado.</li>
+        </ol>
+        Status das transações:<br>
+        • <strong style="color:#86efac">Aprovado</strong> — já foi processado e o dinheiro está na conta.<br>
+        • <strong style="color:#fde68a">Pendente</strong> — aguardando aprovação do administrador.<br>
+        • <strong style="color:#f87171">Rejeitado</strong> — não foi processado (saldo foi devolvido para saques rejeitados).<br>
+        <div class="tut-tip">💡 Use os <strong>filtros</strong> acima para encontrar uma transação específica por tipo ou status.</div>
+      </div>
+    </details>
     <div class="section">
       <h2><span>Histórico de transações</span> <span class="hint">comissões recebidas e saques solicitados</span></h2>
       <div class="filters">

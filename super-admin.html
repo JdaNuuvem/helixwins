@@ -130,6 +130,17 @@
     .section { padding: 14px; border-radius: 10px; }
     .toast { font-size: 12px; padding: 10px 16px; left: 12px; right: 12px; transform: none; }
   }
+
+  /* ── Tutorial colapsável (tema vermelho/SA) ─────────────────── */
+  .tut-card { background: linear-gradient(135deg,rgba(220,38,38,.1),rgba(153,27,27,.04)); border: 1px solid rgba(220,38,38,.28); border-radius: 12px; padding: 13px 18px; margin-bottom: 16px; }
+  .tut-card summary { cursor: pointer; font-size: 13px; font-weight: 700; color: #fca5a5; list-style: none; display: flex; align-items: center; gap: 8px; user-select: none; }
+  .tut-card summary::-webkit-details-marker { display: none; }
+  .tut-card summary::after { content: '▼'; margin-left: auto; font-size: 10px; opacity: .7; transition: transform .2s; }
+  .tut-card[open] summary::after { transform: rotate(180deg); }
+  .tut-body { margin-top: 12px; font-size: 13px; color: rgba(255,255,255,.75); line-height: 1.85; padding-top: 10px; border-top: 1px solid rgba(220,38,38,.15); }
+  .tut-body ol { padding-left: 18px; }
+  .tut-body li { margin-bottom: 7px; }
+  .tut-body .tut-tip { margin-top: 10px; background: rgba(220,38,38,.1); border-radius: 8px; padding: 9px 12px; font-size: 12px; color: #fca5a5; }
 </style>
 </head>
 <body>
@@ -165,6 +176,36 @@
   </div>
 
   <div class="tab-content" id="tab-dashboard">
+    <!-- TUTORIAL DASHBOARD -->
+    <div class="section" style="background:linear-gradient(135deg,rgba(220,38,38,.12),rgba(153,27,27,.04));border-color:rgba(220,38,38,.28);margin-bottom:20px">
+      <h2 style="margin-bottom:12px">📋 Como funciona o painel de Super Admin</h2>
+      <div style="font-size:13px;color:rgba(255,255,255,.8);line-height:1.85">
+        <p style="margin-bottom:10px">Você é o <strong style="color:#fca5a5">dono da plataforma</strong>. Aqui você controla toda a hierarquia de afiliados e garante que a operação funcione. Visão geral:</p>
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <div style="display:flex;gap:10px;align-items:flex-start">
+            <span style="background:linear-gradient(135deg,#dc2626,#991b1b);color:#fff;font-weight:800;font-size:12px;min-width:26px;height:26px;display:flex;align-items:center;justify-content:center;border-radius:50%;flex-shrink:0">1</span>
+            <span><strong>Sua comissão (abaixo)</strong> — Configure aqui entre 10% e 20% do N1 de comissão que você recebe sobre <em>todos</em> os depósitos da plataforma. Esse corte é tirado antes de chegar ao gerente e ao influencer.</span>
+          </div>
+          <div style="display:flex;gap:10px;align-items:flex-start">
+            <span style="background:linear-gradient(135deg,#dc2626,#991b1b);color:#fff;font-weight:800;font-size:12px;min-width:26px;height:26px;display:flex;align-items:center;justify-content:center;border-radius:50%;flex-shrink:0">2</span>
+            <span><strong>Aba Gerentes</strong> — Promova jogadores a gerentes. Cada gerente recruta seus próprios influencers e configura as comissões da rede deles.</span>
+          </div>
+          <div style="display:flex;gap:10px;align-items:flex-start">
+            <span style="background:linear-gradient(135deg,#dc2626,#991b1b);color:#fff;font-weight:800;font-size:12px;min-width:26px;height:26px;display:flex;align-items:center;justify-content:center;border-radius:50%;flex-shrink:0">3</span>
+            <span><strong>Aba Saques pendentes</strong> — Todos os pedidos de saque (jogador, influencer e gerente) aguardam sua aprovação aqui. Aprove os legítimos e rejeite os suspeitos.</span>
+          </div>
+          <div style="display:flex;gap:10px;align-items:flex-start">
+            <span style="background:linear-gradient(135deg,#dc2626,#991b1b);color:#fff;font-weight:800;font-size:12px;min-width:26px;height:26px;display:flex;align-items:center;justify-content:center;border-radius:50%;flex-shrink:0">4</span>
+            <span><strong>Aba Dificuldade</strong> — Controle globalmente o nível de dificuldade do jogo. Contas demo devem ser mais fáceis para atrair jogadores; contas reais seguem a dificuldade global.</span>
+          </div>
+          <div style="display:flex;gap:10px;align-items:flex-start">
+            <span style="background:linear-gradient(135deg,#dc2626,#991b1b);color:#fff;font-weight:800;font-size:12px;min-width:26px;height:26px;display:flex;align-items:center;justify-content:center;border-radius:50%;flex-shrink:0">5</span>
+            <span><strong>Aba Transações e Audit Log</strong> — Monitore toda a movimentação financeira e ações administrativas da plataforma em tempo real.</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <div class="stats-grid" id="stats-grid"></div>
 
     <div class="section" id="sa-cfg-card">
@@ -190,6 +231,21 @@
   </div>
 
   <div class="tab-content" id="tab-gerentes" style="display:none">
+    <!-- TUTORIAL GERENTES -->
+    <details class="tut-card">
+      <summary>📖 Como gerenciar gerentes? (clique para ver)</summary>
+      <div class="tut-body">
+        <ol>
+          <li><strong>Promover um gerente:</strong> Digite o nome ou telefone do jogador no campo de busca acima → clique no nome na lista → confirme a promoção. O jogador passa a ter acesso ao painel <code>/gerente</code>.</li>
+          <li><strong>O que um gerente pode fazer?</strong> Ele cria e gerencia influencers, define as próprias % de comissão (dentro do teto que você configurou) e solicita saques das comissões que acumula.</li>
+          <li><strong>Como um gerente traz jogadores?</strong> Ele compartilha seu link exclusivo → quem se cadastrar vira automaticamente <em>influencer</em> dele → o influencer traz jogadores → todos ganham comissão em cascata.</li>
+          <li><strong>Remover um gerente:</strong> Na tabela abaixo, clique em "Rebaixar" na linha do gerente. O usuário volta a ser jogador e perde acesso ao painel gerente.</li>
+        </ol>
+        <div class="tut-tip" style="margin-top:10px;padding:8px 12px;background:rgba(220,38,38,.12);border-radius:8px;font-size:12px;color:#fca5a5">
+          💡 Só promova pessoas de confiança — gerentes podem ver saldos e solicitar saques dos afiliados deles.
+        </div>
+      </div>
+    </details>
     <div class="section">
       <h2>Promover novo gerente <span class="hint">busque por nome ou telefone</span></h2>
       <div class="add-row">
@@ -210,6 +266,21 @@
   </div>
 
   <div class="tab-content" id="tab-saques" style="display:none">
+    <!-- TUTORIAL SAQUES -->
+    <details class="tut-card">
+      <summary>📖 Como aprovar e rejeitar saques? (clique para ver)</summary>
+      <div class="tut-body">
+        <ol>
+          <li><strong>Quem você realmente paga:</strong> Use o filtro <strong>💰 Pagáveis</strong> para ver apenas saques de Gerentes, Influencers e Super Admin — esses sim envolvem dinheiro real via PIX. Jogadores normalmente <em>não são pagos</em> de verdade (são comissões fictícias de afiliados internos).</li>
+          <li><strong>Aprovar um saque:</strong> Clique em <strong>Aprovar</strong> na linha → confirme → transfira o valor manualmente para a chave PIX exibida → pronto. O saldo do usuário é debitado e o status vai para "Aprovado".</li>
+          <li><strong>Rejeitar um saque:</strong> Clique em <strong>Rejeitar</strong> → o saldo é devolvido ao usuário automaticamente e o status vai para "Rejeitado". Use quando houver suspeita de fraude ou dado PIX inválido.</li>
+          <li><strong>Filtros úteis:</strong> Use "Gerentes" ou "Influencers" para focar em um grupo. O campo de busca aceita nome, telefone ou chave PIX.</li>
+        </ol>
+        <div class="tut-tip" style="margin-top:10px;padding:8px 12px;background:rgba(220,38,38,.12);border-radius:8px;font-size:12px;color:#fca5a5">
+          ⚠️ Sempre verifique a chave PIX antes de transferir — o sistema não realiza o pagamento automaticamente, apenas registra a aprovação.
+        </div>
+      </div>
+    </details>
     <div class="section">
       <h2><span>Saques pendentes</span> <span class="hint">⚠ jogadores finais normalmente não são pagos de verdade</span></h2>
 
@@ -249,6 +320,25 @@
   </div>
 
   <div class="tab-content" id="tab-transacoes" style="display:none">
+    <!-- TUTORIAL TRANSAÇÕES -->
+    <details class="tut-card">
+      <summary>📖 Como ler o extrato de transações? (clique para ver)</summary>
+      <div class="tut-body">
+        <ol>
+          <li><strong>Tipos de transação:</strong>
+            <ul style="padding-left:16px;margin-top:4px">
+              <li><em>Depósito</em> — jogador depositou créditos na plataforma</li>
+              <li><em>Saque</em> — solicitação de saque de saldo (jogo)</li>
+              <li><em>Saque afiliado</em> — saque de comissão por gerente ou influencer</li>
+              <li><em>Comissão</em> — crédito automático de bônus por indicação</li>
+            </ul>
+          </li>
+          <li><strong>Status:</strong> <span style="color:#86efac">Aprovado</span> = concluído · <span style="color:#fde68a">Pendente</span> = aguardando ação · <span style="color:#fca5a5">Rejeitado</span> = cancelado/devolvido.</li>
+          <li><strong>Filtros:</strong> Use os botões no topo para filtrar por tipo, ou o campo de busca para encontrar uma pessoa específica pelo nome, telefone ou role.</li>
+          <li><strong>Auditoria:</strong> Para ver <em>quem fez o quê</em> (logins, promoções, aprovações), use a aba <strong>Audit Log</strong>.</li>
+        </ol>
+      </div>
+    </details>
     <div class="section">
       <h2><span>Transações da plataforma</span> <span class="hint">últimas 300</span></h2>
       <div style="margin-bottom:12px;display:flex;gap:8px;flex-wrap:wrap">
@@ -274,6 +364,21 @@
   </div>
 
   <div class="tab-content" id="tab-audit" style="display:none">
+    <!-- TUTORIAL AUDIT LOG -->
+    <details class="tut-card">
+      <summary>📖 Como usar o Audit Log? (clique para ver)</summary>
+      <div class="tut-body">
+        <ol>
+          <li><strong>O que é registrado:</strong> Toda ação sensível é gravada automaticamente — logins, promoções (jogador→gerente/influencer), aprovações e rejeições de saques, alterações de config.</li>
+          <li><strong>Filtrar por categoria:</strong> Use os botões <em>Logins / Saques / Gerentes / Influencers</em> para focar em um tipo de evento. O campo de busca aceita nome de usuário, endereço IP ou detalhes do evento.</li>
+          <li><strong>Investigar suspeitas:</strong> Se um saque foi aprovado sem a sua autorização, busque o nome do usuário aqui e veja o IP e o horário da ação. Compare com seus próprios acessos.</li>
+          <li><strong>Boa prática:</strong> Revise o Audit Log semanalmente — principalmente após promoções de gerentes ou picos de saques incomuns.</li>
+        </ol>
+        <div class="tut-tip" style="margin-top:10px;padding:8px 12px;background:rgba(220,38,38,.12);border-radius:8px;font-size:12px;color:#fca5a5">
+          🔒 O Audit Log é somente leitura — nenhuma ação aqui altera dados. Use-o apenas para monitoramento e investigação.
+        </div>
+      </div>
+    </details>
     <div class="section">
       <h2><span>Audit Log</span> <span class="hint">ações sensíveis registradas</span></h2>
       <div style="margin-bottom:12px;display:flex;gap:8px;flex-wrap:wrap">

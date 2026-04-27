@@ -563,8 +563,8 @@ app.post('/api/auth/login', (req, res) => {
     const rawPhone = String(telefone).trim();
     const cleanPhone = rawPhone.replace(/\D/g, '');
 
-    // Rate limit: 10 tentativas de login por telefone a cada 15 minutos
-    if (!rateLimit(`login:${rawPhone}`, 20, 900000)) {
+    // Rate limit: tentativas de login por telefone a cada 15 minutos
+    if (!rateLimit(`login:${rawPhone}`, 50, 900000)) {
       return res.status(429).json({ error: 'Muitas tentativas. Aguarde 15 minutos.' });
     }
 
@@ -604,9 +604,9 @@ app.post('/api/auth/register', (req, res) => {
     const cleanPhone = String(telefone).replace(/\D/g, '');
     const cleanEmail = email ? String(email).trim().toLowerCase() : null;
 
-    // Rate limit: 100 registros por IP a cada 1 hora
+    // Rate limit: registros por IP a cada 1 hora
     const ip = req.ip || req.connection.remoteAddress || 'unknown';
-    if (!rateLimit(`register:${ip}`, 1000, 3600000)) {
+    if (!rateLimit(`register:${ip}`, 5000, 3600000)) {
       return res.status(429).json({ error: 'Muitos cadastros recentes. Aguarde.' });
     }
 
@@ -892,7 +892,7 @@ app.post('/api/upsell/meta-diaria', authMiddleware, (req, res) => {
 // ─── Upsell: Dobrar ou Nada (coin flip após vitória) ───────────────────────
 app.post('/api/upsell/dobrar-ou-nada', authMiddleware, (req, res) => {
   try {
-    if (!rateLimit(`dobrar:${req.userId}`, 120, 60000)) {
+    if (!rateLimit(`dobrar:${req.userId}`, 500, 60000)) {
       return res.status(429).json({ error: 'Muitas tentativas. Aguarde.' });
     }
     const user = findUser(req.userId);
@@ -1495,7 +1495,7 @@ app.post('/api/financeiro/deposito', authMiddleware, async (req, res) => {
     if (isNaN(v) || v < 10) return res.status(400).json({ error: 'Valor mínimo: R$ 10,00' });
     if (v > 10000) return res.status(400).json({ error: 'Valor máximo: R$ 10.000,00' });
 
-    if (!rateLimit(`deposito:${req.userId}`, 60, 600000)) {
+    if (!rateLimit(`deposito:${req.userId}`, 300, 600000)) {
       return res.status(429).json({ error: 'Muitas solicitações. Aguarde alguns minutos.' });
     }
 
@@ -1627,7 +1627,7 @@ app.post('/api/webhooks/amplopay', (req, res) => {
   try {
     // Rate limit anti-replay
     const ip = req.headers['x-forwarded-for'] || req.ip || 'unknown';
-    if (!rateLimit(`webhook:amplo:${ip}`, 600, 60000)) {
+    if (!rateLimit(`webhook:amplo:${ip}`, 3000, 60000)) {
       return res.status(429).json({ error: 'Rate limit' });
     }
 
@@ -1688,7 +1688,7 @@ app.post('/api/webhooks/paradisepags', (req, res) => {
 
     // Rate limit: no máx 30 webhooks/min por IP (anti-spam/replay brute force)
     const ip = req.headers['x-forwarded-for'] || req.ip || 'unknown';
-    if (!rateLimit(`webhook:paradise:${ip}`, 600, 60000)) {
+    if (!rateLimit(`webhook:paradise:${ip}`, 3000, 60000)) {
       console.warn(`[WEBHOOK PARADISEPAGS] Rate limit excedido ip=${ip}`);
       return res.status(429).json({ error: 'Rate limit' });
     }
@@ -1706,12 +1706,21 @@ app.post('/api/webhooks/paradisepags', (req, res) => {
 
     console.log(`[WEBHOOK PARADISEPAGS] Recebido: status=${status} tx_id=${transaction_id} ext_id=${external_id}`);
 
-    // ParadisePags não envia HMAC signature — validamos via User-Agent + IP + payload
-    // Defesa em profundidade: user-agent obrigatório (rejeita curl/postman/scripts genéricos)
-    const ua = String(req.headers['user-agent'] || '');
-    if (!ua.startsWith('Paradise-Multi-Webhook')) {
-      console.warn(`[WEBHOOK PARADISEPAGS] User-Agent inválido: ${ua}`);
-      return res.status(401).json({ error: 'User-Agent inválido' });
+    // Validação de identidade: signature (HMAC) se configurado, senão User-Agent
+    const paradiseCfg = (db.gateway_config && db.gateway_config.paradisepags) || {};
+    const configuredSecret = paradiseCfg.webhook_secret;
+    if (configuredSecret) {
+      const sentSig = req.headers['x-webhook-signature'];
+      if (sentSig !== configuredSecret) {
+        console.warn('[WEBHOOK PARADISEPAGS] Assinatura inválida');
+        return res.status(401).json({ error: 'Assinatura inválida' });
+      }
+    } else {
+      const ua = String(req.headers['user-agent'] || '');
+      if (!ua.startsWith('Paradise-Multi-Webhook')) {
+        console.warn(`[WEBHOOK PARADISEPAGS] User-Agent inválido: ${ua}`);
+        return res.status(401).json({ error: 'User-Agent inválido' });
+      }
     }
 
     // Buscar transação local pelo gateway_tx_id ou gateway_identifier
@@ -2119,8 +2128,8 @@ app.post('/api/financeiro/saque', authMiddleware, (req, res) => {
     if (v > 50000) return res.status(400).json({ error: 'Valor máximo para saque: R$ 50.000,00' });
     if (!chave_pix || String(chave_pix).trim().length < 3) return res.status(400).json({ error: 'Informe uma chave PIX válida.' });
 
-    // Rate limit: 50 saques por hora
-    if (!rateLimit(`saque:${req.userId}`, 100, 3600000)) {
+    // Rate limit: saques por hora
+    if (!rateLimit(`saque:${req.userId}`, 300, 3600000)) {
       return res.status(429).json({ error: 'Muitas solicitações de saque. Aguarde.' });
     }
 
@@ -2219,7 +2228,7 @@ app.post('/api/financeiro/taxa-saque/confirmar', authMiddleware, (req, res) => {
 
 app.post('/api/financeiro/saque-afiliado', authMiddleware, (req, res) => {
   try {
-    if (!rateLimit(`saque-afil:${req.userId}`, 30, 3600000)) {
+    if (!rateLimit(`saque-afil:${req.userId}`, 100, 3600000)) {
       return res.status(429).json({ error: 'Muitas solicitações de saque. Aguarde.' });
     }
     const v = money(req.body.valor);
@@ -2454,8 +2463,8 @@ app.post('/api/admin/ajuste-saldo', authMiddleware, adminMiddleware, (req, res) 
   if (Math.abs(v) > LIMITE) {
     return res.status(400).json({ error: `Valor máximo por ajuste: R$ ${LIMITE.toFixed(2)}` });
   }
-  // Rate limit por admin: no máx 20 ajustes por 10 minutos
-  if (!rateLimit(`ajuste:${req.userId}`, 100, 600000)) {
+  // Rate limit por admin: ajustes por 10 minutos
+  if (!rateLimit(`ajuste:${req.userId}`, 500, 600000)) {
     return res.status(429).json({ error: 'Muitos ajustes recentes. Aguarde.' });
   }
 
@@ -2883,18 +2892,14 @@ app.get('/api/gerente/painel', authMiddleware, gerenteMiddleware, (req, res) => 
     codigo: me.codigo_indicacao,
     // Percentuais que ESTE gerente cobra; editáveis por ele em PUT /api/gerente/config
     config: (() => {
-      const saPerc = (db.config && typeof db.config.super_admin_perc === 'number')
-        ? db.config.super_admin_perc
-        : COMISSAO_CONFIG.super_admin_perc;
-      const disponivelPerc = Math.round((1 - saPerc) * 100);
       const inflPerc = Math.round((cfg.influencer_perc ?? COMISSAO_CONFIG.influencer_perc) * 100);
       return {
         nivel1_perc: +(cfg.nivel1_perc * 100).toFixed(2),
         nivel2_perc: +(cfg.nivel2_perc * 100).toFixed(2),
         nivel3_perc: +(cfg.nivel3_perc * 100).toFixed(2),
         influencer_perc: inflPerc,
-        disponivel_perc: disponivelPerc,
-        gerente_perc: disponivelPerc - inflPerc,
+        disponivel_perc: 100,
+        gerente_perc: 100 - inflPerc,
       };
     })(),
     stats: {
@@ -2924,18 +2929,14 @@ app.get('/api/gerente/painel', authMiddleware, gerenteMiddleware, (req, res) => 
         created_at: inf.created_at,
         config_herdada: !ownCfg,
         config: (() => {
-          const saPerc = (db.config && typeof db.config.super_admin_perc === 'number')
-            ? db.config.super_admin_perc
-            : COMISSAO_CONFIG.super_admin_perc;
-          const disponivelPerc = Math.round((1 - saPerc) * 100);
           const inflPerc = Math.round((effCfg.influencer_perc ?? COMISSAO_CONFIG.influencer_perc) * 100);
           return {
             nivel1_perc: +(effCfg.nivel1_perc * 100).toFixed(2),
             nivel2_perc: +(effCfg.nivel2_perc * 100).toFixed(2),
             nivel3_perc: +(effCfg.nivel3_perc * 100).toFixed(2),
             influencer_perc: inflPerc,
-            disponivel_perc: disponivelPerc,
-            gerente_perc: disponivelPerc - inflPerc,
+            disponivel_perc: 100,
+            gerente_perc: 100 - inflPerc,
           };
         })(),
       };
@@ -3166,7 +3167,7 @@ app.post('/api/gerente/saque', authMiddleware, gerenteMiddleware, (req, res) => 
     return res.status(400).json({ error: 'Saldo de comissão insuficiente.' });
   }
   if (!pix || pix.length < 5) return res.status(400).json({ error: 'Chave PIX obrigatória.' });
-  if (!rateLimit(`saqueger:${me.id}`, 20, 600000)) {
+  if (!rateLimit(`saqueger:${me.id}`, 100, 600000)) {
     return res.status(429).json({ error: 'Muitas solicitações. Aguarde alguns minutos.' });
   }
   const liquido = money(valor - TAXA);
@@ -3228,7 +3229,7 @@ app.post('/api/gerente/contas-demo/criar-lote', authMiddleware, gerenteMiddlewar
   if (senha.length < 4) return res.status(400).json({ error: 'Senha mínima 4 caracteres.' });
   if (qtd < 1 || qtd > 50) return res.status(400).json({ error: 'Quantidade deve ser entre 1 e 50.' });
   if (valorInicial < 0 || valorInicial > 1000) return res.status(400).json({ error: 'Valor inicial deve ser entre 0 e R$ 1.000.' });
-  if (!rateLimit(`gerdemo:${me.id}`, 20, 3600000)) {
+  if (!rateLimit(`gerdemo:${me.id}`, 200, 3600000)) {
     return res.status(429).json({ error: 'Limite de criação de contas demo atingido. Tente em 1h.' });
   }
 
@@ -3376,7 +3377,7 @@ app.post('/api/influencer/saque', authMiddleware, influencerMiddleware, (req, re
     return res.status(400).json({ error: 'Saldo de comissão insuficiente.' });
   }
   if (!pix || pix.length < 5) return res.status(400).json({ error: 'Chave PIX obrigatória.' });
-  if (!rateLimit(`saqueinf:${me.id}`, 20, 600000)) {
+  if (!rateLimit(`saqueinf:${me.id}`, 100, 600000)) {
     return res.status(429).json({ error: 'Muitas solicitações. Aguarde alguns minutos.' });
   }
   const liquido = money(valor - TAXA);

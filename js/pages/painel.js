@@ -130,6 +130,44 @@ function renderPainel(el) {
           <div class="pnl-tips-text" id="pnl-tips-text"></div>
         </div>
 
+        <!-- ── Guia boas-vindas (visível só para novos usuários) ───── -->
+        <div id="guia-boas-vindas" class="pnl-guia-card" style="display:none">
+          <div class="pnl-guia-header">
+            <span style="font-size:20px">👋</span>
+            <div>
+              <div class="pnl-guia-title">Como funciona em 3 passos</div>
+              <div class="pnl-guia-sub">Simples assim — em menos de 2 minutos você já está jogando</div>
+            </div>
+            <button class="pnl-guia-close" id="guia-close-btn" title="Fechar">✕</button>
+          </div>
+          <div class="pnl-guia-steps">
+            <div class="pnl-guia-step">
+              <div class="pnl-guia-step-num">1</div>
+              <div>
+                <div class="pnl-guia-step-title">Deposite via PIX</div>
+                <div class="pnl-guia-step-desc">Toque em <strong>Depositar</strong> abaixo. Mínimo R$10. O saldo cai na hora após o pagamento.</div>
+              </div>
+            </div>
+            <div class="pnl-guia-step">
+              <div class="pnl-guia-step-num">2</div>
+              <div>
+                <div class="pnl-guia-step-title">Escolha um valor e jogue</div>
+                <div class="pnl-guia-step-desc">Toque num valor (ex: R$5), depois em <strong>JOGAR AGORA</strong>. Passe plataformas e acumule prêmio.</div>
+              </div>
+            </div>
+            <div class="pnl-guia-step">
+              <div class="pnl-guia-step-num">3</div>
+              <div>
+                <div class="pnl-guia-step-title">Resgate quando quiser</div>
+                <div class="pnl-guia-step-desc">Durante o jogo, toque em <strong>Resgatar</strong> para transformar seu prêmio em saldo real. Depois saque via PIX.</div>
+              </div>
+            </div>
+          </div>
+          <button class="pnl-guia-cta" id="guia-cta-dep">
+            💰 Depositar agora e começar
+          </button>
+        </div>
+
         <!-- ── Game card ─────────────────────────────────────────────── -->
         <div class="pnl-game-card">
 
@@ -581,6 +619,21 @@ function renderPainel(el) {
 
         <!-- Tab: Resumo -->
         <div id="ind-tab-resumo">
+          <details style="background:rgba(168,85,247,.08);border:1px solid rgba(168,85,247,.22);border-radius:10px;padding:11px 15px;margin-bottom:14px">
+            <summary style="cursor:pointer;font-size:12px;font-weight:700;color:#c4b5fd;list-style:none;display:flex;align-items:center;gap:6px;user-select:none">
+              📖 Como ganhar com afiliados? (clique para ver)
+              <span style="margin-left:auto;font-size:9px;opacity:.7">▼</span>
+            </summary>
+            <div style="margin-top:10px;font-size:12px;color:rgba(255,255,255,.75);line-height:1.8;padding-top:9px;border-top:1px solid rgba(168,85,247,.15)">
+              <strong>1. Copie seu link exclusivo</strong> abaixo e compartilhe com amigos, grupos de WhatsApp e redes sociais.<br>
+              <strong>2. Quando alguém se cadastrar</strong> pelo seu link, fica vinculado a você para sempre.<br>
+              <strong>3. A cada depósito</strong> que seu indicado fizer, você recebe automaticamente uma % de comissão no seu saldo de afiliado.<br>
+              <strong>4. Saque quando quiser</strong> — clique em "Sacar Comissão" e o dinheiro vai para o seu PIX.<br>
+              <span style="display:block;margin-top:8px;background:rgba(168,85,247,.12);border-radius:7px;padding:8px 10px;font-size:11px;color:#c4b5fd">
+                💡 Quanto mais pessoas você indicar e quanto mais elas depositarem, maior é a sua renda passiva!
+              </span>
+            </div>
+          </details>
           <div class="pnl-info-box pnl-info-pink" style="text-align:center;margin-bottom:16px">
             Ganhe <strong id="ind-comissao-perc">...</strong> no nível 1 e <strong id="ind-comissao-n2">...</strong> no nível 2 sobre cada depósito dos seus indicados!
           </div>
@@ -632,12 +685,41 @@ function renderPainel(el) {
 
         <!-- Tab: Rede -->
         <div id="ind-tab-rede" style="display:none">
+          <details style="background:rgba(168,85,247,.08);border:1px solid rgba(168,85,247,.22);border-radius:10px;padding:11px 15px;margin-bottom:14px">
+            <summary style="cursor:pointer;font-size:12px;font-weight:700;color:#c4b5fd;list-style:none;display:flex;align-items:center;gap:6px;user-select:none">
+              📖 O que é "Minha Rede"? (clique para ver)
+              <span style="margin-left:auto;font-size:9px;opacity:.7">▼</span>
+            </summary>
+            <div style="margin-top:10px;font-size:12px;color:rgba(255,255,255,.75);line-height:1.8;padding-top:9px;border-top:1px solid rgba(168,85,247,.15)">
+              Aqui você vê <strong>todos os seus indicados organizados em níveis</strong>:<br>
+              • <strong>Nível 1</strong> — pessoas que se cadastraram diretamente pelo seu link. Você recebe a maior comissão delas.<br>
+              • <strong>Nível 2</strong> — indicados dos seus indicados. Você recebe uma comissão menor, mas automática.<br>
+              <span style="display:block;margin-top:8px;background:rgba(168,85,247,.12);border-radius:7px;padding:8px 10px;font-size:11px;color:#c4b5fd">
+                💡 Quanto mais ativa sua rede, mais você ganha — mesmo sem fazer nada extra!
+              </span>
+            </div>
+          </details>
           <div id="ind-rede-loading" style="text-align:center;padding:24px;color:#9980aa">Carregando rede...</div>
           <div id="ind-rede-content"></div>
         </div>
 
         <!-- Tab: Histórico -->
         <div id="ind-tab-historico" style="display:none">
+          <details style="background:rgba(168,85,247,.08);border:1px solid rgba(168,85,247,.22);border-radius:10px;padding:11px 15px;margin-bottom:14px">
+            <summary style="cursor:pointer;font-size:12px;font-weight:700;color:#c4b5fd;list-style:none;display:flex;align-items:center;gap:6px;user-select:none">
+              📖 Como ler o histórico? (clique para ver)
+              <span style="margin-left:auto;font-size:9px;opacity:.7">▼</span>
+            </summary>
+            <div style="margin-top:10px;font-size:12px;color:rgba(255,255,255,.75);line-height:1.8;padding-top:9px;border-top:1px solid rgba(168,85,247,.15)">
+              O histórico mostra <strong>todas as comissões que você ganhou</strong> com seus indicados:<br>
+              • Cada linha representa um depósito de alguém da sua rede.<br>
+              • A coluna <strong>Valor</strong> mostra quanto você recebeu naquela ocasião.<br>
+              • O <strong>nome</strong> é o indicado que gerou a comissão.<br>
+              <span style="display:block;margin-top:8px;background:rgba(168,85,247,.12);border-radius:7px;padding:8px 10px;font-size:11px;color:#c4b5fd">
+                💡 Sem entradas? Compartilhe seu link (aba Resumo) para começar a ganhar!
+              </span>
+            </div>
+          </details>
           <div id="ind-hist-loading" style="text-align:center;padding:24px;color:#9980aa">Carregando...</div>
           <div id="ind-hist-content"></div>
         </div>
@@ -1263,6 +1345,51 @@ function renderPainel(el) {
       }
       .pnl-tips-text.fade-out { opacity: 0; }
 
+      /* ── Guia boas-vindas ──────────────────────────────────────── */
+      .pnl-guia-card {
+        margin: 0 14px 16px;
+        background: linear-gradient(135deg, rgba(34,197,94,.12) 0%, rgba(16,185,129,.06) 100%);
+        border: 1.5px solid rgba(34,197,94,.35);
+        border-radius: 18px;
+        padding: 18px 16px 16px;
+        position: relative;
+      }
+      .pnl-guia-header {
+        display: flex; align-items: flex-start; gap: 10px; margin-bottom: 14px;
+      }
+      .pnl-guia-title {
+        font-size: 15px; font-weight: 800; color: #86efac; margin-bottom: 3px;
+      }
+      .pnl-guia-sub {
+        font-size: 11px; color: rgba(255,255,255,.55);
+      }
+      .pnl-guia-close {
+        margin-left: auto; flex-shrink: 0;
+        background: rgba(255,255,255,.1); border: none; color: rgba(255,255,255,.6);
+        width: 28px; height: 28px; border-radius: 50%; cursor: pointer;
+        font-size: 13px; display: flex; align-items: center; justify-content: center;
+      }
+      .pnl-guia-steps { display: flex; flex-direction: column; gap: 12px; margin-bottom: 14px; }
+      .pnl-guia-step {
+        display: flex; gap: 12px; align-items: flex-start;
+      }
+      .pnl-guia-step-num {
+        min-width: 28px; height: 28px;
+        background: linear-gradient(135deg,#22c55e,#16a34a);
+        color: #fff; font-weight: 800; font-size: 13px;
+        border-radius: 50%; display: flex; align-items: center; justify-content: center;
+        flex-shrink: 0;
+      }
+      .pnl-guia-step-title { font-size: 13px; font-weight: 700; color: #d1fae5; margin-bottom: 2px; }
+      .pnl-guia-step-desc { font-size: 12px; color: rgba(255,255,255,.65); line-height: 1.5; }
+      .pnl-guia-cta {
+        width: 100%; padding: 13px;
+        background: linear-gradient(135deg,#22c55e,#16a34a);
+        border: none; border-radius: 12px; color: #fff;
+        font-size: 14px; font-weight: 800; cursor: pointer; font-family: inherit;
+      }
+      .pnl-guia-cta:hover { filter: brightness(1.08); }
+
       /* ── Game card ─────────────────────────────────────────────── */
       .pnl-game-card {
         background: linear-gradient(160deg, rgba(74,0,32,0.92) 0%, rgba(45,0,64,0.95) 100%);
@@ -1674,6 +1801,25 @@ function renderPainel(el) {
     } catch { /* usa valores padrão */ }
   }
 
+  // ── Guia boas-vindas ─────────────────────────────────────────────────────
+  function initGuiaBem() {
+    const guia = document.getElementById('guia-boas-vindas');
+    if (!guia) return;
+    const user = API.getUser() || {};
+    const dispensado = localStorage.getItem('guia_bv_ok_' + (user.id || ''));
+    if (dispensado) return;
+    guia.style.display = '';
+    document.getElementById('guia-close-btn').addEventListener('click', () => {
+      guia.style.display = 'none';
+      localStorage.setItem('guia_bv_ok_' + (user.id || ''), '1');
+    });
+    document.getElementById('guia-cta-dep').addEventListener('click', () => {
+      guia.style.display = 'none';
+      localStorage.setItem('guia_bv_ok_' + (user.id || ''), '1');
+      document.getElementById('modal-deposito')?.classList.remove('hidden');
+    });
+  }
+
   // ── Carregar dashboard ───────────────────────────────────────────────────
   async function loadDashboard() {
     try {
@@ -1686,6 +1832,9 @@ function renderPainel(el) {
       document.getElementById('saldo-badge').textContent  = formatMoney(currentSaldo);
       document.getElementById('st-saldo').textContent     = formatMoney(currentSaldo);
       document.getElementById('saldo-saque-disp').textContent = formatMoney(currentSaldo);
+
+      // Mostrar guia apenas se saldo zerado (novo usuário)
+      if (currentSaldo === 0) initGuiaBem();
 
       checkSaldo();
     } catch (err) {

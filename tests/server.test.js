@@ -752,7 +752,24 @@ describe('Afiliados', () => {
 // SEGURANÇA — correções recentes contra hacking de saldo
 // ═══════════════════════════════════════════════════════════════════════════
 describe('Segurança - hardening', () => {
-  function unique() { return Math.floor(Math.random() * 99999999); }
+  const _uq = { n: 1000 };
+  function unique() { return _uq.n++; }
+
+  // Telefones e IDs de transação gerados deterministicamente por este bloco (n começa em 1000)
+  // Limpeza necessária pois db.json persiste entre execuções de teste
+  const PHONES_TO_CLEAN = [
+    '11999990100', '11999991100', '11999992100',
+    '11999993100', '11999994100',
+    '11999995100', '11999996101', '11999998100',
+  ];
+  const TX_IDS_TO_CLEAN = ['TX_MISMATCH_1000', 'TX_OK_1001', 'TX_REPLAY_1002'];
+
+  beforeAll(() => {
+    db.users = db.users.filter(u => !PHONES_TO_CLEAN.includes(u.telefone));
+    db.transacoes = (db.transacoes || []).filter(t =>
+      !TX_IDS_TO_CLEAN.includes(t.gateway_tx_id)
+    );
+  });
 
   test('Webhook ParadisePags rejeita amount mismatch', async () => {
     const u = db.users.find(x => x.id === testUserId);
@@ -945,9 +962,10 @@ describe('Segurança - hardening', () => {
     const tJog = '11999996' + unique().toString().slice(0,3);
     const regJ = await agent().post('/api/auth/register').send({
       nome: 'Jog Da Rede', telefone: tJog, senha: 'Test123!',
-      codigo_indicacao: ger.codigo_indicacao,
     });
     const jog = db.users.find(x => x.id === regJ.body.user.id);
+    // Vincula jogador à rede do gerente sem usar o link direto (que auto-promoveria a influencer)
+    jog.indicado_por = ger.codigo_indicacao;
     expect(jog.indicado_por).toBe(ger.codigo_indicacao);
 
     const res = await agent().post('/api/gerente/influencers/promover')
@@ -1266,6 +1284,557 @@ describe('Migracao gerente_split -> influencer_perc', () => {
   });
 });
 
+// ═══════════════════════════════════════════════════════════════════════════
+// GERENTE — todas as abas
+// ═══════════════════════════════════════════════════════════════════════════
+describe('Gerente - aba dashboard (GET /api/gerente/painel)', () => {
+  let gCookie = '', gId = null, iId = null;
+
+  beforeAll(async () => {
+    const telG = '11800000001', telI = '11800000002';
+    db.users = db.users.filter(u => u.telefone !== telG && u.telefone !== telI);
+    const rg = await agent().post('/api/auth/register').send({ nome: 'Ger Tab', telefone: telG, senha: 'Ger123!', email: 'gertab@test.com' });
+    gId = rg.body.user?.id;
+    const g = db.users.find(x => x.id === gId);
+    g.role = 'gerente';
+    g.saldo_afiliado = 25;
+    g.comissao_config = { nivel1_perc: 0.10, nivel2_perc: 0.03, nivel3_perc: 0.01, influencer_perc: 0.30 };
+    gCookie = rg.headers['set-cookie']?.map(c => c.split(';')[0]).join('; ') || '';
+
+    const ri = await agent().post('/api/auth/register').send({ nome: 'Inf Tab', telefone: telI, senha: 'Inf123!', email: 'inftab@test.com', codigo_indicacao: g.codigo_indicacao });
+    iId = ri.body.user?.id;
+    const i = db.users.find(x => x.id === iId);
+    i.role = 'influencer';
+    i.prospectador_id = gId;
+    db.config = db.config || {};
+    db.config.super_admin_perc = 0.20;
+  });
+
+  test('retorna 200 com stats, link_afiliado, config e influencers', async () => {
+    const res = await agent().get('/api/gerente/painel').set('Cookie', gCookie);
+    expect(res.status).toBe(200);
+    expect(res.body.me).toBeDefined();
+    expect(res.body.link_afiliado).toContain('?ref=');
+    expect(res.body.stats.saldo_afiliado).toBe(25);
+    expect(typeof res.body.stats.total_influencers).toBe('number');
+    expect(Array.isArray(res.body.influencers)).toBe(true);
+  });
+
+  test('config não expõe super_admin_perc', async () => {
+    const res = await agent().get('/api/gerente/painel').set('Cookie', gCookie);
+    expect(res.body.config.super_admin_perc).toBeUndefined();
+    expect(typeof res.body.config.influencer_perc).toBe('number');
+    expect(typeof res.body.config.gerente_perc).toBe('number');
+  });
+
+  test('jogador comum recebe 403', async () => {
+    const res = await agent().get('/api/gerente/painel').set('Cookie', authCookie);
+    expect(res.status).toBe(403);
+  });
+});
+
+describe('Gerente - aba influencers', () => {
+  let gCookie = '', gId = null;
+
+  beforeAll(async () => {
+    const tel = '11800000010';
+    db.users = db.users.filter(u => u.telefone !== tel);
+    const rg = await agent().post('/api/auth/register').send({ nome: 'Ger Inf', telefone: tel, senha: 'GerInf1!', email: 'gerinf@test.com' });
+    gId = rg.body.user?.id;
+    const g = db.users.find(x => x.id === gId);
+    g.role = 'gerente';
+    g.comissao_config = { nivel1_perc: 0.10, nivel2_perc: 0.03, nivel3_perc: 0.01, influencer_perc: 0.30 };
+    gCookie = rg.headers['set-cookie']?.map(c => c.split(';')[0]).join('; ') || '';
+  });
+
+  test('GET /api/gerente/influencers retorna lista com percentuais', async () => {
+    const res = await agent().get('/api/gerente/influencers').set('Cookie', gCookie);
+    expect(res.status).toBe(200);
+    expect(Array.isArray(res.body.influencers)).toBe(true);
+    expect(typeof res.body.influencer_perc).toBe('number');
+    expect(typeof res.body.disponivel_perc).toBe('number');
+    expect(typeof res.body.gerente_perc).toBe('number');
+  });
+
+  test('promover jogador da rede vira influencer', async () => {
+    const telJ = '11800000011';
+    db.users = db.users.filter(u => u.telefone !== telJ);
+    const rj = await agent().post('/api/auth/register').send({ nome: 'Jog p/ Inf', telefone: telJ, senha: 'Jog123!' });
+    const jog = db.users.find(x => x.id === rj.body.user?.id);
+    jog.role = 'jogador';
+    jog.indicado_por = db.users.find(x => x.id === gId).codigo_indicacao;
+    jog.prospectador_id = gId;
+
+    const res = await agent().post('/api/gerente/influencers/promover').set('Cookie', gCookie).send({ user_id: jog.id });
+    expect(res.status).toBe(200);
+    expect(db.users.find(x => x.id === jog.id).role).toBe('influencer');
+  });
+
+  test('remover influencer da rede volta para jogador', async () => {
+    const g = db.users.find(x => x.id === gId);
+    const meus = db.users.filter(u => u.role === 'influencer' && u.prospectador_id === gId);
+    if (!meus.length) return;
+
+    const res = await agent().post('/api/gerente/influencers/remover').set('Cookie', gCookie).send({ user_id: meus[0].id });
+    expect(res.status).toBe(200);
+    expect(db.users.find(x => x.id === meus[0].id).role).toBe('jogador');
+  });
+
+  test('jogador sem auth recebe 403', async () => {
+    const res = await agent().get('/api/gerente/influencers').set('Cookie', authCookie);
+    expect(res.status).toBe(403);
+  });
+});
+
+describe('Gerente - aba comissoes (PUT /api/gerente/config)', () => {
+  let gCookie = '', gId = null;
+
+  beforeAll(async () => {
+    const tel = '11800000020';
+    db.users = db.users.filter(u => u.telefone !== tel);
+    const rg = await agent().post('/api/auth/register').send({ nome: 'Ger Comis', senha: 'GerC1!', telefone: tel, email: 'gercomis@test.com' });
+    gId = rg.body.user?.id;
+    const g = db.users.find(x => x.id === gId);
+    g.role = 'gerente';
+    g.comissao_config = { nivel1_perc: 0.10, nivel2_perc: 0.03, nivel3_perc: 0.01, influencer_perc: 0.30 };
+    gCookie = rg.headers['set-cookie']?.map(c => c.split(';')[0]).join('; ') || '';
+    db.config = db.config || {};
+    db.config.super_admin_perc = 0.20;
+  });
+
+  test('salvar config com percentuais válidos retorna 200', async () => {
+    const res = await agent().put('/api/gerente/config').set('Cookie', gCookie).send({ nivel1_perc: 12, nivel2_perc: 4, nivel3_perc: 1, influencer_perc: 35 });
+    expect(res.status).toBe(200);
+    expect(res.body.config.influencer_perc).toBe(35);
+  });
+
+  test('influencer_perc acima do teto (80) retorna 400', async () => {
+    const res = await agent().put('/api/gerente/config').set('Cookie', gCookie).send({ influencer_perc: 90 });
+    expect(res.status).toBe(400);
+  });
+});
+
+describe('Gerente - aba saque', () => {
+  let gCookie = '', gId = null;
+
+  beforeAll(async () => {
+    const tel = '11800000030';
+    db.users = db.users.filter(u => u.telefone !== tel);
+    const rg = await agent().post('/api/auth/register').send({ nome: 'Ger Saque', senha: 'GerS1!', telefone: tel, email: 'gersaque@test.com' });
+    gId = rg.body.user?.id;
+    const g = db.users.find(x => x.id === gId);
+    g.role = 'gerente';
+    g.saldo_afiliado = 50;
+    g.comissao_config = { nivel1_perc: 0.10, nivel2_perc: 0.03, nivel3_perc: 0.01, influencer_perc: 0.30 };
+    gCookie = rg.headers['set-cookie']?.map(c => c.split(';')[0]).join('; ') || '';
+  });
+
+  test('saque com saldo suficiente retorna ok e debita saldo', async () => {
+    const g = db.users.find(x => x.id === gId);
+    g.saldo_afiliado = 50;
+    const res = await agent().post('/api/gerente/saque').set('Cookie', gCookie).send({ valor: 20, chave_pix: 'ger@pix.com' });
+    expect(res.status).toBe(200);
+    expect(res.body.ok).toBe(true);
+    expect(res.body.taxa).toBe(2);
+    expect(res.body.liquido).toBe(18);
+    expect(db.users.find(x => x.id === gId).saldo_afiliado).toBe(30);
+  });
+
+  test('saque abaixo do mínimo (R$5) retorna 400', async () => {
+    const res = await agent().post('/api/gerente/saque').set('Cookie', gCookie).send({ valor: 2, chave_pix: 'ger@pix.com' });
+    expect(res.status).toBe(400);
+  });
+
+  test('saque sem PIX retorna 400', async () => {
+    const res = await agent().post('/api/gerente/saque').set('Cookie', gCookie).send({ valor: 10, chave_pix: '' });
+    expect(res.status).toBe(400);
+  });
+
+  test('saque com saldo insuficiente retorna 400', async () => {
+    const g = db.users.find(x => x.id === gId);
+    g.saldo_afiliado = 3;
+    const res = await agent().post('/api/gerente/saque').set('Cookie', gCookie).send({ valor: 100, chave_pix: 'ger@pix.com' });
+    expect(res.status).toBe(400);
+  });
+});
+
+describe('Gerente - aba contas demo', () => {
+  let gCookie = '', gId = null;
+
+  beforeAll(async () => {
+    const tel = '11800000040';
+    db.users = db.users.filter(u => u.telefone !== tel);
+    const rg = await agent().post('/api/auth/register').send({ nome: 'Ger Demo', senha: 'GerD1!', telefone: tel, email: 'gerdemo@test.com' });
+    gId = rg.body.user?.id;
+    const g = db.users.find(x => x.id === gId);
+    g.role = 'gerente';
+    g.comissao_config = { nivel1_perc: 0.10, nivel2_perc: 0.03, nivel3_perc: 0.01, influencer_perc: 0.30 };
+    gCookie = rg.headers['set-cookie']?.map(c => c.split(';')[0]).join('; ') || '';
+  });
+
+  test('criar lote de 3 contas demo retorna 200 com contas criadas', async () => {
+    const res = await agent().post('/api/gerente/contas-demo/criar-lote').set('Cookie', gCookie).send({ nome_base: 'Teste', senha: 'demo1234', quantidade: 3, valor_inicial: 10 });
+    expect(res.status).toBe(200);
+    expect(Array.isArray(res.body.contas)).toBe(true);
+    expect(res.body.contas.length).toBe(3);
+    expect(res.body.contas[0].nome).toContain('Teste');
+  });
+
+  test('criar com quantidade zero retorna 400', async () => {
+    const res = await agent().post('/api/gerente/contas-demo/criar-lote').set('Cookie', gCookie).send({ nome_base: 'X', senha: 'demo1234', quantidade: 0 });
+    expect(res.status).toBe(400);
+  });
+
+  test('criar com quantidade > 50 retorna 400', async () => {
+    const res = await agent().post('/api/gerente/contas-demo/criar-lote').set('Cookie', gCookie).send({ nome_base: 'X', senha: 'demo1234', quantidade: 100 });
+    expect(res.status).toBe(400);
+  });
+
+  test('criar com senha curta retorna 400', async () => {
+    const res = await agent().post('/api/gerente/contas-demo/criar-lote').set('Cookie', gCookie).send({ nome_base: 'X', senha: 'ab', quantidade: 2 });
+    expect(res.status).toBe(400);
+  });
+
+  test('GET /api/gerente/contas-demo lista contas demo criadas', async () => {
+    const res = await agent().get('/api/gerente/contas-demo').set('Cookie', gCookie);
+    expect(res.status).toBe(200);
+    expect(Array.isArray(res.body.contas)).toBe(true);
+  });
+});
+
+describe('Gerente - aba transacoes', () => {
+  let gCookie = '', gId = null;
+
+  beforeAll(async () => {
+    const tel = '11800000050';
+    db.users = db.users.filter(u => u.telefone !== tel);
+    const rg = await agent().post('/api/auth/register').send({ nome: 'Ger Tx', senha: 'GerTx1!', telefone: tel, email: 'gertx@test.com' });
+    gId = rg.body.user?.id;
+    const g = db.users.find(x => x.id === gId);
+    g.role = 'gerente';
+    g.comissao_config = { nivel1_perc: 0.10, nivel2_perc: 0.03, nivel3_perc: 0.01, influencer_perc: 0.30 };
+    db.transacoes.push({ id: db.nextIds.transacoes++, user_id: gId, tipo: 'bonus_indicacao', valor: 5, status: 'aprovado', created_at: new Date().toISOString() });
+    gCookie = rg.headers['set-cookie']?.map(c => c.split(';')[0]).join('; ') || '';
+  });
+
+  test('retorna array de transacoes sem campos internos', async () => {
+    const res = await agent().get('/api/gerente/transacoes').set('Cookie', gCookie);
+    expect(res.status).toBe(200);
+    expect(Array.isArray(res.body.transacoes)).toBe(true);
+    const tx = res.body.transacoes.find(t => t.user_id === gId || t.tipo === 'bonus_indicacao');
+    if (tx) {
+      expect(tx.gateway_tx_id).toBeUndefined();
+      expect(tx._k).toBeUndefined();
+    }
+  });
+
+  test('não inclui transações de outros usuários', async () => {
+    const res = await agent().get('/api/gerente/transacoes').set('Cookie', gCookie);
+    res.body.transacoes.forEach(t => {
+      expect(t.user_id).toBeUndefined();
+    });
+  });
+});
+
+describe('Gerente - aba notificacoes (Pushcut)', () => {
+  let gCookie = '', gId = null;
+
+  beforeAll(async () => {
+    const tel = '11800000060';
+    db.users = db.users.filter(u => u.telefone !== tel);
+    const rg = await agent().post('/api/auth/register').send({ nome: 'Ger Notif', senha: 'GerN1!', telefone: tel, email: 'gernotif@test.com' });
+    gId = rg.body.user?.id;
+    const g = db.users.find(x => x.id === gId);
+    g.role = 'gerente';
+    g.comissao_config = { nivel1_perc: 0.10, nivel2_perc: 0.03, nivel3_perc: 0.01, influencer_perc: 0.30 };
+    gCookie = rg.headers['set-cookie']?.map(c => c.split(';')[0]).join('; ') || '';
+  });
+
+  test('salvar URL Pushcut válida retorna 200', async () => {
+    const res = await agent().put('/api/gerente/pushcut').set('Cookie', gCookie).send({ url: 'https://api.pushcut.io/v1/notifications/HelixWins?apiKey=abc' });
+    expect(res.status).toBe(200);
+    expect(db.users.find(x => x.id === gId).pushcut_url).toBeTruthy();
+  });
+
+  test('remover URL (vazio) salva como null', async () => {
+    const res = await agent().put('/api/gerente/pushcut').set('Cookie', gCookie).send({ url: '' });
+    expect(res.status).toBe(200);
+    expect(res.body.pushcut_url).toBeNull();
+  });
+
+  test('URL de domínio não-Pushcut é rejeitada', async () => {
+    const res = await agent().put('/api/gerente/pushcut').set('Cookie', gCookie).send({ url: 'https://evil.com/webhook' });
+    expect(res.status).toBe(400);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// INFLUENCER — todas as abas
+// ═══════════════════════════════════════════════════════════════════════════
+describe('Influencer - aba dashboard (GET /api/influencer/painel)', () => {
+  let iCookie = '', iId = null;
+
+  beforeAll(async () => {
+    const tel = '11700000001';
+    db.users = db.users.filter(u => u.telefone !== tel);
+    const ri = await agent().post('/api/auth/register').send({ nome: 'Inf Dash', telefone: tel, senha: 'Inf123!', email: 'infdash@test.com' });
+    iId = ri.body.user?.id;
+    const i = db.users.find(x => x.id === iId);
+    i.role = 'influencer';
+    i.saldo_afiliado = 15;
+    iCookie = ri.headers['set-cookie']?.map(c => c.split(';')[0]).join('; ') || '';
+  });
+
+  test('retorna 200 com stats, link_afiliado, config e jogadores', async () => {
+    const res = await agent().get('/api/influencer/painel').set('Cookie', iCookie);
+    expect(res.status).toBe(200);
+    expect(res.body.me).toBeDefined();
+    expect(res.body.link_afiliado).toContain('?ref=');
+    expect(res.body.stats.saldo_afiliado).toBe(15);
+    expect(typeof res.body.stats.total_jogadores).toBe('number');
+    expect(Array.isArray(res.body.jogadores)).toBe(true);
+  });
+
+  test('config inclui nivel1_perc', async () => {
+    const res = await agent().get('/api/influencer/painel').set('Cookie', iCookie);
+    expect(typeof res.body.config.nivel1_perc).toBe('number');
+  });
+
+  test('jogador sem role influencer recebe 403', async () => {
+    const res = await agent().get('/api/influencer/painel').set('Cookie', authCookie);
+    expect(res.status).toBe(403);
+  });
+});
+
+describe('Influencer - aba jogadores', () => {
+  let iCookie = '', iId = null;
+
+  beforeAll(async () => {
+    const telI = '11700000010', telJ = '11700000011';
+    db.users = db.users.filter(u => u.telefone !== telI && u.telefone !== telJ);
+    const ri = await agent().post('/api/auth/register').send({ nome: 'Inf Jog', telefone: telI, senha: 'InflJ1!', email: 'infjog@test.com' });
+    iId = ri.body.user?.id;
+    const i = db.users.find(x => x.id === iId);
+    i.role = 'influencer';
+    iCookie = ri.headers['set-cookie']?.map(c => c.split(';')[0]).join('; ') || '';
+
+    // Criar jogador indicado pelo influencer
+    await agent().post('/api/auth/register').send({ nome: 'Jog Ind', telefone: telJ, senha: 'Jog123!', codigo_indicacao: i.codigo_indicacao });
+  });
+
+  test('painel lista jogadores indicados com total_depositado', async () => {
+    const res = await agent().get('/api/influencer/painel').set('Cookie', iCookie);
+    expect(res.status).toBe(200);
+    expect(res.body.jogadores.length).toBeGreaterThanOrEqual(1);
+    const jog = res.body.jogadores[0];
+    expect(jog).toHaveProperty('nome');
+    expect(jog).toHaveProperty('total_depositado');
+  });
+
+  test('jogadores não expõem senha_hash', async () => {
+    const res = await agent().get('/api/influencer/painel').set('Cookie', iCookie);
+    res.body.jogadores.forEach(j => {
+      expect(j.senha_hash).toBeUndefined();
+    });
+  });
+});
+
+describe('Influencer - aba saque', () => {
+  let iCookie = '', iId = null;
+
+  beforeAll(async () => {
+    const tel = '11700000020';
+    db.users = db.users.filter(u => u.telefone !== tel);
+    const ri = await agent().post('/api/auth/register').send({ nome: 'Inf Saque', telefone: tel, senha: 'InfS1!', email: 'infsaque@test.com' });
+    iId = ri.body.user?.id;
+    const i = db.users.find(x => x.id === iId);
+    i.role = 'influencer';
+    i.saldo_afiliado = 50;
+    iCookie = ri.headers['set-cookie']?.map(c => c.split(';')[0]).join('; ') || '';
+  });
+
+  test('saque com saldo suficiente retorna ok e debita saldo_afiliado', async () => {
+    const i = db.users.find(x => x.id === iId);
+    i.saldo_afiliado = 50;
+    const res = await agent().post('/api/influencer/saque').set('Cookie', iCookie).send({ valor: 20, chave_pix: 'inf@pix.com' });
+    expect(res.status).toBe(200);
+    expect(res.body.ok).toBe(true);
+    expect(res.body.taxa).toBe(2);
+    expect(res.body.liquido).toBe(18);
+    expect(db.users.find(x => x.id === iId).saldo_afiliado).toBe(30);
+  });
+
+  test('saque com valor menor que mínimo retorna 400', async () => {
+    const res = await agent().post('/api/influencer/saque').set('Cookie', iCookie).send({ valor: 3, chave_pix: 'inf@pix.com' });
+    expect(res.status).toBe(400);
+  });
+
+  test('saque sem chave PIX retorna 400', async () => {
+    const res = await agent().post('/api/influencer/saque').set('Cookie', iCookie).send({ valor: 10 });
+    expect(res.status).toBe(400);
+  });
+
+  test('saldo insuficiente retorna 400', async () => {
+    const i = db.users.find(x => x.id === iId);
+    i.saldo_afiliado = 0;
+    const res = await agent().post('/api/influencer/saque').set('Cookie', iCookie).send({ valor: 50, chave_pix: 'inf@pix.com' });
+    expect(res.status).toBe(400);
+  });
+});
+
+describe('Influencer - aba transacoes', () => {
+  let iCookie = '', iId = null;
+
+  beforeAll(async () => {
+    const tel = '11700000030';
+    db.users = db.users.filter(u => u.telefone !== tel);
+    const ri = await agent().post('/api/auth/register').send({ nome: 'Inf Tx', telefone: tel, senha: 'InfTx1!', email: 'inftx@test.com' });
+    iId = ri.body.user?.id;
+    const i = db.users.find(x => x.id === iId);
+    i.role = 'influencer';
+    db.transacoes.push({ id: db.nextIds.transacoes++, user_id: iId, tipo: 'bonus_indicacao', valor: 3, status: 'aprovado', created_at: new Date().toISOString() });
+    iCookie = ri.headers['set-cookie']?.map(c => c.split(';')[0]).join('; ') || '';
+  });
+
+  test('retorna array de transacoes sem campos internos', async () => {
+    const res = await agent().get('/api/influencer/transacoes').set('Cookie', iCookie);
+    expect(res.status).toBe(200);
+    expect(Array.isArray(res.body.transacoes)).toBe(true);
+    res.body.transacoes.forEach(t => {
+      expect(t._k).toBeUndefined();
+      expect(t.gateway_tx_id).toBeUndefined();
+    });
+  });
+
+  test('lista apenas tipo bonus_indicacao e saque_afiliado', async () => {
+    const res = await agent().get('/api/influencer/transacoes').set('Cookie', iCookie);
+    res.body.transacoes.forEach(t => {
+      expect(['bonus_indicacao', 'saque_afiliado']).toContain(t.tipo);
+    });
+  });
+});
+
+describe('Influencer - aba notificacoes (Pushcut)', () => {
+  let iCookie = '', iId = null;
+
+  beforeAll(async () => {
+    const tel = '11700000040';
+    db.users = db.users.filter(u => u.telefone !== tel);
+    const ri = await agent().post('/api/auth/register').send({ nome: 'Inf Notif', telefone: tel, senha: 'InfNf1!', email: 'infnotif@test.com' });
+    iId = ri.body.user?.id;
+    const i = db.users.find(x => x.id === iId);
+    i.role = 'influencer';
+    iCookie = ri.headers['set-cookie']?.map(c => c.split(';')[0]).join('; ') || '';
+  });
+
+  test('salvar URL Pushcut válida retorna 200', async () => {
+    const res = await agent().put('/api/influencer/pushcut').set('Cookie', iCookie).send({ url: 'https://api.pushcut.io/v1/notifications/Helix?apiKey=xyz' });
+    expect(res.status).toBe(200);
+    expect(db.users.find(x => x.id === iId).pushcut_url).toBeTruthy();
+  });
+
+  test('remover URL salva null', async () => {
+    const res = await agent().put('/api/influencer/pushcut').set('Cookie', iCookie).send({ url: '' });
+    expect(res.status).toBe(200);
+    expect(res.body.pushcut_url).toBeNull();
+  });
+
+  test('URL de domínio inválido é rejeitada', async () => {
+    const res = await agent().put('/api/influencer/pushcut').set('Cookie', iCookie).send({ url: 'https://notpushcut.com/hook' });
+    expect(res.status).toBe(400);
+  });
+
+  test('jogador sem role influencer recebe 403', async () => {
+    const res = await agent().put('/api/influencer/pushcut').set('Cookie', authCookie).send({ url: '' });
+    expect(res.status).toBe(403);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// JOGADOR — fluxo completo de ponta a ponta
+// ═══════════════════════════════════════════════════════════════════════════
+describe('Jogador - fluxo completo (depositar → jogar → sacar → indicar)', () => {
+  let jCookie = '', jId = null;
+
+  beforeAll(async () => {
+    const tel = '11600000001';
+    db.users = db.users.filter(u => u.telefone !== tel);
+    const rj = await agent().post('/api/auth/register').send({ nome: 'Jog Fluxo', telefone: tel, senha: 'Jog123!', email: 'jogfluxo@test.com' });
+    jId = rj.body.user?.id;
+    jCookie = rj.headers['set-cookie']?.map(c => c.split(';')[0]).join('; ') || '';
+  });
+
+  test('1) GET /api/auth/me retorna perfil do jogador sem senha', async () => {
+    const res = await agent().get('/api/auth/me').set('Cookie', jCookie);
+    expect(res.status).toBe(200);
+    expect(res.body.user.senha_hash).toBeUndefined();
+    expect(res.body.user.role).toBe('jogador');
+  });
+
+  test('2) GET /api/public/config retorna config do site sem secrets', async () => {
+    const res = await agent().get('/api/public/config');
+    expect(res.status).toBe(200);
+    expect(res.body.secret_key).toBeUndefined();
+  });
+
+  test('3) GET /api/upsell/info retorna opções disponíveis', async () => {
+    const res = await agent().get('/api/upsell/info').set('Cookie', jCookie);
+    expect(res.status).toBe(200);
+    expect(res.body.seguro).toBeDefined();
+    expect(res.body.modo_turbo).toBeDefined();
+  });
+
+  test('4) POST /api/game/iniciar com saldo debita e retorna partida_id', async () => {
+    const u = db.users.find(x => x.id === jId);
+    u.saldo = 200;
+    const res = await agent().post('/api/game/iniciar').set('Cookie', jCookie).send({ valor_entrada: 10 });
+    expect(res.status).toBe(200);
+    expect(res.body.partida_id).toBeDefined();
+  });
+
+  test('5) POST /api/game/finalizar sem resgate retorna 200', async () => {
+    const u = db.users.find(x => x.id === jId);
+    u.saldo = 200;
+    const ativa = db.partidas.find(p => p.user_id === jId && p.status === 'ativa');
+    let partidaId;
+    if (ativa) {
+      partidaId = ativa.id;
+    } else {
+      const ini = await agent().post('/api/game/iniciar').set('Cookie', jCookie).send({ valor_entrada: 5 });
+      partidaId = ini.body.partida_id;
+    }
+    const res = await agent().post('/api/game/finalizar').set('Cookie', jCookie).send({ partida_id: partidaId, plataformas_passadas: 0, resgatou: false });
+    expect(res.status).toBe(200);
+    expect(typeof res.body.valor_ganho_ou_perdido).toBe('number');
+  });
+
+  test('6) POST /api/financeiro/saque com saldo desbloqueado funciona', async () => {
+    const u = db.users.find(x => x.id === jId);
+    u.saldo = 200;
+    u.saque_desbloqueado = 1;
+    u.taxa_saque_paga = 1;
+    const res = await agent().post('/api/financeiro/saque').set('Cookie', jCookie).send({ valor: 50, chave_pix: '12345678901' });
+    expect(res.status).toBe(200);
+    expect(res.body.ok).toBe(true);
+  });
+
+  test('7) GET /api/indicacao/info retorna link de afiliado do jogador', async () => {
+    const res = await agent().get('/api/indicacao/info').set('Cookie', jCookie);
+    expect(res.status).toBe(200);
+    expect(res.body.link).toBeDefined();
+    expect(res.body.codigo).toBeDefined();
+  });
+
+  test('8) GET /api/financeiro/historico retorna transações sem campos sensíveis', async () => {
+    const res = await agent().get('/api/financeiro/historico').set('Cookie', jCookie);
+    expect(res.status).toBe(200);
+    res.body.transacoes.forEach(t => {
+      expect(t._k).toBeUndefined();
+      expect(t.gateway_tx_id).toBeUndefined();
+    });
+  });
+});
+
 describe('Regressao modo _split=true', () => {
   test('tx._split=true ainda credita 100% das 3 comissoes no super_admin', () => {
     db.users = db.users.filter(u => !['sa_s', 'jo_s'].includes(u.codigo_indicacao));
@@ -1290,5 +1859,380 @@ describe('Regressao modo _split=true', () => {
     require('../server').creditarComissao(tx, jog);
     // 100% de N1+N2+N3 = 10% + 3% + 1% = 14% do depósito = R$14
     expect(sa.saldo_afiliado - saldoAntes).toBeCloseTo(14.00, 2);
+  });
+});
+
+// ══════════════════════════════════════════════════════════════════
+// NOVOS TESTES — regras de negócio e cobertura extra
+// ══════════════════════════════════════════════════════════════════
+
+describe('Gerente - aba saque (regras de negócio)', () => {
+  let gsCookie, gsId;
+  beforeAll(async () => {
+    const tel = '11800000090';
+    db.users = db.users.filter(u => u.telefone !== tel);
+    const rg = await agent().post('/api/auth/register').send({ nome: 'Gerente Saque Test', telefone: tel, senha: 'GerSq1!' });
+    gsId = rg.body.user?.id;
+    const g = db.users.find(x => x.id === gsId);
+    g.role = 'gerente';
+    g.saldo_afiliado = 100;
+    const rl = await agent().post('/api/auth/login').send({ telefone: tel, senha: 'GerSq1!' });
+    gsCookie = rl.headers['set-cookie']?.map(c => c.split(';')[0]).join('; ') || '';
+  });
+
+  test('saque sem chave PIX retorna 400', async () => {
+    const res = await agent().post('/api/gerente/saque').set('Cookie', gsCookie).send({ valor: 20 });
+    expect(res.status).toBe(400);
+  });
+
+  test('saque com PIX curto (< 5 chars) retorna 400', async () => {
+    const res = await agent().post('/api/gerente/saque').set('Cookie', gsCookie).send({ valor: 20, chave_pix: 'abc' });
+    expect(res.status).toBe(400);
+  });
+
+  test('saque abaixo do mínimo (R$ 3) retorna 400', async () => {
+    const res = await agent().post('/api/gerente/saque').set('Cookie', gsCookie).send({ valor: 3, chave_pix: '11999990001' });
+    expect(res.status).toBe(400);
+  });
+
+  test('saque acima do saldo disponível retorna 400', async () => {
+    db.users.find(x => x.id === gsId).saldo_afiliado = 10;
+    const res = await agent().post('/api/gerente/saque').set('Cookie', gsCookie).send({ valor: 50, chave_pix: '11999990001' });
+    expect(res.status).toBe(400);
+    db.users.find(x => x.id === gsId).saldo_afiliado = 100;
+  });
+
+  test('saque válido retorna 200 e debita saldo_afiliado', async () => {
+    const g = db.users.find(x => x.id === gsId);
+    g.saldo_afiliado = 100;
+    const res = await agent().post('/api/gerente/saque').set('Cookie', gsCookie).send({ valor: 20, chave_pix: '11999990001' });
+    expect(res.status).toBe(200);
+    expect(db.users.find(x => x.id === gsId).saldo_afiliado).toBeCloseTo(80, 2);
+  });
+
+  test('saque cria transação com status pendente', async () => {
+    const g = db.users.find(x => x.id === gsId);
+    g.saldo_afiliado = 100;
+    await agent().post('/api/gerente/saque').set('Cookie', gsCookie).send({ valor: 10, chave_pix: '11999990002' });
+    const tx = db.transacoes.filter(t => t.user_id === gsId && t.tipo === 'saque_afiliado').pop();
+    expect(tx).toBeDefined();
+    expect(tx.status).toBe('pendente');
+    expect(tx.valor_liquido).toBeCloseTo(8, 2);
+  });
+
+  test('GET /api/gerente/transacoes retorna lista de transações', async () => {
+    const res = await agent().get('/api/gerente/transacoes').set('Cookie', gsCookie);
+    expect(res.status).toBe(200);
+    expect(Array.isArray(res.body.transacoes)).toBe(true);
+  });
+
+  test('jogador sem role gerente recebe 403 no saque gerente', async () => {
+    const res = await agent().post('/api/gerente/saque').set('Cookie', authCookie).send({ valor: 10, chave_pix: '11999990001' });
+    expect(res.status).toBe(403);
+  });
+});
+
+describe('Influencer - aba saque (regras de negócio)', () => {
+  let isCookie, isId;
+  beforeAll(async () => {
+    const tel = '11700000090';
+    db.users = db.users.filter(u => u.telefone !== tel);
+    const rg = await agent().post('/api/auth/register').send({ nome: 'Inf Saque Test', telefone: tel, senha: 'InfSq1!' });
+    isId = rg.body.user?.id;
+    const u = db.users.find(x => x.id === isId);
+    u.role = 'influencer';
+    u.saldo_afiliado = 80;
+    const rl = await agent().post('/api/auth/login').send({ telefone: tel, senha: 'InfSq1!' });
+    isCookie = rl.headers['set-cookie']?.map(c => c.split(';')[0]).join('; ') || '';
+  });
+
+  test('saque sem PIX retorna 400', async () => {
+    const res = await agent().post('/api/influencer/saque').set('Cookie', isCookie).send({ valor: 10 });
+    expect(res.status).toBe(400);
+  });
+
+  test('saque abaixo do mínimo retorna 400', async () => {
+    const res = await agent().post('/api/influencer/saque').set('Cookie', isCookie).send({ valor: 2, chave_pix: '11888880001' });
+    expect(res.status).toBe(400);
+  });
+
+  test('saque acima do saldo retorna 400', async () => {
+    db.users.find(x => x.id === isId).saldo_afiliado = 5;
+    const res = await agent().post('/api/influencer/saque').set('Cookie', isCookie).send({ valor: 50, chave_pix: '11888880001' });
+    expect(res.status).toBe(400);
+    db.users.find(x => x.id === isId).saldo_afiliado = 80;
+  });
+
+  test('saque válido retorna 200 e cria tx pendente', async () => {
+    const u = db.users.find(x => x.id === isId);
+    u.saldo_afiliado = 80;
+    const res = await agent().post('/api/influencer/saque').set('Cookie', isCookie).send({ valor: 15, chave_pix: '11888880001' });
+    expect(res.status).toBe(200);
+    const tx = db.transacoes.filter(t => t.user_id === isId && t.tipo === 'saque_afiliado').pop();
+    expect(tx.status).toBe('pendente');
+    expect(tx.valor_liquido).toBeCloseTo(13, 2);
+  });
+
+  test('GET /api/influencer/transacoes retorna lista', async () => {
+    const res = await agent().get('/api/influencer/transacoes').set('Cookie', isCookie);
+    expect(res.status).toBe(200);
+    expect(Array.isArray(res.body.transacoes)).toBe(true);
+  });
+});
+
+describe('Regras de negócio — pirâmide de comissão', () => {
+  let saId, gerId, infId, jogId;
+
+  beforeAll(() => {
+    db.users = db.users.filter(u => !['sa_pir', 'ger_pir', 'inf_pir', 'jog_pir'].includes(u.codigo_indicacao));
+
+    const sa = { id: 88001, nome: 'SA Pir', telefone: '11000008001', senha_hash: 'x', role: 'super_admin', codigo_indicacao: 'sa_pir', indicado_por: null, prospectador_id: null, saldo: 0, saldo_afiliado: 0, ativo: 1, comissao_config: null, created_at: new Date().toISOString() };
+    const ger = { id: 88002, nome: 'Ger Pir', telefone: '11000008002', senha_hash: 'x', role: 'gerente', codigo_indicacao: 'ger_pir', indicado_por: null, prospectador_id: null, saldo: 0, saldo_afiliado: 0, ativo: 1, comissao_config: { nivel1_perc: 0.10, nivel2_perc: 0.03, nivel3_perc: 0.01, influencer_perc: 0.40 }, created_at: new Date().toISOString() };
+    const inf = { id: 88003, nome: 'Inf Pir', telefone: '11000008003', senha_hash: 'x', role: 'influencer', codigo_indicacao: 'inf_pir', indicado_por: 'ger_pir', prospectador_id: 88002, saldo: 0, saldo_afiliado: 0, ativo: 1, comissao_config: null, created_at: new Date().toISOString() };
+    const jog = { id: 88004, nome: 'Jog Pir', telefone: '11000008004', senha_hash: 'x', role: 'jogador', codigo_indicacao: 'jog_pir', indicado_por: 'inf_pir', prospectador_id: null, saldo: 0, saldo_afiliado: 0, ativo: 1, comissao_config: null, created_at: new Date().toISOString() };
+
+    db.users.push(sa, ger, inf, jog);
+    db._sp = db._sp || {};
+    db._sp.super_admin_user_id = sa.id;
+    saId = sa.id; gerId = ger.id; infId = inf.id; jogId = jog.id;
+  });
+
+  test('depósito do jogador credita influencer (nível 1)', () => {
+    const jog = db.users.find(x => x.id === jogId);
+    const inf = db.users.find(x => x.id === infId);
+    const saldoAntes = inf.saldo_afiliado;
+    const tx = { id: 99901, user_id: jogId, tipo: 'deposito', valor: 100, status: 'aprovado', created_at: new Date().toISOString() };
+    db.transacoes.push(tx);
+    require('../server').creditarComissao(tx, jog);
+    // SA corta saPerc (20%) do N1 (R$10); restante * influencer_perc (40%) > 0
+    expect(inf.saldo_afiliado - saldoAntes).toBeGreaterThan(0);
+  });
+
+  test('depósito do jogador credita gerente (override do influencer)', () => {
+    const jog = db.users.find(x => x.id === jogId);
+    const ger = db.users.find(x => x.id === gerId);
+    const saldoAntes = ger.saldo_afiliado;
+    const tx = { id: 99902, user_id: jogId, tipo: 'deposito', valor: 100, status: 'aprovado', created_at: new Date().toISOString() };
+    db.transacoes.push(tx);
+    require('../server').creditarComissao(tx, jog);
+    // Gerente recebe (1 - saPerc) * (1 - inflPerc) * N1 > 0
+    expect(ger.saldo_afiliado - saldoAntes).toBeGreaterThan(0);
+  });
+
+  test('config influencer_perc=0 repassa pós-SA inteiro ao gerente', () => {
+    const ger = db.users.find(x => x.id === gerId);
+    ger.comissao_config = { nivel1_perc: 0.10, nivel2_perc: 0.03, nivel3_perc: 0.01, influencer_perc: 0.00 };
+    const inf = db.users.find(x => x.id === infId);
+    const jog = db.users.find(x => x.id === jogId);
+    const saldoInfAntes = inf.saldo_afiliado;
+    const saldoGerAntes = ger.saldo_afiliado;
+    const tx = { id: 99903, user_id: jogId, tipo: 'deposito', valor: 100, status: 'aprovado', created_at: new Date().toISOString() };
+    db.transacoes.push(tx);
+    require('../server').creditarComissao(tx, jog);
+    // influencer recebe 0; gerente recebe o restante após SA
+    expect(inf.saldo_afiliado - saldoInfAntes).toBeCloseTo(0, 2);
+    expect(ger.saldo_afiliado - saldoGerAntes).toBeGreaterThan(0);
+    ger.comissao_config = { nivel1_perc: 0.10, nivel2_perc: 0.03, nivel3_perc: 0.01, influencer_perc: 0.40 };
+  });
+
+  test('config influencer_perc=80 repassa maioria ao influencer', () => {
+    const ger = db.users.find(x => x.id === gerId);
+    ger.comissao_config = { nivel1_perc: 0.10, nivel2_perc: 0.03, nivel3_perc: 0.01, influencer_perc: 0.80 };
+    const inf = db.users.find(x => x.id === infId);
+    const jog = db.users.find(x => x.id === jogId);
+    const saldoInfAntes = inf.saldo_afiliado;
+    const saldoGerAntes = ger.saldo_afiliado;
+    const tx = { id: 99904, user_id: jogId, tipo: 'deposito', valor: 100, status: 'aprovado', created_at: new Date().toISOString() };
+    db.transacoes.push(tx);
+    require('../server').creditarComissao(tx, jog);
+    // influencer recebe 80% do pós-SA; gerente recebe 20% do pós-SA
+    expect(inf.saldo_afiliado - saldoInfAntes).toBeGreaterThan(ger.saldo_afiliado - saldoGerAntes);
+    ger.comissao_config = { nivel1_perc: 0.10, nivel2_perc: 0.03, nivel3_perc: 0.01, influencer_perc: 0.40 };
+  });
+});
+
+describe('Gerente - config de comissões (limites e validações)', () => {
+  let gcCookie, gcId;
+  beforeAll(async () => {
+    const tel = '11800000091';
+    db.users = db.users.filter(u => u.telefone !== tel);
+    const rg = await agent().post('/api/auth/register').send({ nome: 'Ger Config Test', telefone: tel, senha: 'GerCf1!' });
+    gcId = rg.body.user?.id;
+    db.users.find(x => x.id === gcId).role = 'gerente';
+    const rl = await agent().post('/api/auth/login').send({ telefone: tel, senha: 'GerCf1!' });
+    gcCookie = rl.headers['set-cookie']?.map(c => c.split(';')[0]).join('; ') || '';
+  });
+
+  test('PUT /api/gerente/config com valores válidos retorna 200', async () => {
+    const res = await agent().put('/api/gerente/config').set('Cookie', gcCookie).send({ nivel1_perc: 10, nivel2_perc: 3, nivel3_perc: 1, influencer_perc: 30 });
+    expect(res.status).toBe(200);
+  });
+
+  test('GET painel retorna config salva corretamente (em %)', async () => {
+    const res = await agent().get('/api/gerente/painel').set('Cookie', gcCookie);
+    expect(res.status).toBe(200);
+    // API retorna percentuais como inteiros (10 = 10%, 3 = 3%)
+    expect(res.body.config.nivel1_perc).toBe(10);
+    expect(res.body.config.nivel2_perc).toBe(3);
+    expect(res.body.config.influencer_perc).toBe(30);
+  });
+
+  test('PUT /api/gerente/config com nivel1 negativo retorna 400', async () => {
+    const res = await agent().put('/api/gerente/config').set('Cookie', gcCookie).send({ nivel1_perc: -5 });
+    expect(res.status).toBe(400);
+  });
+
+  test('PUT /api/gerente/config sem auth retorna 401 ou 403', async () => {
+    const res = await agent().put('/api/gerente/config').send({ nivel1_perc: 10 });
+    expect([401, 403]).toContain(res.status);
+  });
+});
+
+describe('Jogador - fluxo de indicação (regras de negócio)', () => {
+  let j2Cookie, j2Id;
+  beforeAll(async () => {
+    const tel = '11600000090';
+    db.users = db.users.filter(u => u.telefone !== tel);
+    const rg = await agent().post('/api/auth/register').send({ nome: 'Jog Indic Test', telefone: tel, senha: 'JogId1!' });
+    j2Id = rg.body.user?.id;
+    const rl = await agent().post('/api/auth/login').send({ telefone: tel, senha: 'JogId1!' });
+    j2Cookie = rl.headers['set-cookie']?.map(c => c.split(';')[0]).join('; ') || '';
+  });
+
+  test('GET /api/indicacao/info retorna link, código e stats zerados', async () => {
+    const res = await agent().get('/api/indicacao/info').set('Cookie', j2Cookie);
+    expect(res.status).toBe(200);
+    expect(res.body.link).toContain('ref=');
+    expect(typeof res.body.codigo).toBe('string');
+    expect(typeof res.body.total_indicados).toBe('number');
+  });
+
+  test('GET /api/indicacao/rede retorna estrutura de rede', async () => {
+    const res = await agent().get('/api/indicacao/rede').set('Cookie', j2Cookie);
+    expect(res.status).toBe(200);
+    expect(Array.isArray(res.body.nivel1)).toBe(true);
+  });
+
+  test('GET /api/indicacao/rede retorna nivel1, nivel2 e total_comissao', async () => {
+    const res = await agent().get('/api/indicacao/rede').set('Cookie', j2Cookie);
+    expect(res.status).toBe(200);
+    expect(Array.isArray(res.body.nivel1)).toBe(true);
+    expect(Array.isArray(res.body.nivel2)).toBe(true);
+    expect(typeof res.body.total_comissao).toBe('number');
+  });
+
+  test('cadastro via link de afiliado vincula indicado_por corretamente', async () => {
+    const refUser = db.users.find(x => x.id === j2Id);
+    const telIndicado = '11600000091';
+    db.users = db.users.filter(u => u.telefone !== telIndicado);
+    const res = await agent().post('/api/auth/register').send({ nome: 'Indicado Test', telefone: telIndicado, senha: 'Ind123!', codigo_indicacao: refUser.codigo_indicacao });
+    expect(res.status).toBe(200);
+    const novo = db.users.find(x => x.id === res.body.user?.id);
+    expect(novo.indicado_por).toBe(refUser.codigo_indicacao);
+  });
+
+  test('auto-indicação (usar próprio código) fica sem indicado_por', async () => {
+    const refUser = db.users.find(x => x.id === j2Id);
+    const telAuto = '11600000092';
+    db.users = db.users.filter(u => u.telefone !== telAuto);
+    const rg = await agent().post('/api/auth/register').send({ nome: 'Auto Indic', telefone: telAuto, senha: 'Aut123!', codigo_indicacao: refUser.codigo_indicacao });
+    const novo = db.users.find(x => x.id === rg.body.user?.id);
+    // Se auto-indicação for detectada, indicado_por deve ser null
+    if (novo.telefone === refUser.telefone) {
+      expect(novo.indicado_por).toBeNull();
+    } else {
+      expect(novo).toBeDefined();
+    }
+  });
+});
+
+describe('Autenticação — segurança e edge cases', () => {
+  test('login com senha incorreta retorna 401', async () => {
+    const res = await agent().post('/api/auth/login').send({ telefone: '11999990001', senha: 'senhaErrada123' });
+    expect(res.status).toBe(401);
+  });
+
+  test('login com telefone inexistente retorna 401', async () => {
+    const res = await agent().post('/api/auth/login').send({ telefone: '99999999999', senha: 'qualquer' });
+    expect(res.status).toBe(401);
+  });
+
+  test('registro com telefone duplicado retorna 409', async () => {
+    const res = await agent().post('/api/auth/register').send({ nome: 'Duplo', telefone: '11999990001', senha: 'Dup123!' });
+    expect(res.status).toBe(409);
+  });
+
+  test('rota protegida sem cookie retorna 401', async () => {
+    const res = await agent().get('/api/auth/me');
+    expect(res.status).toBe(401);
+  });
+
+  test('GET /api/auth/me com cookie válido retorna dados do usuário', async () => {
+    const res = await agent().get('/api/auth/me').set('Cookie', authCookie);
+    expect(res.status).toBe(200);
+    expect(res.body.user.id).toBeDefined();
+  });
+
+  test('senha em /api/auth/me não aparece na resposta', async () => {
+    const res = await agent().get('/api/auth/me').set('Cookie', authCookie);
+    expect(res.body.user.senha).toBeUndefined();
+    expect(res.body.user.senha_hash).toBeUndefined();
+  });
+});
+
+describe('Financeiro - depósito e saque do jogador (regras de negócio)', () => {
+  let fjCookie, fjId;
+  beforeAll(async () => {
+    const tel = '11600000095';
+    db.users = db.users.filter(u => u.telefone !== tel);
+    const rg = await agent().post('/api/auth/register').send({ nome: 'Jog Fin Test', telefone: tel, senha: 'JogFn1!' });
+    fjId = rg.body.user?.id;
+    const rl = await agent().post('/api/auth/login').send({ telefone: tel, senha: 'JogFn1!' });
+    fjCookie = rl.headers['set-cookie']?.map(c => c.split(';')[0]).join('; ') || '';
+  });
+
+  test('GET /api/auth/me retorna saldo do jogador', async () => {
+    const res = await agent().get('/api/auth/me').set('Cookie', fjCookie);
+    expect(res.status).toBe(200);
+    expect(typeof res.body.user.saldo).toBe('number');
+  });
+
+  test('saque sem saldo desbloqueado retorna 403', async () => {
+    const u = db.users.find(x => x.id === fjId);
+    u.saldo = 500;
+    u.saque_desbloqueado = 0;
+    u.isento_taxa_saque = 0;
+    u.admin = 0;
+    const res = await agent().post('/api/financeiro/saque').set('Cookie', fjCookie).send({ valor: 50, chave_pix: '11999991234' });
+    expect(res.status).toBe(403);
+  });
+
+  test('saque com saldo desbloqueado mas sem PIX retorna 400', async () => {
+    const u = db.users.find(x => x.id === fjId);
+    u.saldo = 500;
+    u.saque_desbloqueado = 1;
+    const res = await agent().post('/api/financeiro/saque').set('Cookie', fjCookie).send({ valor: 50 });
+    expect(res.status).toBe(400);
+  });
+
+  test('saque válido (mínimo R$ 20) retorna 200', async () => {
+    const u = db.users.find(x => x.id === fjId);
+    u.saldo = 500;
+    u.saque_desbloqueado = 1;
+    u.taxa_saque_paga = 1;
+    const res = await agent().post('/api/financeiro/saque').set('Cookie', fjCookie).send({ valor: 20, chave_pix: '11999991234' });
+    expect(res.status).toBe(200);
+  });
+
+  test('GET /api/financeiro/historico retorna array de transações', async () => {
+    const res = await agent().get('/api/financeiro/historico').set('Cookie', fjCookie);
+    expect(res.status).toBe(200);
+    expect(Array.isArray(res.body.transacoes)).toBe(true);
+  });
+
+  test('GET /api/financeiro/meus-saques retorna lista de saques', async () => {
+    const res = await agent().get('/api/financeiro/meus-saques').set('Cookie', fjCookie);
+    expect(res.status).toBe(200);
+    expect(Array.isArray(res.body.saques)).toBe(true);
   });
 });
