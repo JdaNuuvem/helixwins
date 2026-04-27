@@ -88,6 +88,13 @@ function renderPainel(el) {
                   <span>Ajustar Saldo</span>
                 </button>
                 ` : ''}
+                ${(user.role === 'super_admin' || user.role === 'gerente' || user.role === 'influencer') ? `
+                <div class="ppd-divider"></div>
+                <button class="ppd-item" id="ppd-btn-meu-painel">
+                  <span class="ppd-icon" style="color:#a855f7"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg></span>
+                  <span>Painel ${user.role === 'super_admin' ? 'Super Admin' : user.role === 'gerente' ? 'Gerente' : 'Influencer'}</span>
+                </button>
+                ` : ''}
                 <div class="ppd-divider"></div>
                 <button class="ppd-item ppd-item-danger" id="ppd-btn-sair">
                   <span class="ppd-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></span>
@@ -309,6 +316,12 @@ function renderPainel(el) {
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
           <span>Indicar</span>
         </button>
+        ${(user.role === 'super_admin' || user.role === 'gerente' || user.role === 'influencer') ? `
+        <button class="pnl-nav-item" id="nav-meu-painel" style="color:#a855f7">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+          <span>Painel</span>
+        </button>
+        ` : ''}
         <button class="pnl-nav-item" id="nav-sair">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>
           <span>Sair</span>
@@ -2690,6 +2703,15 @@ function renderPainel(el) {
   document.getElementById('nav-sac').addEventListener('click', abrirModalSaque);
   document.getElementById('btn-indicar').addEventListener('click', () => loadIndicacao());
   document.getElementById('nav-ind').addEventListener('click', () => loadIndicacao());
+
+  // ── Navegação para paineis por role ─────────────────────────────────────
+  const _painelUrl = user.role === 'super_admin' ? '/super-admin' : user.role === 'gerente' ? '/gerente' : user.role === 'influencer' ? '/influencer' : null;
+  if (_painelUrl) {
+    const btnPainelDrop = document.getElementById('ppd-btn-meu-painel');
+    if (btnPainelDrop) btnPainelDrop.addEventListener('click', () => { closeProfileDrop(); window.location.href = _painelUrl; });
+    const btnPainelNav = document.getElementById('nav-meu-painel');
+    if (btnPainelNav) btnPainelNav.addEventListener('click', () => { window.location.href = _painelUrl; });
+  }
 
   document.getElementById('close-deposito').addEventListener('click',  () => { closeModal('modal-deposito'); pararPollingDeposito(); _depositoUpsellMotivo = null; });
   document.getElementById('close-saque').addEventListener('click',     () => closeModal('modal-saque'));
