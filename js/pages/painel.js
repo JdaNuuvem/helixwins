@@ -290,7 +290,7 @@ function renderPainel(el) {
         <div id="missoes-card" class="pnl-card" style="margin-top:16px;padding:16px;display:none">
           <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
             <span style="font-size:20px">🎯</span>
-            <div style="font-size:15px;font-weight:700;color:#e9d5ff">Missoes e Bonus</div>
+            <div style="font-size:15px;font-weight:700;color:#2d0040">Missões e Bônus</div>
           </div>
           <div id="missoes-lista" style="display:flex;flex-direction:column;gap:8px"></div>
         </div>
@@ -3484,19 +3484,19 @@ function renderPainel(el) {
         const progresso = Math.min(md.partidas_hoje, md.partidas_necessarias);
         const pct = Math.round((progresso / md.partidas_necessarias) * 100);
         items.push(`
-          <div style="background:rgba(34,197,94,.08);border:1px solid rgba(34,197,94,.2);border-radius:10px;padding:12px">
+          <div style="background:rgba(34,197,94,.1);border:1.5px solid rgba(34,197,94,.45);border-radius:10px;padding:12px">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
-              <span style="font-size:13px;font-weight:600;color:#86efac">🎮 Meta Diaria: Jogue ${md.partidas_necessarias} partidas</span>
-              <span style="font-size:12px;color:rgba(255,255,255,.5)">${progresso}/${md.partidas_necessarias}</span>
+              <span style="font-size:13px;font-weight:700;color:#15803d">🎮 Meta Diária: Jogue ${md.partidas_necessarias} partidas</span>
+              <span style="font-size:12px;font-weight:600;color:#374151">${progresso}/${md.partidas_necessarias}</span>
             </div>
-            <div style="background:rgba(0,0,0,.3);border-radius:6px;height:6px;overflow:hidden;margin-bottom:8px">
+            <div style="background:rgba(0,0,0,.1);border-radius:6px;height:6px;overflow:hidden;margin-bottom:8px">
               <div style="width:${pct}%;height:100%;background:linear-gradient(90deg,#22c55e,#4ade80);border-radius:6px;transition:width .3s"></div>
             </div>
             ${md.completa && !md.resgatada
               ? `<button onclick="(async()=>{try{const r=await API.resgatarMetaDiaria();showToast('R$ ${md.bonus.toFixed(2)} creditados!','success');loadMissoes();loadDashboard()}catch(e){showToast(e.message,'error')}})()" style="background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff;border:none;border-radius:8px;padding:8px 16px;font-size:12px;font-weight:700;cursor:pointer;width:100%">RESGATAR R$ ${md.bonus.toFixed(2)}</button>`
               : md.resgatada
-                ? `<div style="text-align:center;font-size:12px;color:#4ade80">✅ Resgatado hoje!</div>`
-                : `<div style="text-align:center;font-size:11px;color:rgba(255,255,255,.4)">Jogue mais ${md.partidas_necessarias - progresso} partida${md.partidas_necessarias - progresso !== 1 ? 's' : ''} para ganhar R$ ${md.bonus.toFixed(2)}</div>`
+                ? `<div style="text-align:center;font-size:12px;color:#16a34a;font-weight:600">✅ Resgatado hoje!</div>`
+                : `<div style="text-align:center;font-size:11px;color:#6b7280">Jogue mais ${md.partidas_necessarias - progresso} partida${md.partidas_necessarias - progresso !== 1 ? 's' : ''} para ganhar R$ ${md.bonus.toFixed(2)}</div>`
             }
           </div>`);
       }
@@ -3505,17 +3505,17 @@ function renderPainel(el) {
       if (data.streak) {
         data.streak.bonuses.forEach((s, i) => {
           items.push(`
-            <div style="background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.2);border-radius:10px;padding:12px;display:flex;align-items:center;gap:12px">
+            <div style="background:rgba(251,191,36,.12);border:1.5px solid rgba(251,191,36,.5);border-radius:10px;padding:12px;display:flex;align-items:center;gap:12px">
               <div style="font-size:24px">🔥</div>
               <div style="flex:1">
-                <div style="font-size:13px;font-weight:600;color:#fde68a">${s.partidas} partidas = R$ ${s.bonus.toFixed(2)}</div>
-                <div style="font-size:11px;color:rgba(255,255,255,.4)">${data.streak.partidas_hoje}/${s.partidas} hoje</div>
+                <div style="font-size:13px;font-weight:700;color:#92400e">${s.partidas} partidas = R$ ${s.bonus.toFixed(2)}</div>
+                <div style="font-size:11px;color:#6b7280;font-weight:500">${data.streak.partidas_hoje}/${s.partidas} hoje</div>
               </div>
               ${s.atingida && !s.resgatada
                 ? `<button onclick="(async()=>{try{const r=await API.resgatarStreak(${i});showToast('R$ ${s.bonus.toFixed(2)} creditados!','success');loadMissoes();loadDashboard()}catch(e){showToast(e.message,'error')}})()" style="background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff;border:none;border-radius:8px;padding:6px 14px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">RESGATAR</button>`
                 : s.resgatada
-                  ? `<span style="font-size:11px;color:#fbbf24">✅</span>`
-                  : `<span style="font-size:11px;color:rgba(255,255,255,.3)">🔒</span>`
+                  ? `<span style="font-size:13px;color:#d97706;font-weight:700">✅</span>`
+                  : `<span style="font-size:13px;color:#d1d5db">🔒</span>`
               }
             </div>`);
         });
@@ -3524,12 +3524,12 @@ function renderPainel(el) {
       // Cashback semanal
       if (data.cashback && data.cashback.valor > 0 && !data.cashback.ja_resgatou) {
         items.push(`
-          <div style="background:rgba(168,85,247,.08);border:1px solid rgba(168,85,247,.2);border-radius:10px;padding:12px">
+          <div style="background:rgba(168,85,247,.1);border:1.5px solid rgba(168,85,247,.45);border-radius:10px;padding:12px">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
-              <span style="font-size:13px;font-weight:600;color:#e9d5ff">💜 Cashback Semanal</span>
-              <span style="font-size:14px;font-weight:800;color:#c084fc">R$ ${data.cashback.valor.toFixed(2)}</span>
+              <span style="font-size:13px;font-weight:700;color:#6d28d9">💜 Cashback Semanal</span>
+              <span style="font-size:14px;font-weight:800;color:#7c3aed">R$ ${data.cashback.valor.toFixed(2)}</span>
             </div>
-            <div style="font-size:11px;color:rgba(255,255,255,.4);margin-bottom:8px">5% das suas perdas liquidas da semana (R$ ${data.cashback.perda_liquida.toFixed(2)})</div>
+            <div style="font-size:11px;color:#6b7280;margin-bottom:8px;font-weight:500">5% das suas perdas líquidas da semana (R$ ${data.cashback.perda_liquida.toFixed(2)})</div>
             <button onclick="(async()=>{try{const r=await API.resgatarCashback();showToast('Cashback creditado!','success');loadMissoes();loadDashboard()}catch(e){showToast(e.message,'error')}})()" style="background:linear-gradient(135deg,#a855f7,#7c3aed);color:#fff;border:none;border-radius:8px;padding:8px 16px;font-size:12px;font-weight:700;cursor:pointer;width:100%">RESGATAR CASHBACK</button>
           </div>`);
       }
@@ -3537,8 +3537,8 @@ function renderPainel(el) {
       // Ranking e Presente (links)
       items.push(`
         <div style="display:flex;gap:8px">
-          <button onclick="loadRanking()" style="flex:1;background:rgba(251,191,36,.1);border:1px solid rgba(251,191,36,.2);border-radius:10px;padding:10px;font-size:12px;font-weight:700;color:#fde68a;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px">🏅 Ranking</button>
-          <button onclick="loadPresente()" style="flex:1;background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.2);border-radius:10px;padding:10px;font-size:12px;font-weight:700;color:#86efac;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px">🎁 Presente</button>
+          <button onclick="loadRanking()" style="flex:1;background:rgba(251,191,36,.12);border:1.5px solid rgba(251,191,36,.5);border-radius:10px;padding:10px;font-size:12px;font-weight:700;color:#92400e;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px">🏅 Ranking</button>
+          <button onclick="loadPresente()" style="flex:1;background:rgba(34,197,94,.12);border:1.5px solid rgba(34,197,94,.5);border-radius:10px;padding:10px;font-size:12px;font-weight:700;color:#15803d;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px">🎁 Presente</button>
         </div>`);
 
       // Atualizar vidas count
