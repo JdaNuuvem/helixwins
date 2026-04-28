@@ -64,31 +64,38 @@
   .toast.show { opacity: 1; }
   .toast.error { background: rgba(239,68,68,.95); }
 
+  /* ── Ocultar scrollbar nas abas ────────────────────────────── */
+  .tabs { scrollbar-width: none; -ms-overflow-style: none; }
+  .tabs::-webkit-scrollbar { display: none; }
+
   /* ── Mobile Responsive ──────────────────────────────────────── */
   @media (max-width: 768px) {
     body { padding: 12px; }
     .header { flex-direction: column; align-items: flex-start; gap: 8px; }
     .header h1 { font-size: 18px; }
     .tabs { gap: 2px; padding: 4px; }
-    .tab { min-width: 90px; padding: 9px 10px; font-size: 12px; }
+    .tab { min-width: 90px; padding: 9px 10px; font-size: 12px; min-height: 44px; }
     .section { padding: 16px; }
     .section h2 { font-size: 14px; flex-direction: column; align-items: flex-start; gap: 4px; }
     table { display: block; overflow-x: auto; -webkit-overflow-scrolling: touch; }
     th, td { padding: 9px 8px; font-size: 12px; white-space: nowrap; }
     .link-box { flex-direction: column; align-items: flex-start; }
-    .btn-green { padding: 12px 18px; font-size: 13px; width: 100%; text-align: center; }
+    .btn-green { padding: 12px 18px; font-size: 13px; width: 100%; text-align: center; min-height: 44px; }
+    .stats-grid { grid-template-columns: repeat(2, 1fr); }
     .stat-card .val { font-size: 18px; }
-    .filters input[type="text"], .filters select { min-width: 100px; padding: 10px 10px; }
+    .filters { gap: 6px; flex-direction: column; align-items: stretch; }
+    .filters input[type="text"], .filters select { min-width: 0; width: 100%; font-size: 14px; padding: 12px 10px; min-height: 44px; }
+    .filters .filter-clear { min-height: 44px; }
     .filter-count { margin-left: 0; width: 100%; text-align: right; }
   }
   @media (max-width: 480px) {
     body { padding: 8px; }
     .header h1 { font-size: 16px; }
     .header h1 .badge { font-size: 10px; padding: 3px 8px; }
-    .tab { min-width: 75px; padding: 8px 8px; font-size: 11px; }
-    .stat-card { padding: 14px; }
+    .tab { min-width: 70px; padding: 8px 6px; font-size: 11px; }
+    .stat-card { padding: 12px; }
     .stat-card .val { font-size: 16px; }
-    .section { padding: 14px; border-radius: 10px; }
+    .section { padding: 12px; border-radius: 10px; }
     .toast { font-size: 12px; padding: 10px 16px; left: 12px; right: 12px; transform: none; }
   }
 
