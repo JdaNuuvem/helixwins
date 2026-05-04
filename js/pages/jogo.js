@@ -218,7 +218,7 @@ function renderJogo(container) {
           </div>
 
           <!-- Botões -->
-          <div style="padding:0 20px 24px;display:flex;gap:10px">
+          <div id="resultado-btns" style="padding:0 20px 24px;display:flex;gap:10px">
             <button onclick="jogarNovamente()" style="
               flex:1;background:linear-gradient(135deg,#FF6B9D,#c026d3);
               color:#fff;border:none;border-radius:50px;
@@ -403,6 +403,7 @@ function renderJogo(container) {
 
   // ── Estado de revive (manter progresso ao usar vida) ──────────────────────
   let _reviveAtivo            = false;
+  let _vidaUsadaNesteRound    = false; // bloqueia segunda vida na mesma rodada
   let _plataformasOffset      = 0;   // plataformas acumuladas antes do revive
   let _valorAcumuladoOffset   = 0;   // valor acumulado antes do revive
   let _dificuldadeAtual       = null; // sobrescreve a dificuldade da partida após revive
@@ -512,6 +513,19 @@ function renderJogo(container) {
         return;
       }
 
+      // Segunda morte no mesmo round = derrota definitiva (vida já foi usada)
+      if (_vidaUsadaNesteRound) {
+        partidaFinalizada = true;
+        esconderHUD();
+        try {
+          const res = await API.finalizarPartida(partida_id, plataformasPassadas, false);
+          mostrarDerrota(res);
+        } catch (_e) {
+          mostrarDerrota({ saldo_novo: null, valor_ganho_ou_perdido: parseFloat(valor_entrada) });
+        }
+        return;
+      }
+
       // Oferecer usar vida antes de finalizar (sempre mostra — com opção de comprar se não tem)
       _mostrarModalVida(_vidasJogo);
       return;
@@ -524,11 +538,22 @@ function renderJogo(container) {
     document.getElementById('hud-meta').textContent     = formatMoney(valor_meta);
     atualizarHUD(plataformasPassadas, valorAcumulado);
     if (_reviveAtivo && metaAtingida) mostrarBotaoResgatar(valorAcumulado);
+    const _foiRevive = _reviveAtivo;
     // Limpar flag de revive — já consumida nesta ativação
     _reviveAtivo = false;
 
     // Esconder loading
     document.getElementById('tela-loading').style.display = 'none';
+
+    // Após revive o iframe recarrega com tela "Toque para jogar" — dispensar automaticamente
+    if (_foiRevive) {
+      setTimeout(() => {
+        try {
+          const ss = document.getElementById('game-iframe')?.contentDocument?.getElementById('start-screen');
+          if (ss && !ss.classList.contains('hidden')) ss.click();
+        } catch (_) {}
+      }, 200);
+    }
   }
 
   // Aguardar iframe carregar, depois ativar
@@ -756,27 +781,29 @@ function renderJogo(container) {
         </button>
         <div style="text-align:center;font-size:10px;color:rgba(255,255,255,.35)">50% de chance de dobrar seu premio</div>
       `;
-      const btnsDiv = document.querySelector('#resultado-card > div:last-child');
-      if (btnsDiv) btnsDiv.parentElement.insertBefore(dobrarDiv, btnsDiv);
-
-      document.getElementById('btn-dobrar').addEventListener('click', async function() {
-        this.disabled = true;
-        this.innerHTML = '🎲 Girando...';
-        try {
-          const r = await API.dobrarOuNada(valor);
-          if (r.ganhou) {
-            this.style.background = 'linear-gradient(135deg,#22c55e,#16a34a)';
-            this.innerHTML = '🎉 GANHOU! +' + formatMoney(valor);
-            saldoEl.textContent = 'Novo saldo: ' + formatMoney(r.saldo_novo);
-          } else {
-            this.style.background = 'linear-gradient(135deg,#ef4444,#dc2626)';
-            this.innerHTML = '💀 PERDEU ' + formatMoney(valor);
-            saldoEl.textContent = 'Saldo: ' + formatMoney(r.saldo_novo);
+      const btnsDiv = document.getElementById('resultado-btns');
+      if (btnsDiv) {
+        btnsDiv.parentElement.insertBefore(dobrarDiv, btnsDiv);
+        const _btnDobrar = document.getElementById('btn-dobrar');
+        if (_btnDobrar) _btnDobrar.addEventListener('click', async function() {
+          this.disabled = true;
+          this.innerHTML = '🎲 Girando...';
+          try {
+            const r = await API.dobrarOuNada(valor);
+            if (r.ganhou) {
+              this.style.background = 'linear-gradient(135deg,#22c55e,#16a34a)';
+              this.innerHTML = '🎉 GANHOU! +' + formatMoney(valor);
+              saldoEl.textContent = 'Novo saldo: ' + formatMoney(r.saldo_novo);
+            } else {
+              this.style.background = 'linear-gradient(135deg,#ef4444,#dc2626)';
+              this.innerHTML = '💀 PERDEU ' + formatMoney(valor);
+              saldoEl.textContent = 'Saldo: ' + formatMoney(r.saldo_novo);
+            }
+          } catch (err) {
+            this.innerHTML = 'Erro: ' + err.message;
           }
-        } catch (err) {
-          this.innerHTML = 'Erro: ' + err.message;
-        }
-      });
+        });
+      }
     }
 
     document.getElementById('tela-resultado').style.display = 'flex';
@@ -914,11 +941,335 @@ function renderJogo(container) {
         </button>
         <div style="text-align:center;font-size:10px;color:rgba(255,255,255,.35)">Jogue R$ ${entradaOriginal.toFixed(2).replace('.',',')} e entre com R$ ${(entradaOriginal + bonusValor).toFixed(2).replace('.',',')}</div>
       `;
-      const btnsDiv = document.querySelector('#resultado-card > div:last-child');
+      const btnsDiv = document.getElementById('resultado-btns');
       if (btnsDiv) btnsDiv.parentElement.insertBefore(revBtn, btnsDiv);
     }
 
+    // Dobro ou Nada + Apostar Novamente — seções extras após a derrota
+    if (!IS_DEMO) {
+      let _saldoApostarDerrota = res.saldo_novo ?? 0;
+      let _atualizarSaldoApostar; // referenciado no click do dobrar antes de ser definido
+
+      const _entradaDerrota  = parseFloat(valor_entrada);
+      const _metaRatioDerrota = parseFloat(valor_meta) / _entradaDerrota || 7;
+
+      // --- Dobro ou Nada (recuperação) ---
+      if (perdido > 0) {
+        const dobrarRecovDiv = document.createElement('div');
+        dobrarRecovDiv.style.cssText = 'padding:0 20px 8px';
+        dobrarRecovDiv.innerHTML = `
+          <button id="btn-dobrar-derrota" style="
+            width:100%;background:linear-gradient(135deg,#7c3aed,#a855f7);
+            color:#fff;border:none;border-radius:50px;
+            padding:12px 0;font-size:13px;font-weight:800;
+            cursor:pointer;font-family:inherit;letter-spacing:.3px;
+            box-shadow:0 4px 20px rgba(168,85,247,.35);
+            display:flex;align-items:center;justify-content:center;gap:8px;
+            margin-bottom:4px;
+          ">
+            🎲 DOBRO OU NADA (${formatMoney(perdido)} → ${formatMoney(perdido * 2)})
+          </button>
+          <div style="text-align:center;font-size:10px;color:rgba(255,255,255,.35)">50% de chance de recuperar sua aposta + lucrar</div>
+        `;
+        const bDiv1 = document.getElementById('resultado-btns');
+        if (bDiv1) {
+          bDiv1.parentElement.insertBefore(dobrarRecovDiv, bDiv1);
+          const btnDobrarRec = document.getElementById('btn-dobrar-derrota');
+          if (btnDobrarRec) btnDobrarRec.addEventListener('click', async function() {
+            this.disabled = true;
+            this.innerHTML = '🎲 Girando...';
+            try {
+              const r = await API.dobrarOuNada(perdido);
+              const saldoEl = document.getElementById('resultado-saldo');
+              if (r.ganhou) {
+                this.style.background = 'linear-gradient(135deg,#22c55e,#16a34a)';
+                this.innerHTML = `🎉 GANHOU! +${formatMoney(perdido)}`;
+                if (saldoEl) saldoEl.textContent = 'Novo saldo: ' + formatMoney(r.saldo_novo);
+              } else {
+                this.style.background = 'linear-gradient(135deg,#ef4444,#dc2626)';
+                this.innerHTML = `💀 PERDEU ${formatMoney(perdido)}`;
+                if (saldoEl) saldoEl.textContent = 'Saldo: ' + formatMoney(r.saldo_novo);
+              }
+              if (r.saldo_novo != null) _saldoApostarDerrota = r.saldo_novo;
+              if (_atualizarSaldoApostar) _atualizarSaldoApostar();
+            } catch (err) {
+              this.disabled = false;
+              this.innerHTML = `🎲 DOBRO OU NADA (${formatMoney(perdido)} → ${formatMoney(perdido * 2)})`;
+            }
+          });
+        }
+      }
+
+      // --- Apostar Novamente ---
+      const quickVals = [5, 10, 20, 50, 100];
+      const apostarDiv = document.createElement('div');
+      apostarDiv.id = 'derrota-apostar-wrap';
+      apostarDiv.style.cssText = 'padding:16px 20px 20px;border-top:1px solid rgba(255,255,255,.08);margin-top:4px';
+
+      const qHtml = quickVals.map(v => {
+        const active = Math.abs(_entradaDerrota - v) < 0.01;
+        return `<button class="derrota-qv" data-v="${v}" style="
+          flex:1;min-width:0;
+          background:${active ? 'rgba(255,107,157,.28)' : 'rgba(255,255,255,.07)'};
+          border:1px solid ${active ? 'rgba(255,107,157,.45)' : 'rgba(255,255,255,.12)'};
+          color:${active ? '#FF6B9D' : 'rgba(255,255,255,.7)'};
+          border-radius:8px;padding:8px 2px;font-size:12px;font-weight:700;
+          cursor:pointer;font-family:inherit;
+        ">${v}</button>`;
+      }).join('');
+
+      const depQuickVals = [20, 50, 100, 200];
+      const depQHtml = depQuickVals.map(v =>
+        `<button class="dep-quick-btn" data-v="${v}" style="
+          flex:1;min-width:0;
+          background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);
+          color:rgba(255,255,255,.7);border-radius:8px;padding:8px 2px;
+          font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;
+        ">R$${v}</button>`
+      ).join('');
+
+      apostarDiv.innerHTML = `
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+          <div style="font-size:11px;font-weight:700;letter-spacing:.08em;color:rgba(255,255,255,.4);text-transform:uppercase">Apostar novamente</div>
+          <div style="font-size:12px;color:rgba(255,255,255,.45)">Saldo: <span id="derrota-saldo-display" style="color:#22c55e;font-weight:700">${formatMoney(_saldoApostarDerrota)}</span></div>
+        </div>
+        <div style="display:flex;gap:6px;margin-bottom:10px">${qHtml}</div>
+        <div style="position:relative;margin-bottom:8px">
+          <span style="position:absolute;left:14px;top:50%;transform:translateY(-50%);font-size:13px;font-weight:700;color:rgba(255,255,255,.45);pointer-events:none">R$</span>
+          <input id="derrota-entrada-val" type="number" min="1" step="1" inputmode="decimal" value="${_entradaDerrota}" style="
+            width:100%;box-sizing:border-box;
+            background:rgba(255,255,255,.07);border:1.5px solid rgba(255,255,255,.15);
+            border-radius:12px;padding:13px 14px 13px 40px;
+            color:#fff;font-size:18px;font-weight:800;font-family:inherit;outline:none;
+          "/>
+        </div>
+        <div style="
+          display:flex;justify-content:space-between;align-items:center;
+          font-size:11px;color:rgba(255,255,255,.4);
+          background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);
+          border-radius:8px;padding:7px 12px;margin-bottom:10px;
+        ">
+          <span>Meta: <span id="derrota-meta-preview" style="color:#fbbf24;font-weight:700">...</span></span>
+          <span id="derrota-saldo-insuf" style="display:none;color:#ef4444;font-weight:700">Saldo insuficiente</span>
+        </div>
+        <button id="btn-derrota-jogar" style="
+          width:100%;background:linear-gradient(135deg,#FF6B9D,#c026d3);
+          color:#fff;border:none;border-radius:50px;
+          padding:15px 0;font-size:15px;font-weight:800;
+          cursor:pointer;font-family:inherit;letter-spacing:.3px;
+          box-shadow:0 4px 20px rgba(255,107,157,.4);
+          display:flex;align-items:center;justify-content:center;gap:8px;
+          margin-bottom:10px;
+        ">
+          <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><polygon points="5,3 19,12 5,21"/></svg>
+          JOGAR AGORA
+        </button>
+
+        <!-- Recarga rápida -->
+        <button id="btn-recarga-toggle" style="
+          width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.10);
+          color:rgba(255,255,255,.5);border-radius:10px;
+          padding:10px 16px;font-size:12px;font-weight:700;
+          cursor:pointer;font-family:inherit;
+          display:flex;align-items:center;justify-content:center;gap:6px;
+        ">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" width="13" height="13"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Recarregar saldo
+        </button>
+
+        <div id="derrota-recarga-form" style="display:none;margin-top:10px">
+          <div style="font-size:10px;color:rgba(255,255,255,.35);margin-bottom:6px;text-align:center">Valor do depósito (mín. R$20)</div>
+          <div style="display:flex;gap:6px;margin-bottom:8px">${depQHtml}</div>
+          <div style="position:relative;margin-bottom:8px">
+            <span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);font-size:12px;font-weight:700;color:rgba(255,255,255,.45);pointer-events:none">R$</span>
+            <input id="dep-recarga-valor" type="number" min="20" step="10" value="50" style="
+              width:100%;box-sizing:border-box;
+              background:rgba(255,255,255,.07);border:1.5px solid rgba(255,255,255,.15);
+              border-radius:10px;padding:11px 12px 11px 36px;
+              color:#fff;font-size:16px;font-weight:800;font-family:inherit;outline:none;
+            "/>
+          </div>
+          <button id="btn-gerar-pix-recarga" style="
+            width:100%;background:linear-gradient(135deg,#22c55e,#16a34a);
+            color:#fff;border:none;border-radius:50px;
+            padding:12px 0;font-size:13px;font-weight:800;
+            cursor:pointer;font-family:inherit;
+            display:flex;align-items:center;justify-content:center;gap:6px;
+            box-shadow:0 4px 16px rgba(34,197,94,.3);
+          ">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" width="14" height="14"><rect x="3" y="3" width="8" height="8" rx="1"/><rect x="13" y="3" width="8" height="8" rx="1"/><rect x="3" y="13" width="8" height="8" rx="1"/><circle cx="17" cy="17" r="3"/></svg>
+            Gerar PIX
+          </button>
+          <div id="dep-pix-result" style="display:none;margin-top:10px"></div>
+        </div>
+      `;
+
+      const bDiv2 = document.getElementById('resultado-btns');
+      if (bDiv2) bDiv2.parentElement.insertBefore(apostarDiv, bDiv2);
+
+      _atualizarSaldoApostar = function() {
+        const inp = document.getElementById('derrota-entrada-val');
+        if (!inp) return;
+        const v = parseFloat(inp.value) || 0;
+        const metaEl = document.getElementById('derrota-meta-preview');
+        if (metaEl) metaEl.textContent = formatMoney(v * _metaRatioDerrota);
+        const insuf = v > _saldoApostarDerrota && v > 0;
+        const warnEl = document.getElementById('derrota-saldo-insuf');
+        if (warnEl) warnEl.style.display = insuf ? '' : 'none';
+        const btn = document.getElementById('btn-derrota-jogar');
+        if (btn) btn.disabled = insuf || v < 1;
+        document.querySelectorAll('.derrota-qv').forEach(b => {
+          const isAct = Math.abs(parseFloat(b.dataset.v) - v) < 0.01;
+          b.style.background = isAct ? 'rgba(255,107,157,.28)' : 'rgba(255,255,255,.07)';
+          b.style.border = `1px solid ${isAct ? 'rgba(255,107,157,.45)' : 'rgba(255,255,255,.12)'}`;
+          b.style.color = isAct ? '#FF6B9D' : 'rgba(255,255,255,.7)';
+        });
+        // Atualiza display de saldo
+        const saldoDispEl = document.getElementById('derrota-saldo-display');
+        if (saldoDispEl) saldoDispEl.textContent = formatMoney(_saldoApostarDerrota);
+      };
+
+      const _entradaEl = document.getElementById('derrota-entrada-val');
+      if (_entradaEl) _entradaEl.addEventListener('input', _atualizarSaldoApostar);
+
+      document.querySelectorAll('.derrota-qv').forEach(b => {
+        b.addEventListener('click', () => {
+          const el = document.getElementById('derrota-entrada-val');
+          if (el) el.value = b.dataset.v;
+          _atualizarSaldoApostar();
+        });
+      });
+
+      _atualizarSaldoApostar();
+
+      const _btnDerrotaJogar = document.getElementById('btn-derrota-jogar');
+      if (_btnDerrotaJogar) _btnDerrotaJogar.addEventListener('click', async () => {
+        const v = parseFloat(document.getElementById('derrota-entrada-val').value);
+        if (!v || v < 1 || v > _saldoApostarDerrota) return;
+        const btn = document.getElementById('btn-derrota-jogar');
+        btn.disabled = true;
+        btn.innerHTML = `<svg class="spin-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="18" height="18"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg> Iniciando...`;
+        try {
+          const partida = await API.iniciarPartida(v, {});
+          sessionStorage.setItem('partida_atual', JSON.stringify({
+            partida_id:             partida.partida_id,
+            valor_entrada:          partida.valor_entrada,
+            valor_meta:             partida.valor_meta,
+            valor_por_plataforma:   partida.valor_por_plataforma,
+            plataformas_referencia: partida.plataformas_referencia,
+            multiplicador_meta:     partida.multiplicador_meta,
+            dificuldade:            partida.dificuldade || 'normal',
+            is_demo:                false,
+          }));
+          window.location.reload();
+        } catch (err) {
+          btn.disabled = false;
+          btn.innerHTML = `<svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><polygon points="5,3 19,12 5,21"/></svg> JOGAR AGORA`;
+        }
+      });
+
+      // --- Recarga Rápida ---
+      document.getElementById('btn-recarga-toggle').addEventListener('click', () => {
+        const form = document.getElementById('derrota-recarga-form');
+        const btn  = document.getElementById('btn-recarga-toggle');
+        const open = form.style.display !== 'none';
+        form.style.display = open ? 'none' : 'block';
+        btn.innerHTML = open
+          ? `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" width="13" height="13"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Recarregar saldo`
+          : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" width="13" height="13"><line x1="5" y1="12" x2="19" y2="12"/></svg> Fechar recarga`;
+      });
+
+      document.querySelectorAll('.dep-quick-btn').forEach(b => {
+        b.addEventListener('click', () => {
+          document.getElementById('dep-recarga-valor').value = b.dataset.v;
+          document.querySelectorAll('.dep-quick-btn').forEach(x => {
+            const act = x.dataset.v === b.dataset.v;
+            x.style.background = act ? 'rgba(34,197,94,.25)' : 'rgba(255,255,255,.07)';
+            x.style.border = `1px solid ${act ? 'rgba(34,197,94,.45)' : 'rgba(255,255,255,.12)'}`;
+            x.style.color   = act ? '#4ade80' : 'rgba(255,255,255,.7)';
+          });
+        });
+      });
+
+      let _depPollTimer = null;
+      document.getElementById('btn-gerar-pix-recarga').addEventListener('click', async () => {
+        const v = parseFloat(document.getElementById('dep-recarga-valor').value);
+        if (!v || v < 20) return;
+        const btn = document.getElementById('btn-gerar-pix-recarga');
+        btn.disabled = true;
+        btn.innerHTML = `<svg class="spin-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="14" height="14"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg> Gerando PIX...`;
+        try {
+          const data = await API.deposito(v);
+          const pixCode = data.qrcode_texto || '';
+          const qrSrc   = data.qrcode_imagem || data.qrcode_base64 || '';
+          const pixArea  = document.getElementById('dep-pix-result');
+          pixArea.style.display = 'block';
+          pixArea.innerHTML = `
+            <div style="background:rgba(34,197,94,.07);border:1px solid rgba(34,197,94,.2);border-radius:12px;padding:12px;text-align:center">
+              ${qrSrc ? `<div style="background:#fff;border-radius:8px;padding:8px;display:inline-block;margin-bottom:8px"><img src="${qrSrc}" style="width:150px;height:150px;display:block"/></div><br>` : ''}
+              <div style="font-size:10px;color:rgba(255,255,255,.35);margin-bottom:4px">Código PIX — R$ ${v.toFixed(2).replace('.',',')}</div>
+              <div style="display:flex;gap:6px;align-items:center;margin-bottom:8px">
+                <input id="dep-pix-code" readonly value="${pixCode}" style="
+                  flex:1;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);
+                  border-radius:8px;padding:8px 10px;color:#fff;font-size:10px;font-family:monospace;outline:none;
+                "/>
+                <button id="dep-pix-copy" style="
+                  background:rgba(34,197,94,.25);border:1px solid rgba(34,197,94,.4);
+                  color:#4ade80;border-radius:8px;padding:8px 10px;
+                  font-size:11px;cursor:pointer;font-family:inherit;white-space:nowrap;
+                ">Copiar</button>
+              </div>
+              <div id="dep-pix-status" style="font-size:12px;color:rgba(255,255,255,.45)">⏳ Aguardando pagamento...</div>
+            </div>
+          `;
+          document.getElementById('dep-pix-copy').onclick = () => {
+            navigator.clipboard.writeText(pixCode).catch(() => {});
+            document.getElementById('dep-pix-copy').textContent = '✓ Copiado';
+            setTimeout(() => { document.getElementById('dep-pix-copy').textContent = 'Copiar'; }, 2000);
+          };
+          btn.disabled = false;
+          btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" width="14" height="14"><rect x="3" y="3" width="8" height="8" rx="1"/><rect x="13" y="3" width="8" height="8" rx="1"/><rect x="3" y="13" width="8" height="8" rx="1"/><circle cx="17" cy="17" r="3"/></svg> Gerar novo PIX`;
+
+          if (_depPollTimer) clearTimeout(_depPollTimer);
+          const expira = Date.now() + 30 * 60 * 1000;
+          const checarDep = async () => {
+            if (Date.now() > expira) return;
+            try {
+              const r = await API.depositoStatus(data.txid);
+              if (r.status === 'aprovado') {
+                document.getElementById('dep-pix-status').innerHTML =
+                  `<span style="color:#22c55e;font-weight:700">✅ Pago! +${formatMoney(v)} adicionado ao saldo.</span>`;
+                _saldoApostarDerrota += v;
+                _atualizarSaldoApostar();
+                return;
+              }
+            } catch {}
+            _depPollTimer = setTimeout(checarDep, 4000);
+          };
+          _depPollTimer = setTimeout(checarDep, 4000);
+        } catch (err) {
+          btn.disabled = false;
+          btn.innerHTML = `Tentar novamente`;
+        }
+      });
+    }
+
+    // Overlay rolável para acomodar conteúdo extra na tela de derrota
+    const _telaResultado = document.getElementById('tela-resultado');
+    _telaResultado.style.alignItems  = 'flex-start';
+    _telaResultado.style.overflowY   = 'auto';
+    _telaResultado.style.paddingTop  = '20px';
+    _telaResultado.style.paddingBottom = '20px';
+
     document.getElementById('tela-resultado').style.display = 'flex';
+
+    // Rola automaticamente para mostrar a seção "Apostar Novamente"
+    const _apostarWrap = document.getElementById('derrota-apostar-wrap');
+    if (_apostarWrap) {
+      setTimeout(() => {
+        _apostarWrap.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }, 350);
+    }
   }
 
 
@@ -974,6 +1325,7 @@ function renderJogo(container) {
 
       // Salvar progresso atual para retomar após o reload
       _reviveAtivo          = true;
+      _vidaUsadaNesteRound  = true;
       _plataformasOffset    = plataformasPassadas;
       _valorAcumuladoOffset = valorAcumulado;
 
@@ -984,6 +1336,9 @@ function renderJogo(container) {
       // Mostrar loading enquanto recarrega
       document.getElementById('tela-loading').style.display = 'flex';
       partidaFinalizada = false;
+
+      // Atualizar dificuldade no canal de comunicação com o iframe
+      window.gameEvents.dificuldade = _dificuldadeAtual;
 
       // Recarregar iframe com a nova dificuldade
       const gIframe = document.getElementById('game-iframe');
@@ -1101,7 +1456,6 @@ function renderJogo(container) {
   // ── Ações dos botões de resultado ─────────────────────────────────────────
   function jogarNovamente() {
     if (IS_DEMO) {
-      // Re-inicia a demo sem sair
       sessionStorage.setItem('partida_atual', JSON.stringify({
         partida_id: 'demo', valor_entrada: 5, valor_meta: 30,
         valor_por_plataforma: 1, dificuldade: 'super_facil', modo_demo: true,
@@ -1110,7 +1464,377 @@ function renderJogo(container) {
       window.location.reload();
       return;
     }
-    window.location.hash = '#painel';
+    _mostrarModalApostarNovamente();
+  }
+
+  function _mostrarModalApostarNovamente() {
+    // Remove modal anterior se existir
+    const anterior = document.getElementById('modal-apostar-novamente');
+    if (anterior) anterior.remove();
+
+    const entradaInicial = parseFloat(valor_entrada) || 5;
+    const metaRatio = (parseFloat(valor_meta) / entradaInicial) || 7;
+
+    const quickVals = [5, 10, 20, 50, 100];
+    const depQuickVals = [20, 50, 100, 200];
+
+    const qHtml = quickVals.map(v => {
+      const active = Math.abs(entradaInicial - v) < 0.01;
+      return `<button class="an-qv" data-v="${v}" style="
+        flex:1;min-width:0;
+        background:${active ? 'rgba(255,107,157,.28)' : 'rgba(255,255,255,.07)'};
+        border:1px solid ${active ? 'rgba(255,107,157,.55)' : 'rgba(255,255,255,.12)'};
+        color:${active ? '#FF6B9D' : 'rgba(255,255,255,.75)'};
+        border-radius:8px;padding:10px 2px;font-size:13px;font-weight:700;
+        cursor:pointer;font-family:inherit;
+      ">${v}</button>`;
+    }).join('');
+
+    const depQHtml = depQuickVals.map(v =>
+      `<button class="an-dep-qv" data-v="${v}" style="
+        flex:1;min-width:0;
+        background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);
+        color:rgba(255,255,255,.7);border-radius:8px;padding:8px 2px;
+        font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;
+      ">R$${v}</button>`
+    ).join('');
+
+    const overlay = document.createElement('div');
+    overlay.id = 'modal-apostar-novamente';
+    overlay.style.cssText = `
+      position:fixed;inset:0;z-index:5000;
+      display:flex;align-items:center;justify-content:center;
+      background:rgba(0,0,0,.92);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);
+      padding:20px;overflow-y:auto;
+    `;
+
+    overlay.innerHTML = `
+      <div style="
+        background:linear-gradient(160deg,#13001f 0%,#1e003a 100%);
+        border:1.5px solid rgba(255,107,157,.35);border-radius:24px;
+        max-width:360px;width:100%;overflow:hidden;
+        box-shadow:0 32px 80px rgba(0,0,0,.7),0 0 60px rgba(255,107,157,.08);
+        animation:resCardIn .35s cubic-bezier(.34,1.56,.64,1) both;
+      ">
+        <!-- Cabeçalho -->
+        <div style="
+          padding:20px 20px 14px;
+          background:linear-gradient(160deg,rgba(255,107,157,.10) 0%,transparent 100%);
+          display:flex;align-items:center;justify-content:space-between;
+        ">
+          <div>
+            <div style="font-size:16px;font-weight:800;color:#fff">Apostar Novamente</div>
+            <div style="font-size:12px;color:rgba(255,255,255,.45);margin-top:2px">Configure sua próxima aposta</div>
+          </div>
+          <button id="an-fechar" style="
+            background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);
+            border-radius:50%;width:34px;height:34px;cursor:pointer;
+            color:rgba(255,255,255,.6);font-size:18px;font-family:inherit;
+            display:flex;align-items:center;justify-content:center;
+          ">×</button>
+        </div>
+
+        <!-- Saldo -->
+        <div style="margin:0 16px 14px;background:rgba(34,197,94,.07);border:1px solid rgba(34,197,94,.18);border-radius:12px;padding:12px 16px;display:flex;align-items:center;justify-content:space-between">
+          <span style="font-size:12px;color:rgba(255,255,255,.45)">Saldo disponível</span>
+          <span id="an-saldo-val" style="font-size:18px;font-weight:800;color:#4ade80">...</span>
+        </div>
+
+        <!-- Botões rápidos de valor -->
+        <div style="padding:0 16px 10px">
+          <div style="font-size:10px;font-weight:700;letter-spacing:.08em;color:rgba(255,255,255,.35);text-transform:uppercase;margin-bottom:8px">Valor da aposta</div>
+          <div style="display:flex;gap:6px;margin-bottom:10px">${qHtml}</div>
+          <div style="position:relative;margin-bottom:8px">
+            <span style="position:absolute;left:14px;top:50%;transform:translateY(-50%);font-size:13px;font-weight:700;color:rgba(255,255,255,.4);pointer-events:none">R$</span>
+            <input id="an-entrada-val" type="number" min="1" step="1" inputmode="decimal" value="${entradaInicial}" style="
+              width:100%;box-sizing:border-box;
+              background:rgba(255,255,255,.07);border:1.5px solid rgba(255,255,255,.15);
+              border-radius:12px;padding:14px 14px 14px 42px;
+              color:#fff;font-size:20px;font-weight:800;font-family:inherit;outline:none;
+            "/>
+          </div>
+          <div style="
+            display:flex;justify-content:space-between;align-items:center;
+            font-size:11px;color:rgba(255,255,255,.4);
+            background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);
+            border-radius:8px;padding:8px 12px;margin-bottom:4px;
+          ">
+            <span>Meta estimada: <span id="an-meta-preview" style="color:#fbbf24;font-weight:700">...</span></span>
+            <span id="an-insuf" style="display:none;color:#f87171;font-weight:700">Saldo insuficiente</span>
+          </div>
+        </div>
+
+        <!-- Upsells -->
+        <div style="padding:0 16px 14px">
+          <div style="font-size:10px;font-weight:700;letter-spacing:.08em;color:rgba(255,255,255,.35);text-transform:uppercase;margin-bottom:8px">Turbinar aposta</div>
+          <label style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;background:rgba(168,85,247,.07);border:1px solid rgba(168,85,247,.18);border-radius:10px;padding:10px 12px;margin-bottom:6px">
+            <div>
+              <div style="font-size:12px;font-weight:700;color:#c084fc">🛡️ Seguro de Partida</div>
+              <div style="font-size:10px;color:rgba(255,255,255,.4)">+30% no valor — recupera 50% se perder</div>
+            </div>
+            <input type="checkbox" id="an-seguro" style="width:18px;height:18px;accent-color:#a855f7;cursor:pointer"/>
+          </label>
+          <label style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;background:rgba(251,191,36,.07);border:1px solid rgba(251,191,36,.18);border-radius:10px;padding:10px 12px">
+            <div>
+              <div style="font-size:12px;font-weight:700;color:#fbbf24">⚡ Modo Turbo</div>
+              <div style="font-size:10px;color:rgba(255,255,255,.4)">+20% no valor — plataformas valem mais</div>
+            </div>
+            <input type="checkbox" id="an-turbo" style="width:18px;height:18px;accent-color:#f59e0b;cursor:pointer"/>
+          </label>
+        </div>
+
+        <!-- Botão jogar -->
+        <div style="padding:0 16px 12px">
+          <button id="an-btn-jogar" style="
+            width:100%;background:linear-gradient(135deg,#FF6B9D,#c026d3);
+            color:#fff;border:none;border-radius:50px;
+            padding:16px 0;font-size:16px;font-weight:800;
+            cursor:pointer;font-family:inherit;letter-spacing:.3px;
+            box-shadow:0 4px 24px rgba(255,107,157,.45);
+            display:flex;align-items:center;justify-content:center;gap:8px;
+          ">
+            <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><polygon points="5,3 19,12 5,21"/></svg>
+            JOGAR AGORA
+          </button>
+        </div>
+
+        <!-- Recarga rápida -->
+        <div style="padding:0 16px 16px;border-top:1px solid rgba(255,255,255,.07);margin-top:2px;padding-top:12px">
+          <button id="an-recarga-toggle" style="
+            width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.10);
+            color:rgba(255,255,255,.5);border-radius:10px;
+            padding:10px 16px;font-size:12px;font-weight:700;
+            cursor:pointer;font-family:inherit;
+            display:flex;align-items:center;justify-content:center;gap:6px;
+          ">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" width="13" height="13"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Recarregar saldo via PIX
+          </button>
+          <div id="an-recarga-form" style="display:none;margin-top:10px">
+            <div style="font-size:10px;color:rgba(255,255,255,.35);margin-bottom:6px;text-align:center">Valor do depósito (mín. R$20)</div>
+            <div style="display:flex;gap:6px;margin-bottom:8px">${depQHtml}</div>
+            <div style="position:relative;margin-bottom:8px">
+              <span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);font-size:12px;font-weight:700;color:rgba(255,255,255,.45);pointer-events:none">R$</span>
+              <input id="an-dep-valor" type="number" min="20" step="10" value="50" style="
+                width:100%;box-sizing:border-box;
+                background:rgba(255,255,255,.07);border:1.5px solid rgba(255,255,255,.15);
+                border-radius:10px;padding:11px 12px 11px 36px;
+                color:#fff;font-size:16px;font-weight:800;font-family:inherit;outline:none;
+              "/>
+            </div>
+            <input id="an-dep-cpf" type="text" inputmode="numeric" maxlength="14" placeholder="CPF (somente números)" style="
+              width:100%;box-sizing:border-box;
+              background:rgba(255,255,255,.07);border:1.5px solid rgba(255,255,255,.15);
+              border-radius:10px;padding:11px 14px;
+              color:#fff;font-size:14px;font-family:inherit;outline:none;margin-bottom:8px;
+            "/>
+            <div id="an-pix-erro" style="display:none;color:#f87171;font-size:11px;text-align:center;margin-bottom:6px;padding:6px 10px;background:rgba(239,68,68,.08);border-radius:8px;border:1px solid rgba(239,68,68,.2)"></div>
+            <button id="an-btn-pix" style="
+              width:100%;background:linear-gradient(135deg,#22c55e,#16a34a);
+              color:#fff;border:none;border-radius:50px;
+              padding:12px 0;font-size:13px;font-weight:800;
+              cursor:pointer;font-family:inherit;
+              display:flex;align-items:center;justify-content:center;gap:6px;
+              box-shadow:0 4px 16px rgba(34,197,94,.3);
+            ">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" width="14" height="14"><rect x="3" y="3" width="8" height="8" rx="1"/><rect x="13" y="3" width="8" height="8" rx="1"/><rect x="3" y="13" width="8" height="8" rx="1"/><circle cx="17" cy="17" r="3"/></svg>
+              Gerar PIX
+            </button>
+            <div id="an-pix-result" style="display:none;margin-top:10px"></div>
+          </div>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(overlay);
+
+    // --- Estado do modal ---
+    let _anSaldo = 0;
+
+    // Carregar saldo atual via /auth/me
+    API.me().then(data => {
+      _anSaldo = data.user?.saldo ?? 0;
+      const saldoEl = document.getElementById('an-saldo-val');
+      if (saldoEl) saldoEl.textContent = formatMoney(_anSaldo);
+      _anAtualizar();
+    }).catch(() => {
+      const saldoEl = document.getElementById('an-saldo-val');
+      if (saldoEl) saldoEl.textContent = '—';
+    });
+
+    function _anAtualizar() {
+      const inp = document.getElementById('an-entrada-val');
+      if (!inp) return;
+      const v = parseFloat(inp.value) || 0;
+      const seguro = document.getElementById('an-seguro')?.checked;
+      const turbo  = document.getElementById('an-turbo')?.checked;
+      let custo = v;
+      if (seguro) custo = Math.round(custo * 1.30 * 100) / 100;
+      if (turbo)  custo = Math.round(custo * 1.20 * 100) / 100;
+      const metaEl = document.getElementById('an-meta-preview');
+      if (metaEl) metaEl.textContent = formatMoney(v * metaRatio);
+      const insuf = custo > _anSaldo && v > 0;
+      const warnEl = document.getElementById('an-insuf');
+      if (warnEl) warnEl.style.display = insuf ? '' : 'none';
+      const btn = document.getElementById('an-btn-jogar');
+      if (btn) btn.disabled = insuf || v < 1;
+      document.querySelectorAll('.an-qv').forEach(b => {
+        const isAct = Math.abs(parseFloat(b.dataset.v) - v) < 0.01;
+        b.style.background = isAct ? 'rgba(255,107,157,.28)' : 'rgba(255,255,255,.07)';
+        b.style.border = `1px solid ${isAct ? 'rgba(255,107,157,.55)' : 'rgba(255,255,255,.12)'}`;
+        b.style.color = isAct ? '#FF6B9D' : 'rgba(255,255,255,.75)';
+      });
+    }
+
+    document.getElementById('an-fechar').addEventListener('click', () => overlay.remove());
+    overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+
+    document.getElementById('an-entrada-val').addEventListener('input', _anAtualizar);
+    document.getElementById('an-seguro').addEventListener('change', _anAtualizar);
+    document.getElementById('an-turbo').addEventListener('change', _anAtualizar);
+
+    document.querySelectorAll('.an-qv').forEach(b => {
+      b.addEventListener('click', () => {
+        document.getElementById('an-entrada-val').value = b.dataset.v;
+        _anAtualizar();
+      });
+    });
+
+    _anAtualizar();
+
+    document.getElementById('an-btn-jogar').addEventListener('click', async () => {
+      const v = parseFloat(document.getElementById('an-entrada-val').value);
+      if (!v || v < 1) return;
+      const seguro = document.getElementById('an-seguro')?.checked;
+      const turbo  = document.getElementById('an-turbo')?.checked;
+      const btn = document.getElementById('an-btn-jogar');
+      btn.disabled = true;
+      btn.innerHTML = `<svg class="spin-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="18" height="18"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg> Iniciando...`;
+      try {
+        const opts = {};
+        if (seguro) opts.com_seguro = true;
+        if (turbo)  opts.modo_turbo = true;
+        const partida = await API.iniciarPartida(v, opts);
+        sessionStorage.setItem('partida_atual', JSON.stringify({
+          partida_id:             partida.partida_id,
+          valor_entrada:          partida.valor_entrada,
+          valor_meta:             partida.valor_meta,
+          valor_por_plataforma:   partida.valor_por_plataforma,
+          plataformas_referencia: partida.plataformas_referencia,
+          multiplicador_meta:     partida.multiplicador_meta,
+          dificuldade:            partida.dificuldade || 'normal',
+          is_demo:                false,
+        }));
+        window.location.reload();
+      } catch (err) {
+        btn.disabled = false;
+        btn.innerHTML = `<svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><polygon points="5,3 19,12 5,21"/></svg> JOGAR AGORA`;
+        const warnEl = document.getElementById('an-insuf');
+        if (warnEl) { warnEl.textContent = err.message || 'Erro ao iniciar'; warnEl.style.display = ''; }
+      }
+    });
+
+    // --- Recarga rápida ---
+    document.getElementById('an-recarga-toggle').addEventListener('click', () => {
+      const form = document.getElementById('an-recarga-form');
+      const btn  = document.getElementById('an-recarga-toggle');
+      const open = form.style.display !== 'none';
+      form.style.display = open ? 'none' : 'block';
+      btn.innerHTML = open
+        ? `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" width="13" height="13"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Recarregar saldo via PIX`
+        : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" width="13" height="13"><line x1="5" y1="12" x2="19" y2="12"/></svg> Fechar recarga`;
+    });
+
+    document.querySelectorAll('.an-dep-qv').forEach(b => {
+      b.addEventListener('click', () => {
+        document.getElementById('an-dep-valor').value = b.dataset.v;
+        document.querySelectorAll('.an-dep-qv').forEach(x => {
+          const act = x.dataset.v === b.dataset.v;
+          x.style.background = act ? 'rgba(34,197,94,.22)' : 'rgba(255,255,255,.07)';
+          x.style.border = `1px solid ${act ? 'rgba(34,197,94,.45)' : 'rgba(255,255,255,.12)'}`;
+          x.style.color  = act ? '#4ade80' : 'rgba(255,255,255,.7)';
+        });
+      });
+    });
+
+    // Máscara de CPF no campo
+    document.getElementById('an-dep-cpf').addEventListener('input', function() {
+      this.value = this.value.replace(/\D/g, '').slice(0, 11);
+    });
+
+    let _anDepPollTimer = null;
+    document.getElementById('an-btn-pix').addEventListener('click', async () => {
+      const v = parseFloat(document.getElementById('an-dep-valor').value);
+      if (!v || v < 20) return;
+      const cpfRaw = document.getElementById('an-dep-cpf').value.replace(/\D/g, '');
+      const erroEl = document.getElementById('an-pix-erro');
+      if (cpfRaw.length !== 11) {
+        erroEl.textContent = 'Informe um CPF válido (11 dígitos)';
+        erroEl.style.display = '';
+        return;
+      }
+      erroEl.style.display = 'none';
+      const btn = document.getElementById('an-btn-pix');
+      btn.disabled = true;
+      btn.innerHTML = `<svg class="spin-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="14" height="14"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg> Gerando PIX...`;
+      try {
+        const data = await API.deposito(v, cpfRaw);
+        const pixCode = data.qrcode_texto || '';
+        const qrSrc   = data.qrcode_imagem || data.qrcode_base64 || '';
+        const pixArea  = document.getElementById('an-pix-result');
+        pixArea.style.display = 'block';
+        pixArea.innerHTML = `
+          <div style="background:rgba(34,197,94,.07);border:1px solid rgba(34,197,94,.2);border-radius:12px;padding:12px;text-align:center">
+            ${qrSrc ? `<div style="background:#fff;border-radius:8px;padding:8px;display:inline-block;margin-bottom:8px"><img src="${qrSrc}" style="width:150px;height:150px;display:block"/></div><br>` : ''}
+            <div style="font-size:10px;color:rgba(255,255,255,.35);margin-bottom:4px">PIX — R$ ${v.toFixed(2).replace('.',',')}</div>
+            <div style="display:flex;gap:6px;align-items:center;margin-bottom:8px">
+              <input id="an-pix-code" readonly value="${pixCode}" style="
+                flex:1;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);
+                border-radius:8px;padding:8px 10px;color:#fff;font-size:10px;font-family:monospace;outline:none;
+              "/>
+              <button id="an-pix-copy" style="
+                background:rgba(34,197,94,.25);border:1px solid rgba(34,197,94,.4);
+                color:#4ade80;border-radius:8px;padding:8px 10px;
+                font-size:11px;cursor:pointer;font-family:inherit;white-space:nowrap;
+              ">Copiar</button>
+            </div>
+            <div id="an-pix-status" style="font-size:12px;color:rgba(255,255,255,.45)">⏳ Aguardando pagamento...</div>
+          </div>
+        `;
+        document.getElementById('an-pix-copy').onclick = () => {
+          navigator.clipboard.writeText(pixCode).catch(() => {});
+          document.getElementById('an-pix-copy').textContent = '✓ Copiado';
+          setTimeout(() => { const el = document.getElementById('an-pix-copy'); if (el) el.textContent = 'Copiar'; }, 2000);
+        };
+        btn.disabled = false;
+        btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" width="14" height="14"><rect x="3" y="3" width="8" height="8" rx="1"/><rect x="13" y="3" width="8" height="8" rx="1"/><rect x="3" y="13" width="8" height="8" rx="1"/><circle cx="17" cy="17" r="3"/></svg> Gerar novo PIX`;
+
+        if (_anDepPollTimer) clearTimeout(_anDepPollTimer);
+        const expira = Date.now() + 30 * 60 * 1000;
+        const checar = async () => {
+          if (Date.now() > expira) return;
+          try {
+            const r = await API.depositoStatus(data.txid);
+            if (r.status === 'aprovado') {
+              const statusEl = document.getElementById('an-pix-status');
+              if (statusEl) statusEl.innerHTML = `<span style="color:#22c55e;font-weight:700">✅ Pago! +${formatMoney(v)} adicionado ao saldo.</span>`;
+              _anSaldo += v;
+              const saldoEl = document.getElementById('an-saldo-val');
+              if (saldoEl) saldoEl.textContent = formatMoney(_anSaldo);
+              _anAtualizar();
+              return;
+            }
+          } catch {}
+          _anDepPollTimer = setTimeout(checar, 4000);
+        };
+        _anDepPollTimer = setTimeout(checar, 4000);
+      } catch (err) {
+        btn.disabled = false;
+        btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" width="14" height="14"><rect x="3" y="3" width="8" height="8" rx="1"/><rect x="13" y="3" width="8" height="8" rx="1"/><rect x="3" y="13" width="8" height="8" rx="1"/><circle cx="17" cy="17" r="3"/></svg> Gerar PIX`;
+        const erroEl2 = document.getElementById('an-pix-erro');
+        if (erroEl2) { erroEl2.textContent = err.message || 'Erro ao gerar PIX. Tente novamente.'; erroEl2.style.display = ''; }
+      }
+    });
   }
 
   function voltarPainel() {

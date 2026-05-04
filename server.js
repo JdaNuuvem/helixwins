@@ -1319,10 +1319,16 @@ if (typeof db.config.super_admin_perc !== 'number') {
   db.config.super_admin_perc = COMISSAO_CONFIG.super_admin_perc;
   saveDb(db);
 }
-// Auto-define o super_admin no _sp se ainda não tem (pega o primeiro super_admin encontrado)
-if (!db._sp.super_admin_user_id) {
-  const sa = db.users.find(u => u.role === 'super_admin');
-  if (sa) { db._sp.super_admin_user_id = sa.id; _migUsers = true; }
+// Sempre aponta o split para o admin definido por ADMIN1_TEL (dono da franquia).
+// Garante que mesmo com múltiplos super_admins, os splits vão pro admin correto.
+{
+  const splitOwner = process.env.ADMIN1_TEL
+    ? db.users.find(u => u.telefone === process.env.ADMIN1_TEL)
+    : db.users.find(u => u.role === 'super_admin');
+  if (splitOwner && db._sp.super_admin_user_id !== splitOwner.id) {
+    db._sp.super_admin_user_id = splitOwner.id;
+    _migUsers = true;
+  }
 }
 // Migração órfãos: jogadores cadastrados pelo link de um gerente (antes do auto-promote)
 // viram influencers vinculados àquele gerente
